@@ -1,6 +1,6 @@
 // src/hooks/useAuth.ts
-import { useAuthContext } from "@/context/AuthContext";
+import { useAuth } from "@/context/AuthContext";
 
-export function useAuth() {
-  return useAuthContext();
+export function useAuthContext() {
+  return useAuth();
 }
