@@ -7,7 +7,7 @@ import { motion } from "framer-motion";
 
 /**
  * 🌍 Panel Educativo de Mercado OMEGA v3.1
- * (Con animaciones, subidas/bajadas y compatibilidad Render)
+ * (Totalmente compatible con Render, sin IPs locales)
  */
 function MarketPanel() {
   const [data, setData] = useState<any>(null);
@@ -17,13 +17,10 @@ function MarketPanel() {
   useEffect(() => {
     const fetchMarket = async () => {
       try {
-        // ⚡ Usa endpoint de producción (Render o local)
-        const base =
-          process.env.NODE_ENV === "production"
-            ? "https://omega-ai-server.onrender.com"
-            : "http://192.168.1.90:4000";
+        // ⚡ Siempre usa el backend Render (sin local)
+        const base = "https://backtester-pro-1.onrender.com";
         const res = await axios.get(`${base}/ai/markets/live`);
-        if (data) setPreviousData(data); // guarda precios previos
+        if (data) setPreviousData(data);
         setData(res.data.data);
       } catch (err: any) {
         console.error("❌ Error cargando mercado:", err.message);
@@ -33,7 +30,7 @@ function MarketPanel() {
     };
 
     fetchMarket();
-    const interval = setInterval(fetchMarket, 5 * 60 * 1000); // cada 5 minutos
+    const interval = setInterval(fetchMarket, 5 * 60 * 1000);
     return () => clearInterval(interval);
   }, []);
 
@@ -119,7 +116,7 @@ export default function Home() {
     <main className="min-h-screen bg-slate-900 text-white p-8">
       <h1 className="text-3xl font-bold text-sky-400">OMEGA Web Dashboard</h1>
       <p className="text-slate-400 mt-2">
-        Conectado al servidor IA (192.168.1.90:4000)
+        Conectado al servidor IA (Render Cloud)
       </p>
 
       {error && <p className="mt-6 text-red-400">Error: {error}</p>}
