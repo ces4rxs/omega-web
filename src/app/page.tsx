@@ -6,17 +6,24 @@ import axios from "axios";
 import { motion } from "framer-motion";
 
 /**
- * 🌍 Panel Educativo de Mercado OMEGA v2.0
- * (BTCUSD, XAUUSD, XAGUSD, WTIUSD, SP500)
+ * 🌍 Panel Educativo de Mercado OMEGA v3.1
+ * (Con animaciones, subidas/bajadas y compatibilidad Render)
  */
 function MarketPanel() {
   const [data, setData] = useState<any>(null);
+  const [previousData, setPreviousData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchMarket = async () => {
       try {
-        const res = await axios.get("http://192.168.1.90:4000/market/latest");
+        // ⚡ Usa endpoint de producción (Render o local)
+        const base =
+          process.env.NODE_ENV === "production"
+            ? "https://omega-ai-server.onrender.com"
+            : "http://192.168.1.90:4000";
+        const res = await axios.get(`${base}/ai/markets/live`);
+        if (data) setPreviousData(data); // guarda precios previos
         setData(res.data.data);
       } catch (err: any) {
         console.error("❌ Error cargando mercado:", err.message);
@@ -35,12 +42,21 @@ function MarketPanel() {
   }
 
   const assets = [
-    { key: "BTCUSD", label: "Bitcoin (BTC/USD)", unit: "USD", desc: "Precio del Bitcoin en dólares americanos.", color: "text-yellow-400" },
-    { key: "XAUUSD", label: "Oro (XAU/USD)", unit: "USD/oz", desc: "Valor de una onza troy de oro.", color: "text-amber-400" },
-    { key: "XAGUSD", label: "Plata (XAG/USD)", unit: "USD/oz", desc: "Valor de una onza troy de plata.", color: "text-gray-300" },
-    { key: "WTIUSD", label: "Petróleo (WTI/USD)", unit: "USD/barril", desc: "Precio del barril de petróleo WTI.", color: "text-orange-400" },
-    { key: "SP500", label: "S&P 500", unit: "Pts", desc: "Índice bursátil de las 500 mayores empresas de EE.UU.", color: "text-cyan-400" },
+    { key: "BTCUSD", label: "Bitcoin (BTC/USD)", unit: "USD", color: "text-yellow-400" },
+    { key: "XAUUSD", label: "Oro (XAU/USD)", unit: "USD/oz", color: "text-amber-400" },
+    { key: "XAGUSD", label: "Plata (XAG/USD)", unit: "USD/oz", color: "text-gray-300" },
+    { key: "WTIUSD", label: "Petróleo (WTI/USD)", unit: "USD/barril", color: "text-orange-400" },
+    { key: "SP500", label: "S&P 500", unit: "Pts", color: "text-cyan-400" },
   ];
+
+  const getChangeIndicator = (symbol: string) => {
+    const current = data?.[symbol]?.price;
+    const prev = previousData?.[symbol]?.price;
+    if (!prev || !current) return null;
+    if (current > prev) return <span className="text-green-400">▲</span>;
+    if (current < prev) return <span className="text-red-400">▼</span>;
+    return <span className="text-slate-400">—</span>;
+  };
 
   return (
     <section className="mt-10 bg-slate-800/50 p-6 rounded-2xl border border-sky-500/20 shadow-lg">
@@ -58,15 +74,15 @@ function MarketPanel() {
               whileHover={{ scale: 1.03 }}
             >
               <h3 className={`text-lg font-semibold ${a.color}`}>{a.label}</h3>
-              <p className="text-3xl font-bold text-cyan-400 mt-1">
-                {asset?.lastPrice ? asset.lastPrice.toLocaleString() : "—"}{" "}
+              <p className="text-3xl font-bold text-cyan-400 mt-1 flex items-center gap-2">
+                {asset?.price ? asset.price.toLocaleString() : "—"}{" "}
                 <span className="text-sm text-slate-400">{a.unit}</span>
+                {getChangeIndicator(a.key)}
               </p>
               <p className="text-sm text-slate-400 mt-1">Fuente: {asset?.source || "—"}</p>
               {asset?.error && (
                 <p className="text-xs text-red-400 mt-1">⚠ {asset.error}</p>
               )}
-              <p className="text-xs text-slate-500 mt-3">{a.desc}</p>
             </motion.div>
           );
         })}
@@ -74,7 +90,8 @@ function MarketPanel() {
 
       <div className="mt-4 text-center">
         <p className="text-xs text-slate-500">
-          Última actualización: {new Date().toLocaleTimeString("es-CO", { hour12: false })}
+          Última actualización:{" "}
+          {new Date().toLocaleTimeString("es-CO", { hour12: false })}
         </p>
         <p className="text-xs text-amber-400 mt-1">
           ⚠️ Datos de mercado con fines educativos y de simulación.

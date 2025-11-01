@@ -1,11 +1,15 @@
 "use client";
 
+import TutorAIBox from "@/components/TutorAIBox";
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import {
   fetchManifest,
   runMonteCarlo,
-  fetchReflectiveReport,
+  fetchReflectiveMarket,
+  fetchLiveMarkets,
+  runSymbiontV10,
+  runAutoLearn,
   fetchMarketHistory,
 } from "@/lib/omega";
 import { LineChart, Line, ResponsiveContainer } from "recharts";
@@ -16,82 +20,40 @@ interface LogEntry {
   type: "info" | "success" | "error";
 }
 
-interface MarketData {
-  BTCUSD?: number;
-  ETHUSD?: number;
-  XAUUSD?: number;
-  SP500?: number;
-  USDCOP?: number;
-  lastUpdated?: string;
-}
-
 export default function OmegaTradingPanel() {
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [loading, setLoading] = useState(false);
-  const [metrics, setMetrics] = useState<{
-    Sharpe?: number | string;
-    MDD?: string;
-    CAGR?: string;
-    AntiOverfit?: string;
-  }>({});
-  const [market, setMarket] = useState<MarketData>({});
+  const [market, setMarket] = useState<any>({});
   const [btcHistory, setBtcHistory] = useState<any[]>([]);
   const [goldHistory, setGoldHistory] = useState<any[]>([]);
+  const [autoLearnResult, setAutoLearnResult] = useState<any | null>(null); // 🧩 Nuevo estado
 
-  // 🧩 Logs
-  const addLog = (msg: string, type: LogEntry["type"] = "info") => {
+  const addLog = (msg: string, type: LogEntry["type"] = "info") =>
     setLogs((prev) => [
       ...prev,
       { time: new Date().toLocaleTimeString("es-CO"), message: msg, type },
     ]);
-  };
 
-  // 📈 Fetch precios reales multi-mercado
+  // 🧠 Cargar datos (LIVE -> fallback reflexivo)
   const fetchMarketData = async () => {
     try {
-      const [cryptoRes, goldRes, spRes, fxRes] = await Promise.all([
-        fetch(
-          "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum&vs_currencies=usd"
-        ),
-        fetch("https://api.metals.live/v1/spot"),
-        fetch(
-          "https://api.coingecko.com/api/v3/simple/price?ids=sp500&vs_currencies=usd"
-        ),
-        fetch(
-          "https://api.exchangerate.host/latest?base=USD&symbols=COP"
-        ),
-      ]);
-
-      const cryptoJson = await cryptoRes.json();
-      const goldJson = await goldRes.json();
-      const fxJson = await fxRes.json();
-
-      const goldPrice = Array.isArray(goldJson)
-        ? goldJson.find((m) => m.gold)?.gold
-        : 2380;
-
-      setMarket({
-        BTCUSD: cryptoJson.bitcoin?.usd ?? 68000,
-        ETHUSD: cryptoJson.ethereum?.usd ?? 3500,
-        XAUUSD: goldPrice,
-        SP500: 5230 + Math.random() * 20,
-        USDCOP: fxJson?.rates?.COP ?? 4200,
-        lastUpdated: new Date().toLocaleTimeString("es-CO"),
-      });
-    } catch (error) {
-      addLog("⚠️ Error obteniendo datos de mercado (modo simulado)", "error");
-      setMarket({
-        BTCUSD: 68000,
-        ETHUSD: 3600,
-        XAUUSD: 2380,
-        SP500: 5230,
-        USDCOP: 4200,
-        lastUpdated: new Date().toLocaleTimeString("es-CO"),
-      });
+      const live = await fetchLiveMarkets();
+      if (live?.data) {
+        setMarket(live.data);
+        addLog("📡 Mercados LIVE cargados desde backend", "success");
+        return;
+      }
+      const refl = await fetchReflectiveMarket();
+      setMarket(refl.data);
+      addLog("🧠 Datos reflexivos (fallback)", "info");
+      refl.insights?.forEach((msg: string) => addLog(`🧠 Insight: ${msg}`, "info"));
+    } catch (err: any) {
+      addLog("⚠️ Error al cargar mercados, usando modo simulado", "error");
+      const refl = await fetchReflectiveMarket();
+      setMarket(refl.data);
     }
   };
 
-  // 🔹 Cargar históricos para BTC y Oro
   const loadMarketHistory = async () => {
     try {
       const [btcHist, goldHist] = await Promise.all([
@@ -101,7 +63,7 @@ export default function OmegaTradingPanel() {
       setBtcHistory(btcHist);
       setGoldHistory(goldHist);
     } catch {
-      addLog("⚠️ No se pudo cargar histórico, modo simulado activo", "error");
+      addLog("⚠️ No se pudo cargar histórico (modo simulado)", "error");
     }
   };
 
@@ -112,13 +74,41 @@ export default function OmegaTradingPanel() {
     return () => clearInterval(interval);
   }, []);
 
-  // 🔹 Funciones IA
+  const handleSymbiont = async () => {
+    setLoading(true);
+    addLog("🧠 Ejecutando Symbiont Advisor v10...", "info");
+    try {
+      const res = await runSymbiontV10("demo-unnamed");
+      addLog("✅ Análisis Symbiont completado", "success");
+      addLog(JSON.stringify(res.result?.summary || res, null, 2), "info");
+    } catch (e: any) {
+      addLog(`❌ Error Symbiont: ${e.message}`, "error");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAutoLearn = async () => {
+    setLoading(true);
+    addLog("🎯 Ejecutando Auto-Learn v10.2...", "info");
+    try {
+      const res = await runAutoLearn();
+      addLog("✅ Bucle cognitivo completado", "success");
+      addLog(JSON.stringify(res.result, null, 2), "info");
+      setAutoLearnResult(res.result); // ✅ guarda resultado
+    } catch (e: any) {
+      addLog(`❌ Error Auto-Learn: ${e.message}`, "error");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleManifest = async () => {
     setLoading(true);
-    addLog("Solicitando manifest IA...", "info");
+    addLog("📘 Solicitando manifest IA...", "info");
     try {
       const res = await fetchManifest();
-      addLog("Manifest recibido correctamente ✅", "success");
+      addLog("Manifest recibido ✅", "success");
       addLog(JSON.stringify(res, null, 2), "info");
     } catch (e: any) {
       addLog(`Error manifest: ${e.message}`, "error");
@@ -129,7 +119,7 @@ export default function OmegaTradingPanel() {
 
   const handleMonteCarlo = async () => {
     setLoading(true);
-    addLog("Ejecutando simulación Monte Carlo (v4.4)...", "info");
+    addLog("🎲 Ejecutando Monte Carlo (v4.4)...", "info");
     try {
       const res = await runMonteCarlo("demo-unnamed", 300);
       addLog("Simulación completada ✅", "success");
@@ -141,32 +131,6 @@ export default function OmegaTradingPanel() {
     }
   };
 
-  const handleReflective = async () => {
-    setLoading(true);
-    addLog("🧠 Generando reporte reflexivo (v10.3-B)...", "info");
-    try {
-      const res = await fetchReflectiveReport("demo-unnamed");
-      if (res && res.ok) {
-        addLog("Reporte reflexivo recibido ✅", "success");
-        addLog(JSON.stringify(res, null, 2), "info");
-        if (res.metrics) setMetrics(res.metrics);
-        return;
-      }
-      throw new Error("Respuesta vacía o incompleta del servidor");
-    } catch {
-      addLog("⚠️ Endpoint Reflective no disponible — modo local activo", "info");
-      setMetrics({
-        Sharpe: 1.82,
-        MDD: "-22 %",
-        CAGR: "36 %",
-        AntiOverfit: "0.73",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // 🌍 Render
   return (
     <div className="bg-[#0F172A] border border-[#334155] rounded-2xl p-4 mt-4 shadow-lg shadow-sky-900/10">
       <h3 className="text-lg font-semibold text-sky-400 mb-2">
@@ -178,33 +142,41 @@ export default function OmegaTradingPanel() {
 
       {/* 🌐 MERCADOS EN VIVO */}
       <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-3 mb-5">
-        {[
-          { label: "Bitcoin (USD)", value: market.BTCUSD, color: "text-emerald-400" },
-          { label: "Ethereum (USD)", value: market.ETHUSD, color: "text-blue-400" },
-          { label: "Oro (USD/oz)", value: market.XAUUSD, color: "text-amber-400" },
-          { label: "S&P 500", value: market.SP500, color: "text-sky-400" },
-          { label: "USD/COP", value: market.USDCOP, color: "text-purple-400" },
-        ].map((m, i) => (
-          <motion.div
-            key={i}
-            initial={{ opacity: 0, y: 5 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: i * 0.05 }}
-            className="bg-[#0B1220] rounded-xl border border-[#1E293B] p-3 text-center"
-          >
-            <p className="text-[11px] text-slate-400">{m.label}</p>
-            <p className={`text-lg font-semibold ${m.color}`}>
-              {m.value ? `$${m.value.toLocaleString()}` : "--"}
-            </p>
-          </motion.div>
-        ))}
+        {Object.entries(market || {}).map(([label, value]) => {
+          if (label === "timestamp") return null;
+          const color =
+            label === "BTCUSD" ? "text-emerald-400" :
+            label === "ETHUSD" ? "text-blue-400" :
+            label === "XAUUSD" ? "text-amber-400" :
+            label === "SP500" ? "text-sky-400" :
+            "text-purple-400";
+          return (
+            <motion.div
+              key={label}
+              initial={{ opacity: 0, y: 5 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="bg-[#0B1220] rounded-xl border border-[#1E293B] p-3 text-center"
+            >
+              <p className="text-[11px] text-slate-400">{label}</p>
+              <p className={`text-lg font-semibold ${color}`}>
+                {value?.price == null ? "—" : `$${Number(value.price).toLocaleString()}`}
+              </p>
+              <p className="text-[10px] text-slate-500 mt-1">
+                {value?.source ? `Fuente: ${value.source}` : ""}
+              </p>
+            </motion.div>
+          );
+        })}
       </div>
 
       <p className="text-xs text-slate-500 mb-5 text-center">
-        Última actualización: {market.lastUpdated ?? "cargando..."}
+        Última actualización:{" "}
+        {market?.timestamp
+          ? new Date(market.timestamp).toLocaleTimeString("es-CO")
+          : "cargando..."}
       </p>
 
-      {/* 🔹 Mini Gráficos (BTC y Oro) */}
+      {/* 🔹 Mini Gráficos */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
         <div className="bg-[#0B1220] rounded-xl border border-[#1E293B] p-3">
           <p className="text-xs text-slate-400 mb-1">Bitcoin (7d)</p>
@@ -224,56 +196,15 @@ export default function OmegaTradingPanel() {
         </div>
       </div>
 
-      {/* 🔹 Indicadores de IA */}
-      {Object.keys(metrics).length > 0 && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4 text-center">
-          {Object.entries(metrics).map(([key, value]) => (
-            <div key={key} className="bg-[#1E293B] rounded-lg p-3 shadow-sm">
-              <p className="text-xs text-slate-400">{key}</p>
-              <p
-                className={`text-lg font-semibold ${
-                  key === "MDD"
-                    ? "text-red-400"
-                    : key === "Sharpe"
-                    ? "text-emerald-400"
-                    : key === "CAGR"
-                    ? "text-sky-400"
-                    : "text-amber-400"
-                }`}
-              >
-                {value}
-              </p>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* 🔹 Botones */}
+      {/* 🔹 Botones IA */}
       <div className="flex flex-wrap gap-3 mb-4 justify-center">
-        <button
-          onClick={handleManifest}
-          disabled={loading}
-          className="px-4 py-2 bg-sky-600 hover:bg-sky-500 text-white rounded-lg text-sm transition-all"
-        >
-          Ver Manifest
-        </button>
-        <button
-          onClick={handleMonteCarlo}
-          disabled={loading}
-          className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-sm transition-all"
-        >
-          Ejecutar Monte Carlo
-        </button>
-        <button
-          onClick={handleReflective}
-          disabled={loading}
-          className="px-4 py-2 bg-amber-600 hover:bg-amber-500 text-white rounded-lg text-sm transition-all"
-        >
-          Cargar Reflective Report
-        </button>
+        <button onClick={handleManifest} disabled={loading} className="px-4 py-2 bg-sky-600 hover:bg-sky-500 text-white rounded-lg text-sm">Ver Manifest</button>
+        <button onClick={handleMonteCarlo} disabled={loading} className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-sm">Ejecutar Monte Carlo</button>
+        <button onClick={handleSymbiont} disabled={loading} className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-sm">Analizar con IA Symbiont</button>
+        <button onClick={handleAutoLearn} disabled={loading} className="px-4 py-2 bg-amber-600 hover:bg-amber-500 text-white rounded-lg text-sm">Ejecutar Auto-Learn</button>
       </div>
 
-      {/* 🔹 Consola de logs */}
+      {/* 🔹 Consola */}
       <div className="bg-[#0B1220] border border-[#334155] rounded-lg p-3 h-72 overflow-auto text-sm font-mono">
         {logs.length === 0 && <p className="text-slate-500">Esperando comandos...</p>}
         {logs.map((log, i) => (
@@ -293,6 +224,30 @@ export default function OmegaTradingPanel() {
           </motion.div>
         ))}
       </div>
+
+      {/* 🧠 Resultados Auto-Learn */}
+      {autoLearnResult && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-[#0B1220] border border-[#1E293B] rounded-xl p-4 mt-5"
+        >
+          <h4 className="text-sky-400 font-semibold mb-2">
+            🧠 Resultados Auto-Learn v10.2
+          </h4>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm text-slate-300">
+            <p>📊 Sharpe: <span className="text-emerald-400">{autoLearnResult?.base?.metrics?.sharpe?.toFixed?.(3) ?? "—"}</span></p>
+            <p>📉 MDD: <span className="text-rose-400">{autoLearnResult?.base?.metrics?.mdd?.toFixed?.(3) ?? "—"}</span></p>
+            <p>🧩 Robustez: <span className="text-sky-400">{autoLearnResult?.base?.robustness?.toFixed?.(2) ?? "—"}%</span></p>
+            <p>🧠 Anti-Overfit: <span className="text-amber-400">{autoLearnResult?.frontier?.[0]?.judge?.antiOverfit ?? "—"}</span></p>
+          </div>
+          <p className="text-xs text-slate-500 mt-3">
+            Estrategia: <span className="text-sky-300">{autoLearnResult?.base?.name ?? "Auto-Tuned Strategy"}</span>
+          </p>
+        </motion.div>
+      )}
+
+      <TutorAIBox logs={logs} />
     </div>
   );
 }

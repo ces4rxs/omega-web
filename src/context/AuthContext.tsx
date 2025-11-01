@@ -14,6 +14,7 @@ interface AuthContextProps {
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string) => Promise<void>;
+  refresh: () => Promise<void>;
   logout: () => void;
 }
 
@@ -23,6 +24,7 @@ const AuthContext = createContext<AuthContextProps>({
   loading: false,
   login: async () => {},
   register: async () => {},
+  refresh: async () => {},
   logout: () => {},
 });
 
@@ -30,7 +32,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // ✅ Verifica si ya hay token guardado
+  // ✅ Garantiza encabezado base
+  api.defaults.headers.common["Content-Type"] = "application/json";
+
+  // ✅ Verifica si hay token guardado al iniciar
   useEffect(() => {
     const token = localStorage.getItem("accessToken");
     if (!token) {
@@ -38,45 +43,74 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       return;
     }
 
+    api.defaults.headers.Authorization = `Bearer ${token}`;
     api
-      .get("/auth/me", {
-        headers: { Authorization: `Bearer ${token}` },
+      .get("/auth/me")
+      .then((res) => {
+        // Soporta ambas respuestas: { user } o { id, email }
+        const userData = res.data.user || res.data;
+        setUser(userData);
       })
-      .then((res) => setUser(res.data.user))
       .catch(() => {
         localStorage.removeItem("accessToken");
+        localStorage.removeItem("refreshToken");
         setUser(null);
       })
       .finally(() => setLoading(false));
   }, []);
 
-  // ✅ Login existente
+  // ✅ Login
   const login = async (email: string, password: string) => {
     setLoading(true);
     try {
       const { data } = await api.post("/auth/login", { email, password });
       localStorage.setItem("accessToken", data.accessToken);
+      localStorage.setItem("refreshToken", data.refreshToken);
+      api.defaults.headers.Authorization = `Bearer ${data.accessToken}`;
       setUser(data.user);
     } finally {
       setLoading(false);
     }
   };
 
-  // ✅ Registro nuevo
+  // ✅ Registro
   const register = async (email: string, password: string) => {
     setLoading(true);
     try {
       const { data } = await api.post("/auth/register", { email, password });
       localStorage.setItem("accessToken", data.accessToken);
+      localStorage.setItem("refreshToken", data.refreshToken);
+      api.defaults.headers.Authorization = `Bearer ${data.accessToken}`;
       setUser(data.user);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // ✅ Refresh token
+  const refresh = async () => {
+    const refreshToken = localStorage.getItem("refreshToken");
+    if (!refreshToken) return logout();
+
+    try {
+      const { data } = await api.post("/auth/refresh", { token: refreshToken });
+      if (data.accessToken) {
+        localStorage.setItem("accessToken", data.accessToken);
+        localStorage.setItem("refreshToken", data.refreshToken);
+        api.defaults.headers.Authorization = `Bearer ${data.accessToken}`;
+        setUser(data.user || null);
+      } else {
+        logout();
+      }
+    } catch {
+      logout();
     }
   };
 
   // ✅ Logout
   const logout = () => {
     localStorage.removeItem("accessToken");
+    localStorage.removeItem("refreshToken");
     setUser(null);
   };
 
@@ -88,6 +122,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         loading,
         login,
         register,
+        refresh,
         logout,
       }}
     >

@@ -1,19 +1,22 @@
 // src/lib/api.ts
 import axios from "axios";
 
-// ✅ Detecta si estamos en producción o desarrollo
-const isProd = process.env.NODE_ENV === "production";
+/**
+ * 🌐 Cliente API OMEGA — Versión exclusiva para Render
+ * - Siempre apunta al backend en producción (Render)
+ * - Sin soporte local, evita conflictos de entorno
+ */
 
-// 🌍 Dirección base dinámica
 const api = axios.create({
-  baseURL: isProd
-    ? "https://omega-ai-server.onrender.com" // 🔥 Servidor Render (Producción)
-    : "http://192.168.1.90:4000",            // 💻 Local (Desarrollo)
-  timeout: 15000, // ⏱️ más tolerancia para IA y cálculos complejos
+  baseURL: "https://backtester-pro-1.onrender.com", // ✅ Backend Render
+  timeout: 45000,
   headers: {
     "Content-Type": "application/json",
   },
-  withCredentials: false, // 🚫 no usa cookies
+  withCredentials: false, // 🔒 tokens manuales, sin cookies
 });
+
+// 🧠 Header temporal (puedes quitarlo luego)
+api.defaults.headers.common["x-user-id"] = "2";
 
 export default api;
