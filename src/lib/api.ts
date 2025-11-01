@@ -8,8 +8,14 @@ import axios from "axios";
  */
 
 const api = axios.create({
+<<<<<<< HEAD
   baseURL: "https://backtester-pro-1.onrender.com", // ✅ Backend Render
   timeout: 45000,
+=======
+  baseURL: isProd
+    ? "https://omega-ai-server.onrender.com" // 🔥 Servidor Render (Producción)
+  timeout: 15000, // ⏱️ más tolerancia para IA y cálculos complejos
+>>>>>>> c6343c5b633e67c0e9d09ddafc64ff3ecca7f05e
   headers: {
     "Content-Type": "application/json",
   },
