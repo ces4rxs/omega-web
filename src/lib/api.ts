@@ -1,21 +1,21 @@
-// src/lib/api.ts — versión limpia solo Render
+// src/lib/api.ts — Cliente fijo para backend Render (OMEGA AI)
 import axios from "axios";
 
 /**
- * 🌐 Cliente API OMEGA — Versión exclusiva para Render
- * * Siempre apunta al backend en producción (Render)
- * * Sin soporte local, evita conflictos de entorno
+ * 🌐 Cliente API OMEGA (Producción fija)
+ * Siempre apunta al backend desplegado en Render.
+ * No depende de variables de entorno ni del entorno local.
  */
 const api = axios.create({
-  baseURL: "https://backtester-pro-1.onrender.com", // ✅ Backend Render
+  baseURL: "https://backtester-pro-1.onrender.com", // 🔗 Backend Render fijo
   timeout: 45000,
   headers: {
     "Content-Type": "application/json",
   },
-  withCredentials: false, // 🔒 tokens manuales, sin cookies
+  withCredentials: false, // 🔒 Tokens manuales, sin cookies
 });
 
-// 🧩 Header temporal de prueba
+// 🔧 Header temporal opcional (para debugging o trazabilidad)
 api.defaults.headers.common["x-user-id"] = "2";
 
 export default api;
