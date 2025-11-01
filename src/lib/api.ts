@@ -8,7 +8,6 @@ const isProd = process.env.NODE_ENV === "production";
 const api = axios.create({
   baseURL: isProd
     ? "https://omega-ai-server.onrender.com" // 🔥 Servidor Render (Producción)
-    : "http://192.168.1.90:4000",            // 💻 Local (Desarrollo)
   timeout: 15000, // ⏱️ más tolerancia para IA y cálculos complejos
   headers: {
     "Content-Type": "application/json",
