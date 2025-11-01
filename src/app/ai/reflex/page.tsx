@@ -3,11 +3,8 @@
 import React from "react";
 
 export default function ReflexDashboard() {
-  // URL pública del dashboard (ajusta según Render o localhost)
-  const dashboardURL =
-    process.env.NODE_ENV === "production"
-      ? "https://omega-ai-server.onrender.com/reports/reflex_dashboard_v15plus.html"
-      : "http://localhost:4000/reports/reflex_dashboard_v15plus.html";
+  // 🔗 URL pública del dashboard alojado en el backend Render
+  const dashboardURL = "https://backtester-pro-1.onrender.com/reports/reflex_dashboard_v15plus.html";
 
   return (
     <div style={{ width: "100%", height: "100vh", background: "#000" }}>
