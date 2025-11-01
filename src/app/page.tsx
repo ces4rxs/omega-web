@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import api from "@/services/api";
+import api from "@/lib/api";
 import axios from "axios";
 import { motion } from "framer-motion";
 
