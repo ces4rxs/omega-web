@@ -162,3 +162,55 @@ export async function fetchMarketHistory(symbol: "BTCUSD" | "XAUUSD") {
     }));
   }
 }
+// ------------------------------------------------------
+// 🩹 Compatibilidad temporal — funciones legacy (v9/v10)
+// ------------------------------------------------------
+
+/**
+ * Simula carga de mercados LIVE (modo BFF)
+ * Compatible con OmegaTradingPanel antiguo.
+ */
+export async function fetchLiveMarkets() {
+  try {
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/ai/market/external-live`);
+    const data = await res.json();
+    return { data };
+  } catch {
+    // Fallback educativo local
+    return {
+      data: {
+        BTCUSD: { price: 110487, source: "sim" },
+        ETHUSD: { price: 3892.55, source: "sim" },
+        XAUUSD: { price: 2378.0, source: "sim" },
+        SP500: { price: 5050, source: "sim" },
+        timestamp: new Date().toISOString(),
+      },
+    };
+  }
+}
+
+/**
+ * Simula ejecución Auto-Learn v10.2 (modo demo)
+ * Devuelve resultados para compatibilidad del panel IA.
+ */
+export async function runAutoLearn() {
+  return {
+    result: {
+      base: {
+        name: "AutoLearn v10.2 Demo",
+        metrics: {
+          sharpe: 1.72,
+          mdd: 8.1,
+        },
+        robustness: 94.5,
+      },
+      frontier: [
+        {
+          judge: {
+            antiOverfit: 0.83,
+          },
+        },
+      ],
+    },
+  };
+}
