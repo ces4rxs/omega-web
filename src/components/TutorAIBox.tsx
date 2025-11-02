@@ -3,7 +3,7 @@
 
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { runStrategicV12, runQuantumRiskV13 } from "@/lib/omega"; // 🧩 Importamos v12 + v13
+// import { runStrategicV12, runQuantumRiskV13 } from "@/lib/omega"; // ❌ legacy — reemplazado temporalmente
 
 interface LogEntry {
   time: string;
@@ -36,12 +36,25 @@ export default function TutorAIBox({ logs, metrics }: TutorAIBoxProps) {
   const [v13Result, setV13Result] = useState<any>(null);
   const [loadingV13, setLoadingV13] = useState(false);
 
-  // 🧩 Ejecutar Estratega v12
+  // 🧩 Simulación segura de v12
   const handleStrategicV12 = async () => {
     setLoadingV12(true);
     try {
-      const res = await runStrategicV12("demo-unnamed");
-      setV12Result(res?.result || res);
+      await new Promise((r) => setTimeout(r, 800));
+      const res = {
+        summary: "📊 Simulación Estratégica v12 completada (modo demo).",
+        decision: {
+          decision: "Mantener posición",
+          confidence: "0.87",
+          riskScore: "15.3",
+          rationale: "La tendencia es estable con leve presión compradora.",
+          expectedReturn: 12.5,
+          recommendedAction: "Continuar con balance actual",
+        },
+        baseModel: "Strategic v12 Cognitive Layer",
+        note: "Modo demostrativo (sin backend)",
+      };
+      setV12Result(res);
     } catch (err: any) {
       console.error("❌ Error ejecutando v12:", err.message);
     } finally {
@@ -49,12 +62,24 @@ export default function TutorAIBox({ logs, metrics }: TutorAIBoxProps) {
     }
   };
 
-  // 🛡️ Ejecutar Quantum Risk Layer v13
+  // 🛡️ Simulación segura de v13
   const handleQuantumRiskV13 = async () => {
     setLoadingV13(true);
     try {
-      const res = await runQuantumRiskV13("demo-unnamed");
-      setV13Result(res?.result || res);
+      await new Promise((r) => setTimeout(r, 800));
+      const res = {
+        summary: "🧠 Evaluación de Riesgo v13 completada (modo demo).",
+        risk: {
+          tier: "MODERATE",
+          riskScore: 26.8,
+        },
+        recommendations: [
+          "Reducir exposición en 10 %",
+          "Mantener cobertura en oro",
+        ],
+        meta: { version: "v13 QuantumRisk", note: "Simulación cognitiva local" },
+      };
+      setV13Result(res);
     } catch (err: any) {
       console.error("❌ Error ejecutando v13:", err.message);
     } finally {
@@ -87,11 +112,10 @@ export default function TutorAIBox({ logs, metrics }: TutorAIBoxProps) {
       response = "🧩 Tutor cognitivo activo y en espera de nuevos eventos.";
     }
 
-    // ⚙️ v11 Neural Advisor — análisis de métricas
     if (metrics) {
       if (metrics.Sharpe && Number(metrics.Sharpe) > 1.5) {
         response +=
-          " 📈 Excelente rendimiento ajustado al riesgo (Sharpe > 1.5). Mantén estrategia actual.";
+          " 📈 Excelente rendimiento ajustado al riesgo (Sharpe > 1.5).";
       }
       if (
         metrics.MDD &&
@@ -99,7 +123,7 @@ export default function TutorAIBox({ logs, metrics }: TutorAIBoxProps) {
         metrics.MDD.includes("-3")
       ) {
         response +=
-          " ⚠️ Riesgo elevado detectado (MDD > -30%). Activando heurística de cobertura dinámica v11.2.";
+          " ⚠️ Riesgo elevado detectado (MDD > -30 %). Activando heurística de cobertura dinámica v11.2.";
       }
       if (metrics.CAGR && metrics.CAGR.includes("30")) {
         response +=
@@ -122,7 +146,6 @@ export default function TutorAIBox({ logs, metrics }: TutorAIBoxProps) {
     setAnalysis(response);
   }, [logs, metrics]);
 
-  // 🎨 Color según riesgo
   const riskColor = (tier: string) => {
     switch (tier) {
       case "LOW":
@@ -184,19 +207,17 @@ export default function TutorAIBox({ logs, metrics }: TutorAIBoxProps) {
             {v12Result.summary}
           </p>
           <p>
-            📊 <b>Decisión:</b> {v12Result.decision?.decision}{" "}
-            {" · "}Confianza: {v12Result.decision?.confidence}{" "}
-            {" · "}Riesgo: {v12Result.decision?.riskScore}
+            📊 <b>Decisión:</b> {v12Result.decision.decision} · Confianza {v12Result.decision.confidence} · Riesgo {v12Result.decision.riskScore}
           </p>
           <p className="mt-1">
-            💡 <b>Racional:</b> {v12Result.decision?.rationale}
+            💡 <b>Racional:</b> {v12Result.decision.rationale}
           </p>
           <p className="mt-1">
-            💰 <b>Retorno esperado:</b> {v12Result.decision?.expectedReturn}%
+            💰 <b>Retorno esperado:</b> {v12Result.decision.expectedReturn} %
           </p>
           <p className="mt-2">
             🧩 <b>Acción recomendada:</b>{" "}
-            {v12Result.decision?.recommendedAction}
+            {v12Result.decision.recommendedAction}
           </p>
           <p className="text-[11px] text-indigo-400 mt-3 italic">
             Fuente: {v12Result.baseModel} ({v12Result.note})
@@ -212,18 +233,18 @@ export default function TutorAIBox({ logs, metrics }: TutorAIBoxProps) {
           </p>
           <p>
             🛡️ <b>Riesgo:</b>{" "}
-            <span className={riskColor(v13Result.risk?.tier)}>
-              {v13Result.risk?.tier}
+            <span className={riskColor(v13Result.risk.tier)}>
+              {v13Result.risk.tier}
             </span>{" "}
             {" · "}
-            <b>Score:</b> {v13Result.risk?.riskScore.toFixed(2)}%
+            <b>Score:</b> {v13Result.risk.riskScore.toFixed(2)} %
           </p>
           <p className="mt-1">
             💡 <b>Recomendaciones:</b>{" "}
-            {v13Result.recommendations?.join(" · ")}
+            {v13Result.recommendations.join(" · ")}
           </p>
           <p className="text-[11px] text-amber-400 mt-3 italic">
-            Fuente: {v13Result.meta?.version} — {v13Result.meta?.note}
+            Fuente: {v13Result.meta.version} — {v13Result.meta.note}
           </p>
         </div>
       )}
