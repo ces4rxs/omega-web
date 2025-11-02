@@ -1,4 +1,3 @@
-// src/components/VisualAdvisor.tsx
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
@@ -41,6 +40,7 @@ function makeSpark(seed = 0) {
 export default function VisualAdvisor() {
   const [ts, setTs] = useState<string>("");
   const [btc, setBtc] = useState<number | null>(null);
+  const [theme, setTheme] = useState<"day" | "night">("day");
 
   const metrics: Metrics = useMemo(
     () => ({ sharpe: 1.42, winRate: 0.61, mddPct: 0.08 }),
@@ -48,6 +48,13 @@ export default function VisualAdvisor() {
   );
   const grade = useMemo(() => quantumGrade(metrics), [metrics]);
 
+  // Detectar hora para tema día/noche
+  useEffect(() => {
+    const hour = new Date().getHours();
+    setTheme(hour >= 7 && hour < 18 ? "day" : "night");
+  }, []);
+
+  // Fetch de manifest (backend o modo offline)
   useEffect(() => {
     (async () => {
       const m = await fetchManifest();
@@ -58,30 +65,37 @@ export default function VisualAdvisor() {
     })();
   }, []);
 
+  const bgGradient =
+    theme === "day"
+      ? "from-sky-400/20 to-amber-500/10"
+      : "from-indigo-800/30 to-sky-900/20";
+
   return (
     <motion.section
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.6 }}
-      className={`relative overflow-hidden mt-6 rounded-2xl border border-[#1E293B] p-5 shadow-lg shadow-black/30`}
+      initial={{ opacity: 0, scale: 0.96 }}
+      animate={{ opacity: 1, scale: 1 }}
+      transition={{ duration: 0.8, ease: "easeOut" }}
+      className={`relative overflow-hidden mt-6 rounded-2xl border border-[#1E293B] p-5 shadow-xl shadow-black/40`}
     >
       {/* 🔮 Fondo dinámico */}
       <div
-        className={`absolute inset-0 bg-gradient-to-br ${grade.ring} blur-2xl opacity-40 animate-pulse`}
+        className={`absolute inset-0 bg-gradient-to-br ${grade.ring} ${bgGradient} blur-2xl opacity-40 animate-pulse`}
       />
+
       <div className="relative z-10">
         <header className="flex items-center justify-between mb-4">
           <h3 className="text-xl font-semibold text-sky-300 flex items-center gap-2">
-            🧭 Visual Advisor v11.1{" "}
+            🧭 Visual Advisor v11.2
             <motion.span
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              transition={{ delay: 0.3 }}
+              transition={{ delay: 0.4 }}
               className={`text-[11px] font-medium px-2 py-0.5 rounded-full border border-white/10 ${grade.color}`}
             >
               {grade.tag}
             </motion.span>
           </h3>
+
           <div className="flex items-center gap-2 text-xs text-slate-400">
             <motion.span
               className={`inline-flex h-2 w-2 rounded-full ${grade.pulse}`}
@@ -96,11 +110,11 @@ export default function VisualAdvisor() {
           </div>
         </header>
 
-        {/* 🔹 Panel métrico + gráficas */}
+        {/* Panel principal */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           <motion.div
             whileHover={{ scale: 1.02 }}
-            transition={{ type: "spring", stiffness: 150 }}
+            transition={{ type: "spring", stiffness: 120 }}
             className={`rounded-xl border border-[#1E293B] p-4 backdrop-blur-sm bg-[#0B1220]/70`}
           >
             <div className="text-sm text-slate-400 mb-1">Clasificación</div>
@@ -109,14 +123,20 @@ export default function VisualAdvisor() {
             </div>
 
             <div className="mt-4 grid grid-cols-3 gap-3 text-sm">
-              <Metric label="Sharpe" value={metrics.sharpe.toFixed(2)} />
-              <Metric
+              <TooltipMetric
+                label="Sharpe"
+                value={metrics.sharpe.toFixed(2)}
+                tip="Sharpe > 1.5 indica rendimiento excelente ajustado al riesgo."
+              />
+              <TooltipMetric
                 label="Winrate"
                 value={(metrics.winRate * 100).toFixed(1) + "%"}
+                tip="Winrate mide la proporción de operaciones ganadoras sobre el total."
               />
-              <Metric
+              <TooltipMetric
                 label="MDD %"
                 value={(metrics.mddPct * 100).toFixed(1) + "%"}
+                tip="Drawdown máximo: caída más grande desde un pico hasta un valle."
               />
             </div>
           </motion.div>
@@ -130,6 +150,7 @@ export default function VisualAdvisor() {
                   stroke="#22d3ee"
                   strokeWidth={2}
                   dot={false}
+                  isAnimationActive
                 />
               </LineChart>
             </ResponsiveContainer>
@@ -151,6 +172,7 @@ export default function VisualAdvisor() {
                   stroke="#f59e0b"
                   strokeWidth={2}
                   dot={false}
+                  isAnimationActive
                 />
               </LineChart>
             </ResponsiveContainer>
@@ -158,17 +180,27 @@ export default function VisualAdvisor() {
           </Card>
         </div>
 
-        {/* ✨ Narrativa final */}
+        {/* Texto descriptivo */}
         <motion.p
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.3 }}
           className="mt-5 text-sm text-slate-300 leading-relaxed"
         >
-          📌 <b>Lectura instantánea:</b> El perfil actual muestra{" "}
+          📌 <b>Lectura instantánea:</b> El perfil actual refleja{" "}
           <b>rendimiento ajustado al riesgo</b> saludable y estabilidad táctica.
           Mantén posición y revisa coberturas si la MDD supera el 12 %.
         </motion.p>
+
+        {/* 🪶 Sello holográfico OMEGA */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 0.7 }}
+          transition={{ delay: 0.8 }}
+          className="absolute bottom-2 right-4 text-[10px] text-sky-400/60 italic select-none"
+        >
+          ✦ OMEGA Quantum Insight System ✦
+        </motion.div>
       </div>
     </motion.section>
   );
@@ -186,23 +218,39 @@ function Card({ title, children }: { title: string; children: React.ReactNode })
   );
 }
 
-function Metric({ label, value }: { label: string; value: string }) {
+function TooltipMetric({
+  label,
+  value,
+  tip,
+}: {
+  label: string;
+  value: string;
+  tip: string;
+}) {
+  const [show, setShow] = useState(false);
   return (
     <motion.div
       whileHover={{ scale: 1.04 }}
       transition={{ type: "spring", stiffness: 200 }}
-      className="bg-[#0F172A]/70 rounded-lg p-3 border border-[#1E293B] shadow-inner"
+      className="relative bg-[#0F172A]/70 rounded-lg p-3 border border-[#1E293B] shadow-inner"
+      onMouseEnter={() => setShow(true)}
+      onMouseLeave={() => setShow(false)}
     >
       <div className="text-[11px] text-slate-400">{label}</div>
       <div className="text-base font-semibold text-cyan-300">{value}</div>
+      {show && (
+        <motion.div
+          initial={{ opacity: 0, y: 4 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="absolute top-full mt-2 w-48 p-2 text-[11px] text-slate-300 bg-[#0A101F]/90 rounded-lg border border-slate-700 shadow-lg"
+        >
+          {tip}
+        </motion.div>
+      )}
     </motion.div>
   );
 }
 
 function Hint({ text }: { text: string }) {
-  return (
-    <div className="mt-2 text-[11px] text-slate-500 italic">
-      {text}
-    </div>
-  );
+  return <div className="mt-2 text-[11px] text-slate-500 italic">{text}</div>;
 }
