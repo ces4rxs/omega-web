@@ -1,19 +1,14 @@
 "use client";
-
 import { useEffect, useState } from "react";
-import api from "@/lib/api";
 import { motion } from "framer-motion";
+import api from "@/lib/api";
+import { useLiveMarket } from "@/hooks/useLiveMarket";
 
 type Strategy = {
   id: string;
   name: string;
   description?: string;
-  metrics?: {
-    sharpe?: number;
-    profitPct?: number;
-    mddPct?: number;
-    winRate?: number;
-  };
+  metrics?: { sharpe?: number; profitPct?: number; mddPct?: number; winRate?: number };
   updatedAt?: string;
 };
 
@@ -22,39 +17,45 @@ export default function StrategiesPage() {
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
 
+  const { market, loading: mLoading, error: mErr, refreshing, lastUpdated, refresh } = useLiveMarket();
+
   useEffect(() => {
     (async () => {
       try {
-        // ✅ Llamada al backend principal (Render)
         const { data } = await api.get("/api/strategies");
-
-        // 🪶 Log temporal para ver la respuesta real del servidor
-        console.log("🔍 Datos del backend:", data);
-
-        // ✅ Usa el campo correcto "strategies" del backend
-        const list: Strategy[] = Array.isArray(data?.strategies)
-          ? data.strategies
-          : [];
-
+        const list: Strategy[] = Array.isArray(data?.strategies) ? data.strategies : [];
         setItems(list);
-      } catch (e: any) {
-        console.error("❌ Error cargando estrategias:", e);
-        setErr(e?.message ?? "Error cargando estrategias");
-      } finally {
-        setLoading(false);
-      }
+      } catch (e: any) { setErr(e?.message ?? "Error cargando estrategias"); }
+      finally { setLoading(false); }
     })();
   }, []);
 
   return (
     <main className="min-h-screen bg-slate-900 text-white p-8">
-      <header className="mb-6">
-        <h1 className="text-3xl font-bold text-sky-400">
-          Estrategias Inteligentes
-        </h1>
-        <p className="text-slate-400">
-          Panel inicial (solo lectura). No modifica el backend.
-        </p>
+      <header className="mb-6 flex flex-col md:flex-row md:items-end md:justify-between gap-3">
+        <div>
+          <h1 className="text-3xl font-bold text-sky-400">Estrategias Inteligentes</h1>
+          <p className="text-slate-400">Datos reales vía OMEGA BFF · panel solo lectura</p>
+        </div>
+
+        {/* Barra live market */}
+        <div className="bg-slate-800/60 border border-sky-500/20 rounded-xl px-4 py-3">
+          <div className="text-xs text-slate-400 mb-1">
+            {refreshing ? "Actualizando…" : lastUpdated ? `Últ. actualización: ${lastUpdated.toLocaleTimeString()}` : "Cargando…"}
+          </div>
+          <div className="flex gap-4 text-sm">
+            <LiveTag label="BTC" value={market?.BTCUSD?.price} />
+            <LiveTag label="ETH" value={market?.ETHUSD?.price} />
+            <LiveTag label="XAU" value={market?.XAUUSD?.price} />
+            <button
+              onClick={refresh}
+              className="ml-2 px-3 py-1 rounded-lg border border-sky-600 text-sky-300 hover:bg-sky-600/10"
+            >
+              Refrescar
+            </button>
+          </div>
+          {mErr && <div className="text-amber-400 text-xs mt-1">⚠️ Mercado: {String(mErr)}</div>}
+        </div>
       </header>
 
       {loading && <p className="text-slate-400">Cargando estrategias…</p>}
@@ -68,13 +69,9 @@ export default function StrategiesPage() {
               className="bg-slate-900/80 border border-sky-500/10 rounded-xl p-4 hover:border-sky-400/40 transition-all duration-300"
               whileHover={{ scale: 1.02 }}
             >
-              <h3 className="text-lg font-semibold text-sky-300">
-                {s.name ?? s.id}
-              </h3>
+              <h3 className="text-lg font-semibold text-sky-300">{s.name ?? s.id}</h3>
               {s.description && (
-                <p className="text-sm text-slate-400 mt-1 line-clamp-2">
-                  {s.description}
-                </p>
+                <p className="text-sm text-slate-400 mt-1 line-clamp-2">{s.description}</p>
               )}
 
               <div className="mt-3 grid grid-cols-2 gap-3 text-sm">
@@ -84,22 +81,49 @@ export default function StrategiesPage() {
                 <Metric label="Winrate" value={fmtPct(s.metrics?.winRate)} />
               </div>
 
+              {/* Botones (ya operativos contra tu backend actual) */}
+              <div className="mt-4 flex flex-wrap gap-2">
+                <button
+                  className="px-3 py-1 rounded-lg border border-sky-600 text-sky-300 hover:bg-sky-600/10"
+                  onClick={async () => {
+                    try {
+                      const { data } = await api.get("/ai/predict/advanced");
+                      alert(`Predicción lista:\n${JSON.stringify(data, null, 2)}`);
+                    } catch (e:any) { alert("Error en predicción: " + e.message); }
+                  }}
+                >
+                  Backtest
+                </button>
+
+                <button
+                  className="px-3 py-1 rounded-lg border border-emerald-600 text-emerald-300 hover:bg-emerald-600/10"
+                  onClick={async () => {
+                    try {
+                      const { data } = await api.post("/ai/optimize", { manifest: { id: s.id }, goal: "robustness" });
+                      alert(`Optimización OK:\n${JSON.stringify(data?.report ?? data, null, 2)}`);
+                    } catch (e:any) { alert("Error al optimizar: " + e.message); }
+                  }}
+                >
+                  Optimizar
+                </button>
+
+                <button
+                  className="px-3 py-1 rounded-lg border border-amber-600 text-amber-300 hover:bg-amber-600/10"
+                  onClick={async () => {
+                    try {
+                      const { data } = await api.post("/ai/symbiont", { strategyId: s.id });
+                      alert(`Reflexión Cognitiva:\n${JSON.stringify(data?.result ?? data, null, 2)}`);
+                    } catch (e:any) { alert("Error en reflexión: " + e.message); }
+                  }}
+                >
+                  Reflexionar
+                </button>
+              </div>
+
               <div className="mt-4 text-xs text-slate-500">
                 {s.updatedAt
                   ? `Actualizada: ${new Date(s.updatedAt).toLocaleString()}`
                   : "Sin fecha"}
-              </div>
-
-              <div className="mt-4 flex gap-2">
-                <button className="px-3 py-1 rounded-lg border border-sky-600 text-sky-300 hover:bg-sky-600/10">
-                  Backtest
-                </button>
-                <button className="px-3 py-1 rounded-lg border border-emerald-600 text-emerald-300 hover:bg-emerald-600/10">
-                  Optimizar
-                </button>
-                <button className="px-3 py-1 rounded-lg border border-amber-600 text-amber-300 hover:bg-amber-600/10">
-                  Reflexionar
-                </button>
               </div>
             </motion.div>
           ))}
@@ -113,6 +137,16 @@ export default function StrategiesPage() {
   );
 }
 
+function LiveTag({ label, value }: { label: string; value: number | null | undefined }) {
+  const v = typeof value === "number" ? value.toLocaleString("en-US", { maximumFractionDigits: 2 }) : "—";
+  return (
+    <div className="px-2 py-1 rounded-md bg-slate-700/60 border border-sky-500/10">
+      <span className="text-slate-400 mr-1">{label}:</span>
+      <span className="text-cyan-300 font-semibold">{v}</span>
+    </div>
+  );
+}
+
 function Metric({ label, value }: { label: string; value: string }) {
   return (
     <div className="bg-slate-800/60 rounded-lg p-3 border border-sky-500/10">
@@ -121,10 +155,5 @@ function Metric({ label, value }: { label: string; value: string }) {
     </div>
   );
 }
-
-function fmt(n?: number) {
-  return typeof n === "number" ? n.toFixed(2) : "—";
-}
-function fmtPct(n?: number) {
-  return typeof n === "number" ? `${(n * 100).toFixed(1)}%` : "—";
-}
+function fmt(n?: number) { return typeof n === "number" ? n.toFixed(2) : "—"; }
+function fmtPct(n?: number) { return typeof n === "number" ? `${(n * 100).toFixed(1)}%` : "—"; }
