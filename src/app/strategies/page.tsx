@@ -25,12 +25,20 @@ export default function StrategiesPage() {
   useEffect(() => {
     (async () => {
       try {
+        // ✅ Llamada al backend principal (Render)
         const { data } = await api.get("/api/strategies");
-        const list: Strategy[] = Array.isArray(data)
-          ? data
-          : data?.items ?? [];
+
+        // 🪶 Log temporal para ver la respuesta real del servidor
+        console.log("🔍 Datos del backend:", data);
+
+        // ✅ Usa el campo correcto "strategies" del backend
+        const list: Strategy[] = Array.isArray(data?.strategies)
+          ? data.strategies
+          : [];
+
         setItems(list);
       } catch (e: any) {
+        console.error("❌ Error cargando estrategias:", e);
         setErr(e?.message ?? "Error cargando estrategias");
       } finally {
         setLoading(false);
