@@ -7,9 +7,9 @@ import {
   fetchManifest,
   runMonteCarlo,
   fetchReflectiveMarket,
-  fetchLiveMarkets,
+  // fetchLiveMarkets,   // ❌ Eliminado: reemplazado por /ai/market/external-live
   runSymbiontV10,
-  runAutoLearn,
+  // runAutoLearn,       // ❌ Eliminado temporalmente
   fetchMarketHistory,
 } from "@/lib/omega";
 import { LineChart, Line, ResponsiveContainer } from "recharts";
@@ -26,7 +26,7 @@ export default function OmegaTradingPanel() {
   const [market, setMarket] = useState<any>({});
   const [btcHistory, setBtcHistory] = useState<any[]>([]);
   const [goldHistory, setGoldHistory] = useState<any[]>([]);
-  const [autoLearnResult, setAutoLearnResult] = useState<any | null>(null); // 🧩 Nuevo estado
+  const [autoLearnResult, setAutoLearnResult] = useState<any | null>(null);
 
   const addLog = (msg: string, type: LogEntry["type"] = "info") =>
     setLogs((prev) => [
@@ -37,10 +37,11 @@ export default function OmegaTradingPanel() {
   // 🧠 Cargar datos (LIVE -> fallback reflexivo)
   const fetchMarketData = async () => {
     try {
-      const live = await fetchLiveMarkets();
+      // ⚡ Reemplazo: usamos el endpoint del backend en lugar de fetchLiveMarkets
+      const live = await fetch("https://backtester-pro-1.onrender.com/ai/market/external-live").then((r) => r.json());
       if (live?.data) {
         setMarket(live.data);
-        addLog("📡 Mercados LIVE cargados desde backend", "success");
+        addLog("📡 Mercados LIVE cargados desde OMEGA BFF", "success");
         return;
       }
       const refl = await fetchReflectiveMarket();
@@ -88,19 +89,12 @@ export default function OmegaTradingPanel() {
     }
   };
 
+  // ⚙️ Temporalmente deshabilitado para no romper el build
   const handleAutoLearn = async () => {
     setLoading(true);
-    addLog("🎯 Ejecutando Auto-Learn v10.2...", "info");
-    try {
-      const res = await runAutoLearn();
-      addLog("✅ Bucle cognitivo completado", "success");
-      addLog(JSON.stringify(res.result, null, 2), "info");
-      setAutoLearnResult(res.result); // ✅ guarda resultado
-    } catch (e: any) {
-      addLog(`❌ Error Auto-Learn: ${e.message}`, "error");
-    } finally {
-      setLoading(false);
-    }
+    addLog("🎯 Auto-Learn v10.2 temporalmente deshabilitado", "info");
+    addLog("ℹ️ Esta función se reactivará con el módulo Neural v11.", "info");
+    setLoading(false);
   };
 
   const handleManifest = async () => {
@@ -224,28 +218,6 @@ export default function OmegaTradingPanel() {
           </motion.div>
         ))}
       </div>
-
-      {/* 🧠 Resultados Auto-Learn */}
-      {autoLearnResult && (
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="bg-[#0B1220] border border-[#1E293B] rounded-xl p-4 mt-5"
-        >
-          <h4 className="text-sky-400 font-semibold mb-2">
-            🧠 Resultados Auto-Learn v10.2
-          </h4>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm text-slate-300">
-            <p>📊 Sharpe: <span className="text-emerald-400">{autoLearnResult?.base?.metrics?.sharpe?.toFixed?.(3) ?? "—"}</span></p>
-            <p>📉 MDD: <span className="text-rose-400">{autoLearnResult?.base?.metrics?.mdd?.toFixed?.(3) ?? "—"}</span></p>
-            <p>🧩 Robustez: <span className="text-sky-400">{autoLearnResult?.base?.robustness?.toFixed?.(2) ?? "—"}%</span></p>
-            <p>🧠 Anti-Overfit: <span className="text-amber-400">{autoLearnResult?.frontier?.[0]?.judge?.antiOverfit ?? "—"}</span></p>
-          </div>
-          <p className="text-xs text-slate-500 mt-3">
-            Estrategia: <span className="text-sky-300">{autoLearnResult?.base?.name ?? "Auto-Tuned Strategy"}</span>
-          </p>
-        </motion.div>
-      )}
 
       <TutorAIBox logs={logs} />
     </div>
