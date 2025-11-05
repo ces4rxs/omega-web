@@ -243,7 +243,9 @@ export async function runBacktest(payload: BacktestPayload) {
   };
 }
 
-// ---------- ⚡ OPTIMIZER V5 ----------
+// ======================================================
+// 🧠 OPTIMIZER V5 (AI Quantitative Analysis)
+// ======================================================
 export interface OptimizerRequest {
   symbol: string;
   timeframe: string;
@@ -267,31 +269,23 @@ export async function runOptimizerV5(payload: OptimizerRequest) {
     ok: true,
     simulated: true,
     jobId: `offline-${Date.now()}`,
-    note: "Optimizer v5 ejecutado en modo educativo (sin backend).",
+    note: "Optimizer_v5 ejecutado en modo educativo (sin backend).",
     summary: {
       symbol: payload.symbol,
       timeframe: payload.timeframe,
       expectedSharpe: Number((1.4 + Math.random() * 0.4).toFixed(2)),
       riskScore: Math.round(45 + Math.random() * 30),
-      windowSuggestion: `${["7 sesiones", "14 sesiones", "21 sesiones"][Math.floor(Math.random() * 3)]}`,
+      windowSuggestion: `${["17 sesiones", "14 sesiones", "21 sesiones"][Math.floor(Math.random() * 3)]}`,
     },
   };
 }
 
+// ======================================================
+// 🔍 Backtest History (tu función antigua debe seguir aquí)
+// ======================================================
 export async function fetchBacktestHistory(symbol: string) {
-  const data = await tryBackend(`/ai/backtest/history?symbol=${encodeURIComponent(symbol)}`);
-  if (Array.isArray(data?.history)) {
-    return data.history;
-  }
-
-  return Array.from({ length: 5 }).map((_, idx) => ({
-    id: `demo-${idx + 1}`,
-    symbol,
-    timeframe: ["1m", "5m", "1h", "1d"][idx % 4],
-    pnl: Number((Math.random() * 5 - 1).toFixed(2)),
-    sharpe: Number((1 + Math.random() * 0.8).toFixed(2)),
-    startedAt: new Date(Date.now() - idx * 3600 * 1000).toISOString(),
-  }));
+  const { data } = await api.get(`/ai/backtest/history/${symbol}`);
+  return data;
 }
 
 // ---------- 📈 HISTÓRICO DE MERCADO ----------
