@@ -15,6 +15,16 @@ async function tryBackend(path: string) {
   }
 }
 
+async function postBackend(path: string, payload: any) {
+  try {
+    const { data } = await api.post(path, payload);
+    return data;
+  } catch (err: any) {
+    console.warn(`⚠️ Backend no disponible para ${path} (POST):`, err.message);
+    return null;
+  }
+}
+
 // ---------- 🧠 BÁSICOS ----------
 export async function fetchManifest() {
   const data = await tryBackend("/ai/manifest");
@@ -132,6 +142,121 @@ export async function fetchReflectiveMarket() {
       "📊 Datos simulados (CoinGecko + MetalsAPI placeholders).",
     ],
   };
+}
+
+// ---------- 📊 SNAPSHOT + SERIES ----------
+export async function fetchMarketSnapshot() {
+  const direct = await tryBackend("/ai/market/external-live");
+  if (direct?.data) {
+    return {
+      ...direct,
+      timestamp: direct.timestamp ?? new Date().toISOString(),
+      mode: "live",
+    };
+  }
+
+  const fallback = await fetchReflectiveMarket();
+  return {
+    data: fallback.data,
+    timestamp: fallback.lastUpdated ?? new Date().toISOString(),
+    mode: fallback.ok ? "reflective" : "offline",
+  };
+}
+
+export async function fetchMarketSeries(symbol: string, timeframe: string) {
+  const data = await tryBackend(
+    `/ai/market/history?symbol=${encodeURIComponent(symbol)}&timeframe=${encodeURIComponent(timeframe)}`
+  );
+
+  if (data?.series) {
+    return data.series;
+  }
+
+  const points = timeframe === "1d" ? 120 : timeframe === "1h" ? 72 : 40;
+  const step =
+    timeframe === "1d"
+      ? 24 * 60 * 60 * 1000
+      : timeframe === "1h"
+      ? 60 * 60 * 1000
+      : timeframe === "5m"
+      ? 5 * 60 * 1000
+      : 60 * 1000;
+  const seed = symbol
+    .split("")
+    .reduce((acc, char) => acc + char.charCodeAt(0), 0);
+  return Array.from({ length: points }).map((_, idx) => {
+    const base =
+      symbol === "BTCUSD"
+        ? 65000
+        : symbol === "ETHUSD"
+        ? 3200
+        : symbol === "XAUUSD"
+        ? 2350
+        : symbol === "SP500"
+        ? 5100
+        : 100;
+    const noise = Math.sin(idx / 3 + seed) * (timeframe === "1m" ? 6 : 18);
+    return {
+      t: idx,
+      price: Number((base + noise + Math.random() * 12).toFixed(2)),
+      timestamp: new Date(Date.now() - (points - idx) * step).toISOString(),
+    };
+  });
+}
+
+// ---------- 🧪 BACKTESTING ----------
+export interface BacktestPayload {
+  strategyId?: string;
+  symbol: string;
+  timeframe: string;
+  capital?: number;
+  risk?: "conservative" | "balanced" | "aggressive";
+}
+
+export async function runBacktest(payload: BacktestPayload) {
+  const body = {
+    strategyId: payload.strategyId ?? "demo-quant",
+    symbol: payload.symbol,
+    timeframe: payload.timeframe,
+    capital: payload.capital ?? 10000,
+    risk: payload.risk ?? "balanced",
+  };
+
+  const data = await postBackend("/ai/backtest/run", body);
+  if (data) {
+    return data;
+  }
+
+  const pnl = Number((Math.random() * 4 - 1.2).toFixed(2));
+  return {
+    ok: true,
+    simulated: true,
+    timeframe: payload.timeframe,
+    symbol: payload.symbol,
+    result: {
+      pnl,
+      pnlPct: Number((pnl / body.capital).toFixed(4)),
+      sharpe: Number((1.1 + Math.random() * 0.6).toFixed(2)),
+      trades: 18 + Math.floor(Math.random() * 12),
+    },
+    note: "Backtest simulado (sin conexión con servidor).",
+  };
+}
+
+export async function fetchBacktestHistory(symbol: string) {
+  const data = await tryBackend(`/ai/backtest/history?symbol=${encodeURIComponent(symbol)}`);
+  if (Array.isArray(data?.history)) {
+    return data.history;
+  }
+
+  return Array.from({ length: 5 }).map((_, idx) => ({
+    id: `demo-${idx + 1}`,
+    symbol,
+    timeframe: ["1m", "5m", "1h", "1d"][idx % 4],
+    pnl: Number((Math.random() * 5 - 1).toFixed(2)),
+    sharpe: Number((1 + Math.random() * 0.8).toFixed(2)),
+    startedAt: new Date(Date.now() - idx * 3600 * 1000).toISOString(),
+  }));
 }
 
 // ---------- 📈 HISTÓRICO DE MERCADO ----------
