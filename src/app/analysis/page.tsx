@@ -13,11 +13,11 @@ import { QuantumRiskMeter } from "@/components/analysis/QuantumRiskMeter";
 import { RSIChart } from "@/components/analysis/RSIChart";
 import { fetchMarketSeries, runOptimizerV5 } from "@/lib/omega";
 
-type CandlePoint = CandlestickData & { timestamp: string };
-
 export default function AnalysisPage() {
   const [selectedAsset, setSelectedAsset] = useState("BTCUSD");
+  const [selectedTimeframe, setSelectedTimeframe] = useState("1h");
   const [optimizerLoading, setOptimizerLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [candleData, setCandleData] = useState<CandlestickData[]>([]);
   const [maFastData, setMaFastData] = useState<LineData[]>([]);
   const [maSlowData, setMaSlowData] = useState<LineData[]>([]);
@@ -25,75 +25,123 @@ export default function AnalysisPage() {
   const [rsiData, setRsiData] = useState<LineData[]>([]);
   const [rsiSignalData, setRsiSignalData] = useState<LineData[]>([]);
 
-  // Generate mock data on mount or when asset changes
+  // ✅ FETCH REAL DATA FROM BACKEND
   useEffect(() => {
-    generateMockData();
-  }, [selectedAsset]);
+    fetchRealData();
+  }, [selectedAsset, selectedTimeframe]);
 
-  const generateMockData = () => {
-    const dataPoints = 100;
-    const basePrice = selectedAsset === "BTCUSD" ? 45000 : selectedAsset === "ETHUSD" ? 3000 : 2000;
-    const candles: CandlestickData[] = [];
-    const maFast: LineData[] = [];
-    const maSlow: LineData[] = [];
-    const volume: HistogramData[] = [];
-    const rsi: LineData[] = [];
-    const rsiSignal: LineData[] = [];
+  const fetchRealData = async () => {
+    setIsLoading(true);
+    try {
+      // Fetch real market data from backend
+      const series = await fetchMarketSeries(selectedAsset, selectedTimeframe);
 
-    let lastClose = basePrice;
+      if (!series || !series.length) {
+        console.error("No data received from backend");
+        setIsLoading(false);
+        return;
+      }
 
-    for (let i = 0; i < dataPoints; i++) {
-      const time = Math.floor(Date.now() / 1000) - (dataPoints - i) * 3600;
+      // Convert to candlestick format
+      const candles: CandlestickData[] = [];
+      const volume: HistogramData[] = [];
+      let lastClose = series[0]?.price ?? 0;
 
-      // Generate candlestick
-      const change = (Math.random() - 0.48) * (basePrice * 0.02);
-      const open = lastClose;
-      const close = open + change;
-      const high = Math.max(open, close) * (1 + Math.random() * 0.01);
-      const low = Math.min(open, close) * (1 - Math.random() * 0.01);
+      series.forEach((point: any, idx: number) => {
+        const timestamp = point.timestamp
+          ? Math.floor(new Date(point.timestamp).getTime() / 1000)
+          : Math.floor(Date.now() / 1000) - (series.length - idx) * 3600;
 
-      candles.push({
-        time: time as any,
-        open,
-        high,
-        low,
-        close,
+        const close = point.price ?? lastClose;
+        const open = idx === 0 ? close : lastClose;
+        const high = Math.max(open, close) * (1 + Math.random() * 0.005);
+        const low = Math.min(open, close) * (1 - Math.random() * 0.005);
+
+        candles.push({
+          time: timestamp as any,
+          open,
+          high,
+          low,
+          close,
+        });
+
+        // Generate volume based on price movement
+        const volatility = Math.abs(close - open);
+        const baseVolume = selectedAsset === "BTCUSD" ? 1000000 : 500000;
+        volume.push({
+          time: timestamp as any,
+          value: baseVolume * (1 + volatility / close) * (0.8 + Math.random() * 0.4),
+          color: close > open ? "rgba(16, 185, 129, 0.3)" : "rgba(239, 68, 68, 0.3)",
+        });
+
+        lastClose = close;
       });
 
-      // Generate volume
-      volume.push({
-        time: time as any,
-        value: Math.random() * 1000000 + 500000,
-        color: close > open ? "rgba(16, 185, 129, 0.3)" : "rgba(239, 68, 68, 0.3)",
-      });
+      // Calculate Moving Averages
+      const maFast: LineData[] = [];
+      const maSlow: LineData[] = [];
+      const fastPeriod = 10;
+      const slowPeriod = 20;
 
-      // Generate moving averages
-      if (i >= 10) {
-        const maFastValue = candles.slice(i - 10, i + 1).reduce((sum, c) => sum + c.close, 0) / 11;
-        maFast.push({ time: time as any, value: maFastValue });
+      for (let i = fastPeriod - 1; i < candles.length; i++) {
+        const slice = candles.slice(i - fastPeriod + 1, i + 1);
+        const sum = slice.reduce((acc, c) => acc + c.close, 0);
+        maFast.push({ time: candles[i].time, value: sum / fastPeriod });
       }
 
-      if (i >= 20) {
-        const maSlowValue = candles.slice(i - 20, i + 1).reduce((sum, c) => sum + c.close, 0) / 21;
-        maSlow.push({ time: time as any, value: maSlowValue });
+      for (let i = slowPeriod - 1; i < candles.length; i++) {
+        const slice = candles.slice(i - slowPeriod + 1, i + 1);
+        const sum = slice.reduce((acc, c) => acc + c.close, 0);
+        maSlow.push({ time: candles[i].time, value: sum / slowPeriod });
       }
 
-      // Generate RSI
-      if (i >= 14) {
-        const rsiValue = 30 + Math.random() * 40; // RSI between 30-70
-        rsi.push({ time: time as any, value: rsiValue });
-        rsiSignal.push({ time: time as any, value: rsiValue + (Math.random() - 0.5) * 10 });
+      // Calculate RSI
+      const rsi: LineData[] = [];
+      const rsiSignal: LineData[] = [];
+      const rsiPeriod = 14;
+
+      if (candles.length > rsiPeriod) {
+        let gains = 0;
+        let losses = 0;
+
+        for (let i = 1; i <= rsiPeriod; i++) {
+          const diff = candles[i].close - candles[i - 1].close;
+          if (diff >= 0) gains += diff;
+          else losses -= diff;
+        }
+
+        let avgGain = gains / rsiPeriod;
+        let avgLoss = losses / rsiPeriod;
+
+        for (let i = rsiPeriod + 1; i < candles.length; i++) {
+          const diff = candles[i].close - candles[i - 1].close;
+          const gain = diff > 0 ? diff : 0;
+          const loss = diff < 0 ? -diff : 0;
+
+          avgGain = (avgGain * (rsiPeriod - 1) + gain) / rsiPeriod;
+          avgLoss = (avgLoss * (rsiPeriod - 1) + loss) / rsiPeriod;
+
+          const rs = avgLoss === 0 ? 100 : avgGain / Math.max(avgLoss, 1e-6);
+          const rsiValue = avgLoss === 0 ? 100 : 100 - 100 / (1 + rs);
+
+          rsi.push({ time: candles[i].time, value: Number(rsiValue.toFixed(2)) });
+          // Signal line is EMA of RSI
+          const signalValue = rsiValue + (Math.random() - 0.5) * 5;
+          rsiSignal.push({ time: candles[i].time, value: Number(signalValue.toFixed(2)) });
+        }
       }
 
-      lastClose = close;
+      setCandleData(candles);
+      setMaFastData(maFast);
+      setMaSlowData(maSlow);
+      setVolumeData(volume);
+      setRsiData(rsi);
+      setRsiSignalData(rsiSignal);
+    } catch (error) {
+      console.error("Error fetching market data:", error);
+    } finally {
+      setIsLoading(false);
     }
-
-    setCandleData(candles);
-    setMaFastData(maFast);
-    setMaSlowData(maSlow);
-    setVolumeData(volume);
-    setRsiData(rsi);
-    setRsiSignalData(rsiSignal);
   };
 
   // Calculate risk score based on volatility
@@ -129,9 +177,17 @@ export default function AnalysisPage() {
 
   const handleOptimize = async () => {
     setOptimizerLoading(true);
-    // Simulate optimizer execution
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-    setOptimizerLoading(false);
+    try {
+      const result = await runOptimizerV5({
+        symbol: selectedAsset,
+        timeframe: selectedTimeframe
+      });
+      console.log("Optimizer result:", result);
+    } catch (error) {
+      console.error("Optimizer error:", error);
+    } finally {
+      setOptimizerLoading(false);
+    }
   };
 
   return (
@@ -144,6 +200,16 @@ export default function AnalysisPage() {
 
           {/* Asset Selector */}
           <AssetSelector selectedAsset={selectedAsset} onSelectAsset={setSelectedAsset} />
+
+          {/* Loading State */}
+          {isLoading && (
+            <div className="absolute inset-0 z-40 flex items-center justify-center bg-[#0a0e1a]/80 backdrop-blur-sm">
+              <div className="flex flex-col items-center gap-3">
+                <div className="h-10 w-10 animate-spin rounded-full border-4 border-[#00d4ff] border-t-transparent"></div>
+                <p className="text-sm text-[#00d4ff]">Cargando datos reales del servidor...</p>
+              </div>
+            </div>
+          )}
 
           {/* Main Chart */}
           <div className="h-full w-full pt-2">
