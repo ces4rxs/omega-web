@@ -114,7 +114,7 @@ export default function AnalysisPage() {
       },
     });
 
-    const candleSeries = chart.addCandlestickSeries({
+    const candleSeries = (chart as any).addCandlestickSeries({
       upColor: "#22D3EE",
       borderUpColor: "#22D3EE",
       wickUpColor: "#22D3EE",
@@ -123,7 +123,7 @@ export default function AnalysisPage() {
       wickDownColor: "#FACC15",
     });
 
-    const lineSeries = chart.addLineSeries({
+    const lineSeries = (chart as any).addLineSeries({
       color: "#A855F7",
       lineWidth: 2,
       title: "Media Móvil",
@@ -453,7 +453,7 @@ function buildCandles(series: Array<{ price: number; timestamp?: string }>): Can
       high: Number(high.toFixed(2)),
       low: Number(Math.max(low, 0).toFixed(2)),
       close: Number(close.toFixed(2)),
-      time: timeStamp,
+      time: timeStamp as any,
       timestamp: point.timestamp ?? new Date(timeStamp * 1000).toISOString(),
     });
 
@@ -487,7 +487,7 @@ function calculateRSI(candles: CandlePoint[], period = 14): RsiPoint[] {
 
     const rs = averageLoss === 0 ? 100 : averageGain / Math.max(averageLoss, 1e-6);
     const rsi = averageLoss === 0 ? 100 : 100 - 100 / (1 + rs);
-    const time = new Date(candles[i].time * 1000).toLocaleTimeString("es-CO", {
+    const time = new Date((candles[i].time as number) * 1000).toLocaleTimeString("es-CO", {
       hour: "2-digit",
       minute: "2-digit",
       hour12: false,
