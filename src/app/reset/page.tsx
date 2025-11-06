@@ -2,8 +2,10 @@
 
 import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { motion, AnimatePresence } from "framer-motion";
-import { Lock, Check, X, ArrowLeft, Eye, EyeOff } from "lucide-react";
+import { AnimatePresence, motion } from "framer-motion";
+import { AuthLayout } from "@/components/auth/AuthLayout";
+import { AuthInput } from "@/components/auth/AuthInput";
+import { AuthButton } from "@/components/auth/AuthButton";
 import api from "@/lib/api";
 import type { ResetPasswordRequest } from "@/types/api";
 
@@ -17,7 +19,6 @@ function ResetPasswordContent() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
     if (!token) {
@@ -34,18 +35,13 @@ function ResetPasswordContent() {
       return;
     }
 
-    if (!password || !confirmPassword) {
-      setError("Por favor completa todos los campos");
+    if (password !== confirmPassword) {
+      setError("Las contraseñas no coinciden");
       return;
     }
 
     if (password.length < 6) {
       setError("La contraseña debe tener al menos 6 caracteres");
-      return;
-    }
-
-    if (password !== confirmPassword) {
-      setError("Las contraseñas no coinciden");
       return;
     }
 
@@ -60,7 +56,6 @@ function ResetPasswordContent() {
       await api.post("/auth/reset-password", request);
       setSuccess(true);
 
-      // Redirect to login after 3 seconds
       setTimeout(() => {
         router.push("/login?reset=success");
       }, 3000);
@@ -77,136 +72,79 @@ function ResetPasswordContent() {
 
   if (success) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-950 via-blue-950 to-slate-950 flex items-center justify-center p-4">
+      <AuthLayout title="¡Contraseña Actualizada!" subtitle="Tu contraseña ha sido restablecida">
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="bg-slate-900/80 backdrop-blur-lg border border-slate-700 rounded-2xl p-8 max-w-md w-full text-center"
+          className="space-y-4 text-center"
         >
-          <div className="w-16 h-16 bg-emerald-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
-            <Check className="w-8 h-8 text-emerald-400" />
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-[#10b981]/20">
+            <span className="text-4xl text-[#10b981]">✓</span>
           </div>
-          <h2 className="text-2xl font-bold text-white mb-2">
-            ¡Contraseña Actualizada!
-          </h2>
-          <p className="text-slate-400 mb-6">
+          <p className="text-[#9ca3af]">
             Tu contraseña ha sido restablecida correctamente. Redirigiendo al login...
           </p>
           <div className="flex justify-center">
-            <div className="w-12 h-12 border-4 border-emerald-500/30 border-t-emerald-500 rounded-full animate-spin" />
+            <div className="h-8 w-8 animate-spin rounded-full border-4 border-[#00d4ff]/20 border-t-[#00d4ff]" />
           </div>
         </motion.div>
-      </div>
+      </AuthLayout>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-blue-950 to-slate-950 flex items-center justify-center p-4">
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="bg-slate-900/80 backdrop-blur-lg border border-slate-700 rounded-2xl p-8 max-w-md w-full"
-      >
-        {/* Back to Login */}
-        <button
-          onClick={() => router.push("/login")}
-          className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors mb-6"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          <span className="text-sm">Volver al login</span>
-        </button>
+    <AuthLayout title="Nueva Contraseña" subtitle="Ingresa tu nueva contraseña">
+      <form onSubmit={handleSubmit} className="space-y-5">
+        <AuthInput
+          label="Nueva Contraseña"
+          type="password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          placeholder="Mínimo 6 caracteres"
+          required
+          disabled={!token || loading}
+        />
 
-        {/* Header */}
-        <div className="text-center mb-8">
-          <div className="w-16 h-16 bg-blue-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
-            <Lock className="w-8 h-8 text-blue-400" />
-          </div>
-          <h1 className="text-3xl font-bold text-white mb-2">
-            Restablecer Contraseña
-          </h1>
-          <p className="text-slate-400">
-            Ingresa tu nueva contraseña
-          </p>
-        </div>
+        <AuthInput
+          label="Confirmar Contraseña"
+          type="password"
+          value={confirmPassword}
+          onChange={(e) => setConfirmPassword(e.target.value)}
+          placeholder="Repite tu contraseña"
+          required
+          disabled={!token || loading}
+        />
 
-        {/* Form */}
-        <form onSubmit={handleSubmit} className="space-y-5">
-          {/* New Password */}
-          <div>
-            <label className="block text-sm font-medium text-slate-300 mb-2">
-              Nueva Contraseña
-            </label>
-            <div className="relative">
-              <input
-                type={showPassword ? "text" : "password"}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full bg-slate-800/50 border border-slate-600 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-blue-500 transition-colors pr-10"
-                placeholder="••••••••"
-                disabled={!token || loading}
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-300"
-              >
-                {showPassword ? (
-                  <EyeOff className="w-5 h-5" />
-                ) : (
-                  <Eye className="w-5 h-5" />
-                )}
-              </button>
-            </div>
-            <p className="text-xs text-slate-500 mt-1">Mínimo 6 caracteres</p>
-          </div>
+        <AnimatePresence>
+          {error && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              className="rounded-lg border border-[#ef4444]/30 bg-[#ef4444]/10 p-3 text-sm text-[#ef4444]"
+            >
+              ⚠️ {error}
+            </motion.div>
+          )}
+        </AnimatePresence>
 
-          {/* Confirm Password */}
-          <div>
-            <label className="block text-sm font-medium text-slate-300 mb-2">
-              Confirmar Contraseña
-            </label>
-            <input
-              type="password"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              className="w-full bg-slate-800/50 border border-slate-600 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-blue-500 transition-colors"
-              placeholder="••••••••"
-              disabled={!token || loading}
-            />
-          </div>
-
-          {/* Error Message */}
-          <AnimatePresence>
-            {error && (
-              <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: "auto" }}
-                exit={{ opacity: 0, height: 0 }}
-                className="flex items-center gap-2 bg-red-500/10 border border-red-500/50 rounded-lg p-3 text-red-400 text-sm"
-              >
-                <X className="w-4 h-4 flex-shrink-0" />
-                <span>{error}</span>
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          {/* Submit Button */}
-          <button
-            type="submit"
-            disabled={!token || loading}
-            className="w-full bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-semibold py-3 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {loading ? "Actualizando..." : "Restablecer Contraseña"}
-          </button>
-        </form>
-      </motion.div>
-    </div>
+        <AuthButton type="submit" loading={loading} disabled={!token}>
+          Restablecer contraseña
+        </AuthButton>
+      </form>
+    </AuthLayout>
   );
 }
 
 export default function ResetPasswordPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-slate-950" />}>
+    <Suspense
+      fallback={
+        <div className="flex min-h-screen items-center justify-center bg-[#0a0e1a]">
+          <div className="h-12 w-12 animate-spin rounded-full border-4 border-[#00d4ff]/20 border-t-[#00d4ff]" />
+        </div>
+      }
+    >
       <ResetPasswordContent />
     </Suspense>
   );
