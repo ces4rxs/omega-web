@@ -172,7 +172,8 @@ export async function fetchMarketHistory(symbol: "BTCUSD" | "XAUUSD") {
  */
 export async function fetchLiveMarkets() {
   try {
-    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/ai/market/external-live`);
+    const baseURL = process.env.NEXT_PUBLIC_API_URL || "https://backtester-pro-1.onrender.com";
+    const res = await fetch(`${baseURL}/ai/market/external-live`);
     const data = await res.json();
     return { data };
   } catch {

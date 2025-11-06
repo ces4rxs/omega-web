@@ -1,22 +1,11 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
-import { AuthProvider } from "@/context/AuthContext"; // ✅ Import agregado
-
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+import { AuthProvider } from "@/context/AuthContext";
 
 export const metadata: Metadata = {
-  title: "OMEGA Web",
-  description: "Panel educativo y de IA avanzada",
+  title: "OMEGA Web - Advanced Trading Backtesting Platform",
+  description: "Professional trading backtesting platform with AI-powered analysis and optimization",
 };
 
 export default function RootLayout({
@@ -24,7 +13,7 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="es">
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+      <body className="font-sans antialiased">
         <AuthProvider>
           {children}
         </AuthProvider>

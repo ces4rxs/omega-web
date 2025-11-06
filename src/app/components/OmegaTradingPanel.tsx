@@ -136,7 +136,7 @@ export default function OmegaTradingPanel() {
 
       {/* 🌐 MERCADOS EN VIVO */}
       <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-3 mb-5">
-        {Object.entries(market || {}).map(([label, value]) => {
+        {Object.entries(market || {}).map(([label, value]: [string, any]) => {
           if (label === "timestamp") return null;
           const color =
             label === "BTCUSD" ? "text-emerald-400" :

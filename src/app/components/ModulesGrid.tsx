@@ -21,7 +21,7 @@ export default function ModulesGrid() {
           ? Object.entries(data.modules_loaded).map(([v, name]: any) => ({
               version: v,
               name,
-              status: "ok",
+              status: "ok" as const,
             }))
           : [];
         setModules(loaded);

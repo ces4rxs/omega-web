@@ -81,7 +81,7 @@ export default function StrategiesPage() {
 
             return (
               <motion.div key={s.id} whileHover={{ scale: 1.02 }} transition={{ duration: 0.3 }}>
-                <NeuralPulse active={s.metrics?.sharpe && s.metrics.sharpe > 1.4}>
+                <NeuralPulse active={!!(s.metrics?.sharpe && s.metrics.sharpe > 1.4)}>
                   <div className="bg-slate-900/80 border border-sky-500/10 rounded-xl p-4 hover:border-sky-400/40 transition-all duration-300">
                     <div className="flex justify-between items-start">
                       <h3 className="text-lg font-semibold text-sky-300">{s.name ?? s.id}</h3>
