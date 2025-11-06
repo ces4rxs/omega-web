@@ -16,7 +16,7 @@ export default function DashboardLayout({
   children: ReactNode;
 }) {
   return (
-    <div className="flex min-h-screen bg-[#0B1220] text-white">
+    <div className="flex min-h-screen bg-[#050812] text-white">
       {/* 🔹 Barra lateral izquierda */}
       <Sidebar onLogout={onLogout} />
 
@@ -33,7 +33,7 @@ export default function DashboardLayout({
           className="flex-1 grid grid-cols-1 xl:grid-cols-2 gap-6 p-6 overflow-y-auto"
         >
           {/* 🔹 Panel izquierdo: Trading o análisis */}
-          <section className="bg-[#0F172A] border border-[#1E293B] rounded-2xl p-4 shadow-lg">
+          <section className="bg-slate-900/70 backdrop-blur-lg border border-sky-500/30 rounded-2xl p-4 shadow-xl shadow-sky-900/10">
             <h2 className="text-lg font-semibold text-sky-400 mb-3">
               📈 Panel de Control
             </h2>
@@ -41,7 +41,7 @@ export default function DashboardLayout({
           </section>
 
           {/* 🔹 Panel derecho: IA o Mercados */}
-          <section className="bg-[#0F172A] border border-[#1E293B] rounded-2xl p-4 shadow-lg hidden xl:block">
+          <section className="bg-slate-900/70 backdrop-blur-lg border border-sky-500/30 rounded-2xl p-4 shadow-xl shadow-sky-900/10 hidden xl:block">
             <MarketIntelligence />
           </section>
         </motion.main>
