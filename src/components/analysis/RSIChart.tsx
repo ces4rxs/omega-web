@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useRef } from "react";
-import { createChart, type IChartApi, type ISeriesApi, type LineData } from "lightweight-charts";
+import { useEffect, useRef, useState } from "react";
+import type { LineData } from "lightweight-charts";
 
 interface RSIChartProps {
   data: LineData[];
@@ -11,107 +11,116 @@ interface RSIChartProps {
 
 export function RSIChart({ data, secondaryData = [], height = 200 }: RSIChartProps) {
   const chartContainerRef = useRef<HTMLDivElement>(null);
-  const chartRef = useRef<IChartApi | null>(null);
-  const rsiSeriesRef = useRef<ISeriesApi<"Line"> | null>(null);
-  const secondarySeriesRef = useRef<ISeriesApi<"Line"> | null>(null);
+  const chartRef = useRef<any>(null);
+  const rsiSeriesRef = useRef<any>(null);
+  const secondarySeriesRef = useRef<any>(null);
+  const [isChartReady, setIsChartReady] = useState(false);
 
   useEffect(() => {
     if (!chartContainerRef.current) return;
 
-    const chart = createChart(chartContainerRef.current, {
-      height,
-      layout: {
-        background: { color: "transparent" },
-        textColor: "#9ca3af",
-      },
-      grid: {
-        vertLines: { visible: false },
-        horzLines: { color: "rgba(255, 255, 255, 0.05)" },
-      },
-      crosshair: {
-        mode: 1,
-        vertLine: {
-          color: "#00d4ff",
-          width: 1,
-          style: 2,
+    let isMounted = true;
+
+    // Dynamic import to avoid SSR issues
+    import("lightweight-charts").then(({ createChart }) => {
+      if (!isMounted || !chartContainerRef.current) return;
+
+      const chart = createChart(chartContainerRef.current, {
+        height,
+        layout: {
+          background: { color: "transparent" },
+          textColor: "#9ca3af",
         },
-        horzLine: {
-          color: "#00d4ff",
-          width: 1,
-          style: 2,
+        grid: {
+          vertLines: { visible: false },
+          horzLines: { color: "rgba(255, 255, 255, 0.05)" },
         },
-      },
-      rightPriceScale: {
-        borderColor: "rgba(0, 212, 255, 0.3)",
-        scaleMargins: {
-          top: 0.1,
-          bottom: 0.1,
+        crosshair: {
+          mode: 1,
+          vertLine: {
+            color: "#00d4ff",
+            width: 1,
+            style: 2,
+          },
+          horzLine: {
+            color: "#00d4ff",
+            width: 1,
+            style: 2,
+          },
         },
-      },
-      timeScale: {
-        borderColor: "rgba(0, 212, 255, 0.3)",
-        visible: true,
-      },
-    });
-
-    // RSI Line (cyan)
-    const rsiSeries = (chart as any).addLineSeries({
-      color: "#00d4ff",
-      lineWidth: 2,
-      title: "RSI",
-      priceLineVisible: false,
-    });
-
-    // Secondary line (orange) - could be another indicator
-    const secondarySeries = (chart as any).addLineSeries({
-      color: "#fb923c",
-      lineWidth: 2,
-      title: "Signal",
-      priceLineVisible: false,
-    });
-
-    // Add reference lines at 30, 50, 70
-    chart.applyOptions({
-      rightPriceScale: {
-        autoScale: false,
-        scaleMargins: {
-          top: 0.1,
-          bottom: 0.1,
+        rightPriceScale: {
+          borderColor: "rgba(0, 212, 255, 0.3)",
+          scaleMargins: {
+            top: 0.1,
+            bottom: 0.1,
+          },
         },
-      },
+        timeScale: {
+          borderColor: "rgba(0, 212, 255, 0.3)",
+          visible: true,
+        },
+      });
+
+      // RSI Line (cyan)
+      const rsiSeries = (chart as any).addLineSeries({
+        color: "#00d4ff",
+        lineWidth: 2,
+        title: "RSI",
+        priceLineVisible: false,
+      });
+
+      // Secondary line (orange)
+      const secondarySeries = (chart as any).addLineSeries({
+        color: "#fb923c",
+        lineWidth: 2,
+        title: "Signal",
+        priceLineVisible: false,
+      });
+
+      chartRef.current = chart;
+      rsiSeriesRef.current = rsiSeries;
+      secondarySeriesRef.current = secondarySeries;
+
+      setIsChartReady(true);
+
+      const handleResize = () => {
+        if (chartContainerRef.current && chartRef.current) {
+          chartRef.current.applyOptions({
+            width: chartContainerRef.current.clientWidth,
+          });
+        }
+      };
+
+      window.addEventListener("resize", handleResize);
+      handleResize(); // Initial resize
+
+      return () => {
+        isMounted = false;
+        window.removeEventListener("resize", handleResize);
+        if (chartRef.current) {
+          chart.remove();
+          chartRef.current = null;
+        }
+      };
+    }).catch((error) => {
+      console.error("Error loading lightweight-charts for RSI:", error);
     });
-
-    chartRef.current = chart;
-    rsiSeriesRef.current = rsiSeries;
-    secondarySeriesRef.current = secondarySeries;
-
-    const handleResize = () => {
-      if (chartContainerRef.current && chartRef.current) {
-        chartRef.current.applyOptions({
-          width: chartContainerRef.current.clientWidth,
-        });
-      }
-    };
-
-    window.addEventListener("resize", handleResize);
 
     return () => {
-      window.removeEventListener("resize", handleResize);
-      chart.remove();
-      chartRef.current = null;
+      isMounted = false;
     };
   }, [height]);
 
   useEffect(() => {
-    if (!rsiSeriesRef.current || !data.length) return;
+    if (!isChartReady || !rsiSeriesRef.current || !data.length) return;
     rsiSeriesRef.current.setData(data);
     chartRef.current?.timeScale().fitContent();
-  }, [data]);
+  }, [data, isChartReady]);
 
   useEffect(() => {
-    if (!secondarySeriesRef.current || !secondaryData.length) return;
+    if (!isChartReady || !secondarySeriesRef.current || !secondaryData.length) return;
     secondarySeriesRef.current.setData(secondaryData);
-  }, [secondaryData]);
+  }, [secondaryData, isChartReady]);
 
   return (
     <div className="relative h-full w-full rounded-2xl border border-[#9ca3af]/20 bg-[#1a1f2e] p-4">
@@ -131,6 +140,11 @@ export function RSIChart({ data, secondaryData = [], height = 200 }: RSIChartPro
         </div>
       </div>
       <div ref={chartContainerRef} className="h-[calc(100%-32px)] w-full" />
+      {!isChartReady && (
+        <div className="absolute inset-0 flex items-center justify-center">
+          <div className="text-xs text-[#9ca3af]">Cargando RSI...</div>
+        </div>
+      )}
       {/* Reference lines labels */}
       <div className="pointer-events-none absolute right-16 top-16 flex flex-col gap-8 text-[10px] text-[#9ca3af]/60">
         <span>70</span>
