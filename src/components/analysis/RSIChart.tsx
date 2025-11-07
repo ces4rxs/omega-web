@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import type { LineData } from "lightweight-charts";
+import type { IChartApi, ISeriesApi, LineData } from "lightweight-charts";
 
 interface RSIChartProps {
   data: LineData[];
@@ -11,9 +11,9 @@ interface RSIChartProps {
 
 export function RSIChart({ data, secondaryData = [], height = 200 }: RSIChartProps) {
   const chartContainerRef = useRef<HTMLDivElement>(null);
-  const chartRef = useRef<any>(null);
-  const rsiSeriesRef = useRef<any>(null);
-  const secondarySeriesRef = useRef<any>(null);
+  const chartRef = useRef<IChartApi | null>(null);
+  const rsiSeriesRef = useRef<ISeriesApi<"Line"> | null>(null);
+  const secondarySeriesRef = useRef<ISeriesApi<"Line"> | null>(null);
   const [isChartReady, setIsChartReady] = useState(false);
 
   useEffect(() => {
@@ -62,7 +62,7 @@ export function RSIChart({ data, secondaryData = [], height = 200 }: RSIChartPro
       });
 
       // RSI Line (cyan)
-      const rsiSeries = (chart as any).addLineSeries({
+      const rsiSeries = chart.addLineSeries({
         color: "#00d4ff",
         lineWidth: 2,
         title: "RSI",
@@ -70,7 +70,7 @@ export function RSIChart({ data, secondaryData = [], height = 200 }: RSIChartPro
       });
 
       // Secondary line (orange)
-      const secondarySeries = (chart as any).addLineSeries({
+      const secondarySeries = chart.addLineSeries({
         color: "#fb923c",
         lineWidth: 2,
         title: "Signal",

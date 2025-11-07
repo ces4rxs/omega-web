@@ -13,6 +13,29 @@ import { QuantumRiskMeter } from "@/components/analysis/QuantumRiskMeter";
 import { RSIChart } from "@/components/analysis/RSIChart";
 import { fetchMarketSeries, runOptimizerV5 } from "@/lib/omega";
 
+type MarketSeriesPoint = {
+  price?: number;
+  timestamp?: string | number | Date;
+};
+
+function toUnixTimestamp(value: MarketSeriesPoint["timestamp"], fallback: number): UTCTimestamp {
+  if (value instanceof Date) {
+    return Math.floor(value.getTime() / 1000) as UTCTimestamp;
+  }
+  if (typeof value === "number") {
+    // Assume backend already returns seconds
+    const seconds = value > 1e12 ? Math.floor(value / 1000) : Math.floor(value);
+    return seconds as UTCTimestamp;
+  }
+  if (typeof value === "string") {
+    const date = new Date(value);
+    if (!Number.isNaN(date.getTime())) {
+      return Math.floor(date.getTime() / 1000) as UTCTimestamp;
+    }
+  }
+  return fallback as UTCTimestamp;
+}
+
 export default function AnalysisPage() {
   const [selectedAsset, setSelectedAsset] = useState("BTCUSD");
   const [selectedTimeframe, setSelectedTimeframe] = useState("1h");
@@ -46,10 +69,9 @@ export default function AnalysisPage() {
       const volume: HistogramData[] = [];
       let lastClose = series[0]?.price ?? 0;
 
-      series.forEach((point: any, idx: number) => {
-        const timestamp = point.timestamp
-          ? Math.floor(new Date(point.timestamp).getTime() / 1000)
-          : Math.floor(Date.now() / 1000) - (series.length - idx) * 3600;
+      series.forEach((point: MarketSeriesPoint, idx: number) => {
+        const defaultTimestamp = Math.floor(Date.now() / 1000) - (series.length - idx) * 3600;
+        const timestamp = toUnixTimestamp(point.timestamp, defaultTimestamp);
 
         const close = point.price ?? lastClose;
         const open = idx === 0 ? close : lastClose;
@@ -57,7 +79,7 @@ export default function AnalysisPage() {
         const low = Math.min(open, close) * (1 - Math.random() * 0.005);
 
         candles.push({
-          time: timestamp as any,
+          time: timestamp,
           open,
           high,
           low,
@@ -68,7 +90,7 @@ export default function AnalysisPage() {
         const volatility = Math.abs(close - open);
         const baseVolume = selectedAsset === "BTCUSD" ? 1000000 : 500000;
         volume.push({
-          time: timestamp as any,
+          time: timestamp,
           value: baseVolume * (1 + volatility / close) * (0.8 + Math.random() * 0.4),
           color: close > open ? "rgba(16, 185, 129, 0.3)" : "rgba(239, 68, 68, 0.3)",
         });
