@@ -18,10 +18,23 @@ export default function RegisterPage() {
     setError(null);
     setLoading(true);
     try {
-      await registerUser(email, password, name);
-      router.push("/login");
-    } catch {
-      setError("Error al registrarse, intenta de nuevo");
+      const authData = await registerUser(email, password, name);
+
+      // 🔐 Guardar token y datos del usuario en localStorage
+      localStorage.setItem("accessToken", authData.accessToken);
+      localStorage.setItem("user", JSON.stringify(authData.user));
+
+      if (authData.refreshToken) {
+        localStorage.setItem("refreshToken", authData.refreshToken);
+      }
+
+      console.log("✅ Register success:", authData.user);
+      // Redirigir directamente al dashboard después del registro exitoso
+      router.push("/dashboard");
+    } catch (err: any) {
+      console.error("❌ Register error:", err);
+      const errorMessage = err.response?.data?.message || "Error al registrarse, intenta de nuevo";
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }

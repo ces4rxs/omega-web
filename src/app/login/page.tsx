@@ -29,8 +29,17 @@ export default function LoginPage() {
 
     setLoading(true);
     try {
-      const res = await loginUser(email, password);
-      console.log("✅ Login success:", res);
+      const authData = await loginUser(email, password);
+
+      // 🔐 Guardar token y datos del usuario en localStorage
+      localStorage.setItem("accessToken", authData.accessToken);
+      localStorage.setItem("user", JSON.stringify(authData.user));
+
+      if (authData.refreshToken) {
+        localStorage.setItem("refreshToken", authData.refreshToken);
+      }
+
+      console.log("✅ Login success:", authData.user);
       router.push("/dashboard");
     } catch (err) {
       setError("⚠️ Credenciales incorrectas o servidor no disponible.");
