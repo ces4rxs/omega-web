@@ -14,7 +14,7 @@ export function useAIEvents() {
   const esRef = useRef<EventSource | null>(null);
 
   useEffect(() => {
-    const base = process.env.NEXT_PUBLIC_AI_BASE_URL ?? ""; // ej: https://backtester-pro-1.onrender.com
+    const base = process.env.NEXT_PUBLIC_API_URL ?? ""; // ej: https://backtester-pro-1.onrender.com
     const url  = `${base}/ai/events`;
 
     try {
