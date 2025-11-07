@@ -3,8 +3,10 @@
 
 // ----- Stripe Checkout -----
 export interface CreateCheckoutSessionRequest {
-  priceId: string;   // ID del plan o precio de Stripe
-  userId?: string;   // opcional: ID del usuario autenticado
+  priceId: string;     // ID del plan o precio de Stripe
+  userId?: string;     // opcional: ID del usuario autenticado
+  successUrl?: string; // URL de redirección tras pago exitoso
+  cancelUrl?: string;  // URL de redirección si se cancela el pago
 }
 
 export interface CreateCheckoutSessionResponse {
