@@ -5,7 +5,15 @@ import { useState } from "react";
 
 interface AssetSelectorProps {
   selectedAsset: string;
+  selectedTimeframe: string;
   onSelectAsset: (asset: string) => void;
+  onSelectTimeframe: (timeframe: string) => void;
+  lastPrice?: number;
+  changePercent?: number;
+  dayRange?: {
+    high: number;
+    low: number;
+  };
 }
 
 const ASSETS = [
@@ -15,12 +23,37 @@ const ASSETS = [
   { value: "ADAUSD", label: "ADA/USD" },
 ];
 
-export function AssetSelector({ selectedAsset, onSelectAsset }: AssetSelectorProps) {
+const TIMEFRAMES = ["15m", "1h", "4h", "1d"];
+
+export function AssetSelector({
+  selectedAsset,
+  selectedTimeframe,
+  onSelectAsset,
+  onSelectTimeframe,
+  lastPrice,
+  changePercent,
+  dayRange,
+}: AssetSelectorProps) {
   const [isOpen, setIsOpen] = useState(false);
   const currentAsset = ASSETS.find((a) => a.value === selectedAsset) || ASSETS[0];
+  const changeColor =
+    changePercent !== undefined && changePercent !== 0
+      ? changePercent > 0
+        ? "text-[#10b981]"
+        : "text-[#ef4444]"
+      : "text-[#9ca3af]";
+
+  const formattedPrice =
+    lastPrice !== undefined
+      ? lastPrice.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+      : "--";
+  const formattedChange =
+    changePercent !== undefined
+      ? `${changePercent > 0 ? "+" : ""}${changePercent.toFixed(2)}%`
+      : "--";
 
   return (
-    <div className="absolute left-4 top-16 z-40">
+    <div className="absolute left-4 top-14 z-40 flex flex-col gap-2 text-xs text-[#9ca3af]">
       <div className="relative">
         <button
           onClick={() => setIsOpen(!isOpen)}
@@ -58,6 +91,48 @@ export function AssetSelector({ selectedAsset, onSelectAsset }: AssetSelectorPro
             ))}
           </div>
         )}
+      </div>
+
+      <div className="flex items-end gap-3">
+        <div className="flex flex-col">
+          <span className="text-[10px] uppercase tracking-[0.2em] text-[#6b7280]">Precio Spot</span>
+          <span className="text-lg font-semibold text-[#f9fafb]">{formattedPrice}</span>
+        </div>
+        <span className={`text-sm font-semibold ${changeColor}`}>{formattedChange}</span>
+      </div>
+
+      {dayRange && (
+        <div className="flex items-center gap-2 text-[11px] text-[#6b7280]">
+          <span>Rango diario:</span>
+          <span className="text-[#f9fafb]">
+            {dayRange.low.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          </span>
+          <div className="h-[1px] w-6 bg-[#1f2937]">
+            <div className="h-full w-full bg-gradient-to-r from-[#ef4444] via-[#fbbf24] to-[#10b981]" />
+          </div>
+          <span className="text-[#f9fafb]">
+            {dayRange.high.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          </span>
+        </div>
+      )}
+
+      <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.25em] text-[#6b7280]">
+        <span>Timeframes</span>
+        <div className="flex items-center gap-1 rounded-full border border-[#1f2937] bg-[#0f1422]/80 p-1">
+          {TIMEFRAMES.map((timeframe) => (
+            <button
+              key={timeframe}
+              onClick={() => onSelectTimeframe(timeframe)}
+              className={`rounded-full px-3 py-1 text-[11px] font-semibold transition-colors ${
+                timeframe === selectedTimeframe
+                  ? "bg-[#00d4ff]/20 text-[#00d4ff] shadow-[0_0_10px_rgba(0,212,255,0.2)]"
+                  : "text-[#9ca3af] hover:text-[#f9fafb]"
+              }`}
+            >
+              {timeframe}
+            </button>
+          ))}
+        </div>
       </div>
     </div>
   );

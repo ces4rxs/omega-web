@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import type { LineData } from "lightweight-charts";
+import type { IChartApi, ISeriesApi, LineData } from "lightweight-charts";
 
 interface RSIChartProps {
   data: LineData[];
@@ -11,9 +11,9 @@ interface RSIChartProps {
 
 export function RSIChart({ data, secondaryData = [], height = 200 }: RSIChartProps) {
   const chartContainerRef = useRef<HTMLDivElement>(null);
-  const chartRef = useRef<any>(null);
-  const rsiSeriesRef = useRef<any>(null);
-  const secondarySeriesRef = useRef<any>(null);
+  const chartRef = useRef<IChartApi | null>(null);
+  const rsiSeriesRef = useRef<ISeriesApi<"Line"> | null>(null);
+  const secondarySeriesRef = useRef<ISeriesApi<"Line"> | null>(null);
   const [isChartReady, setIsChartReady] = useState(false);
 
   useEffect(() => {
@@ -22,7 +22,7 @@ export function RSIChart({ data, secondaryData = [], height = 200 }: RSIChartPro
     let isMounted = true;
 
     // Dynamic import to avoid SSR issues
-    import("lightweight-charts").then(({ createChart }) => {
+    import("lightweight-charts").then(({ createChart, LineSeries }) => {
       if (!isMounted || !chartContainerRef.current) return;
 
       const chart = createChart(chartContainerRef.current, {
@@ -62,7 +62,7 @@ export function RSIChart({ data, secondaryData = [], height = 200 }: RSIChartPro
       });
 
       // RSI Line (cyan)
-      const rsiSeries = (chart as any).addLineSeries({
+      const rsiSeries = chart.addSeries(LineSeries, {
         color: "#00d4ff",
         lineWidth: 2,
         title: "RSI",
@@ -70,7 +70,7 @@ export function RSIChart({ data, secondaryData = [], height = 200 }: RSIChartPro
       });
 
       // Secondary line (orange)
-      const secondarySeries = (chart as any).addLineSeries({
+      const secondarySeries = chart.addSeries(LineSeries, {
         color: "#fb923c",
         lineWidth: 2,
         title: "Signal",
@@ -124,7 +124,8 @@ export function RSIChart({ data, secondaryData = [], height = 200 }: RSIChartPro
 
   return (
     <div className="relative h-full w-full rounded-2xl border border-[#9ca3af]/20 bg-[#1a1f2e] p-4">
-      <div className="mb-2 flex items-center justify-between">
+      <div className="pointer-events-none absolute inset-0 rounded-2xl bg-gradient-to-b from-[#111827]/60 via-transparent to-[#0a0e1a]/60" />
+      <div className="relative z-10 mb-2 flex items-center justify-between">
         <h4 className="text-sm font-semibold uppercase tracking-wide text-[#9ca3af]">
           RSI 4, 6, 8
         </h4>
@@ -139,7 +140,11 @@ export function RSIChart({ data, secondaryData = [], height = 200 }: RSIChartPro
           </div>
         </div>
       </div>
-      <div ref={chartContainerRef} className="h-[calc(100%-32px)] w-full" />
+      <div className="relative z-10 h-[calc(100%-32px)] w-full">
+        <div className="pointer-events-none absolute left-0 right-0 top-6 h-6 rounded-full bg-[#ef4444]/5" />
+        <div className="pointer-events-none absolute left-0 right-0 bottom-6 h-6 rounded-full bg-[#10b981]/5" />
+        <div ref={chartContainerRef} className="h-full w-full" />
+      </div>
       {!isChartReady && (
         <div className="absolute inset-0 flex items-center justify-center">
           <div className="text-xs text-[#9ca3af]">Cargando RSI...</div>
