@@ -30,6 +30,9 @@ html, body {
 .animate-float {
   animation: float 6s ease-in-out infinite;
 }
+/* ========================== */
+/* 🌌 Animación de halo cuántico */
+/* ========================== */
 @keyframes gradient-rotation {
   0% {
     filter: hue-rotate(0deg);
@@ -41,4 +44,6 @@ html, body {
 
 .animate-gradient-spin {
   animation: gradient-rotation 8s linear infinite;
+  will-change: filter;
 }
+
