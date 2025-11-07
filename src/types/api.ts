@@ -23,6 +23,7 @@ export interface UserSubscription {
 export interface CancelSubscriptionResponse {
   success: boolean;
   message?: string;
+  subscription: UserSubscription; // Datos actualizados de la suscripción cancelada
 }
 
 // ----- Planes de precios -----
