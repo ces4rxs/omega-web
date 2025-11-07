@@ -8,3 +8,17 @@ html, body {
   color: #fff;
   font-family: 'Inter', sans-serif;
 }
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}
+
+/* Transiciones suaves para toda la página */
+* {
+  scroll-behavior: smooth;
+  transition: background 0.3s ease, color 0.3s ease;
+}
