@@ -5,6 +5,7 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import OmegaFeatures from "@/components/OmegaFeatures";
 import OmegaDifferentiators from "@/components/OmegaDifferentiators";
+import OmegaPricing from "@/components/OmegaPricing"; // 🧩 agregado
 
 export default function Home() {
   return (
@@ -39,18 +40,13 @@ export default function Home() {
               </a>
             </li>
             <li>
-              <a href="#ai" className="hover:text-white transition">
-                Tecnología IA
+              <a href="#pricing" className="hover:text-white transition">
+                Planes
               </a>
             </li>
             <li>
               <a href="#community" className="hover:text-white transition">
                 Comunidad
-              </a>
-            </li>
-            <li>
-              <a href="#pricing" className="hover:text-white transition">
-                Precios
               </a>
             </li>
           </ul>
@@ -100,7 +96,7 @@ export default function Home() {
               Prueba Quantum IA
             </Link>
             <Link
-              href="/pricing"
+              href="#pricing"
               className="bg-gradient-to-r from-indigo-500 to-blue-600 px-6 py-3 rounded-lg font-semibold hover:opacity-90 transition"
             >
               Ver Planes
@@ -128,6 +124,7 @@ export default function Home() {
       {/* === SECCIONES NUEVAS === */}
       <OmegaFeatures />
       <OmegaDifferentiators />
+      <OmegaPricing /> {/* 🧠 sección de planes añadida */}
 
       {/* EFECTO FONDO */}
       <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_30%_50%,rgba(59,130,246,0.08),transparent_60%)] blur-2xl" />
