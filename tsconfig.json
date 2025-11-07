@@ -22,11 +22,11 @@
         "name": "next"
       }
     ],
-    // ✅ Alias configurado correctamente
-    "baseUrl": "src",
+    // ✅ Alias configurado correctamente para Next.js con carpeta src/
+    "baseUrl": ".",
     "paths": {
       "@/*": [
-        "*"
+        "src/*"
       ]
     }
   },
