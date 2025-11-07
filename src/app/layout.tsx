@@ -1,22 +1,20 @@
-import type { Metadata } from "next";
-import "./globals.css";
-
-import { AuthProvider } from "@/context/AuthContext";
+import type { Metadata } from 'next';
+import './globals.css';
 
 export const metadata: Metadata = {
-  title: "OMEGA Web - Advanced Trading Backtesting Platform",
-  description: "Professional trading backtesting platform with AI-powered analysis and optimization",
+  title: 'Omega Control Center',
+  description: 'Panel principal con resumen de operaciones y analítica en tiempo real.',
 };
 
 export default function RootLayout({
   children,
-}: Readonly<{ children: React.ReactNode }>) {
+}: {
+  children: React.ReactNode;
+}) {
   return (
-    <html lang="es">
-      <body className="font-sans antialiased">
-        <AuthProvider>
-          {children}
-        </AuthProvider>
+    <html lang="es" className="h-full bg-slate-950">
+      <body className="h-full bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950 text-slate-100 font-sans">
+        {children}
       </body>
     </html>
   );

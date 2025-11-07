@@ -2,8 +2,27 @@
 @tailwind components;
 @tailwind utilities;
 
-html, body {
-  background-color: #0B1220; /* Fondo OMEGA */
-  color: #E2E8F0; /* Texto gris claro */
-  font-family: 'Exo 2', sans-serif;
+:root {
+  color-scheme: dark;
+}
+
+body {
+  min-height: 100vh;
+}
+
+a {
+  @apply text-indigo-300 hover:text-indigo-200 transition;
+}
+
+::-webkit-scrollbar {
+  width: 12px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(15, 23, 42, 0.4);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(79, 70, 229, 0.6);
+  border-radius: 9999px;
 }
