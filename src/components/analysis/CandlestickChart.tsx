@@ -1,7 +1,13 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import type { CandlestickData, HistogramData, LineData } from "lightweight-charts";
+import type {
+  CandlestickData,
+  HistogramData,
+  LineData,
+  IChartApi,
+  ISeriesApi,
+} from "lightweight-charts";
 
 interface CandlestickChartProps {
   data: CandlestickData[];
@@ -19,11 +25,11 @@ export function CandlestickChart({
   height = 500,
 }: CandlestickChartProps) {
   const chartContainerRef = useRef<HTMLDivElement>(null);
-  const chartRef = useRef<any>(null);
-  const candleSeriesRef = useRef<any>(null);
-  const maFastSeriesRef = useRef<any>(null);
-  const maSlowSeriesRef = useRef<any>(null);
-  const volumeSeriesRef = useRef<any>(null);
+  const chartRef = useRef<IChartApi | null>(null);
+  const candleSeriesRef = useRef<ISeriesApi<"Candlestick"> | null>(null);
+  const maFastSeriesRef = useRef<ISeriesApi<"Line"> | null>(null);
+  const maSlowSeriesRef = useRef<ISeriesApi<"Line"> | null>(null);
+  const volumeSeriesRef = useRef<ISeriesApi<"Histogram"> | null>(null);
   const [isChartReady, setIsChartReady] = useState(false);
 
   useEffect(() => {
@@ -71,7 +77,7 @@ export function CandlestickChart({
       });
 
       // Candlestick series
-      const candleSeries = (chart as any).addCandlestickSeries({
+      const candleSeries = chart.addCandlestickSeries({
         upColor: "#10b981",
         downColor: "#ef4444",
         borderUpColor: "#10b981",
@@ -81,7 +87,7 @@ export function CandlestickChart({
       });
 
       // Volume histogram
-      const volumeSeries = (chart as any).addHistogramSeries({
+      const volumeSeries = chart.addHistogramSeries({
         color: "#00d4ff",
         priceFormat: {
           type: "volume",
@@ -94,7 +100,7 @@ export function CandlestickChart({
       });
 
       // MA Fast (cyan)
-      const maFastSeries = (chart as any).addLineSeries({
+      const maFastSeries = chart.addLineSeries({
         color: "#00d4ff",
         lineWidth: 2,
         title: "MA Rápida",
@@ -103,7 +109,7 @@ export function CandlestickChart({
       });
 
       // MA Slow (orange)
-      const maSlowSeries = (chart as any).addLineSeries({
+      const maSlowSeries = chart.addLineSeries({
         color: "#fb923c",
         lineWidth: 2,
         title: "MA Lenta",
