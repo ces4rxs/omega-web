@@ -124,7 +124,8 @@ export function RSIChart({ data, secondaryData = [], height = 200 }: RSIChartPro
 
   return (
     <div className="relative h-full w-full rounded-2xl border border-[#9ca3af]/20 bg-[#1a1f2e] p-4">
-      <div className="mb-2 flex items-center justify-between">
+      <div className="pointer-events-none absolute inset-0 rounded-2xl bg-gradient-to-b from-[#111827]/60 via-transparent to-[#0a0e1a]/60" />
+      <div className="relative z-10 mb-2 flex items-center justify-between">
         <h4 className="text-sm font-semibold uppercase tracking-wide text-[#9ca3af]">
           RSI 4, 6, 8
         </h4>
@@ -139,7 +140,11 @@ export function RSIChart({ data, secondaryData = [], height = 200 }: RSIChartPro
           </div>
         </div>
       </div>
-      <div ref={chartContainerRef} className="h-[calc(100%-32px)] w-full" />
+      <div className="relative z-10 h-[calc(100%-32px)] w-full">
+        <div className="pointer-events-none absolute left-0 right-0 top-6 h-6 rounded-full bg-[#ef4444]/5" />
+        <div className="pointer-events-none absolute left-0 right-0 bottom-6 h-6 rounded-full bg-[#10b981]/5" />
+        <div ref={chartContainerRef} className="h-full w-full" />
+      </div>
       {!isChartReady && (
         <div className="absolute inset-0 flex items-center justify-center">
           <div className="text-xs text-[#9ca3af]">Cargando RSI...</div>

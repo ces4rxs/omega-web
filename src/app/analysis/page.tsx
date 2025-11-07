@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import type { CandlestickData, LineData, HistogramData } from "lightweight-charts";
 import { AnalysisLayout } from "@/components/analysis/AnalysisLayout";
 import { AIModeBadge } from "@/components/analysis/AIModeBadge";
@@ -24,13 +24,12 @@ export default function AnalysisPage() {
   const [volumeData, setVolumeData] = useState<HistogramData[]>([]);
   const [rsiData, setRsiData] = useState<LineData[]>([]);
   const [rsiSignalData, setRsiSignalData] = useState<LineData[]>([]);
+  const [activeIndicators, setActiveIndicators] = useState<string[]>(["MA Cross", "Volumen"]);
+
+  const indicatorOptions = ["MA Cross", "Volumen", "AI Overlay"];
 
   // ✅ FETCH REAL DATA FROM BACKEND
-  useEffect(() => {
-    fetchRealData();
-  }, [selectedAsset, selectedTimeframe]);
-
-  const fetchRealData = async () => {
+  const fetchRealData = useCallback(async () => {
     setIsLoading(true);
     try {
       // Fetch real market data from backend
@@ -142,7 +141,40 @@ export default function AnalysisPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [selectedAsset, selectedTimeframe]);
+
+  useEffect(() => {
+    fetchRealData();
+  }, [fetchRealData]);
+
+  const priceStats = useMemo(() => {
+    if (!candleData.length) {
+      return {
+        lastPrice: undefined,
+        changePercent: undefined,
+        range: undefined,
+      };
+    }
+
+    const lastCandle = candleData[candleData.length - 1];
+    const prevCandle = candleData[candleData.length - 2];
+    const changePercent = prevCandle
+      ? ((lastCandle.close - prevCandle.close) / prevCandle.close) * 100
+      : 0;
+
+    const recentWindow = candleData.slice(-60);
+    const highs = recentWindow.map((c) => c.high ?? c.close);
+    const lows = recentWindow.map((c) => c.low ?? c.close);
+
+    return {
+      lastPrice: lastCandle.close,
+      changePercent,
+      range: {
+        high: Math.max(...highs),
+        low: Math.min(...lows),
+      },
+    };
+  }, [candleData]);
 
   // Calculate risk score based on volatility
   const riskScore = useMemo(() => {
@@ -190,6 +222,14 @@ export default function AnalysisPage() {
     }
   };
 
+  const toggleIndicator = (indicator: string) => {
+    setActiveIndicators((prev) =>
+      prev.includes(indicator)
+        ? prev.filter((item) => item !== indicator)
+        : [...prev, indicator]
+    );
+  };
+
   return (
     <AnalysisLayout>
       <div className="flex h-[calc(100vh-140px)] flex-col gap-4">
@@ -199,7 +239,43 @@ export default function AnalysisPage() {
           <AIModeBadge isActivated />
 
           {/* Asset Selector */}
-          <AssetSelector selectedAsset={selectedAsset} onSelectAsset={setSelectedAsset} />
+          <AssetSelector
+            selectedAsset={selectedAsset}
+            selectedTimeframe={selectedTimeframe}
+            onSelectAsset={setSelectedAsset}
+            onSelectTimeframe={setSelectedTimeframe}
+            lastPrice={priceStats.lastPrice}
+            changePercent={priceStats.changePercent}
+            dayRange={priceStats.range}
+          />
+
+          <div className="absolute right-4 top-16 z-40 flex flex-col items-end gap-2 text-[11px] text-[#9ca3af]">
+            <div className="flex items-center gap-2 rounded-full border border-[#1f2937] bg-[#0f1422]/90 px-4 py-2 shadow-[0_0_15px_rgba(0,212,255,0.1)]">
+              <span className="text-[10px] uppercase tracking-[0.4em] text-[#6b7280]">Indicadores</span>
+              <div className="flex items-center gap-1">
+                {indicatorOptions.map((indicator) => {
+                  const isActive = activeIndicators.includes(indicator);
+                  return (
+                    <button
+                      key={indicator}
+                      onClick={() => toggleIndicator(indicator)}
+                      className={`rounded-full px-3 py-1 font-semibold transition-colors ${
+                        isActive
+                          ? "bg-[#00d4ff]/20 text-[#00d4ff]"
+                          : "text-[#6b7280] hover:text-[#f9fafb]"
+                      }`}
+                    >
+                      {indicator}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+            <div className="flex items-center gap-2 rounded-lg border border-[#1f2937] bg-[#0f1422]/80 px-3 py-1 text-[10px] uppercase tracking-[0.3em] text-[#6b7280]">
+              <span>IA ALERTA</span>
+              <span className="rounded-full bg-[#ef4444]/20 px-2 py-0.5 text-[10px] font-semibold text-[#ef4444]">2 Activas</span>
+            </div>
+          </div>
 
           {/* Loading State */}
           {isLoading && (
