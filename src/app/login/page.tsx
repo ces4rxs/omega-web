@@ -1,118 +1,131 @@
-"use client";
+'use client';
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { motion, AnimatePresence } from "framer-motion";
-import { useAuth } from "@/context/AuthContext";
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { loginUser } from '@/lib/auth';
+import Image from 'next/image';
 
 export default function LoginPage() {
-  const { login, loading } = useAuth();
   const router = useRouter();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [rememberMe, setRememberMe] = useState(false);
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError("");
+    setError('');
+    setLoading(true);
+
     try {
-      await login(email, password);
-      router.push("/dashboard");
-    } catch {
-      setError("⚠️ Credenciales inválidas o error en el servidor.");
+      const data = await loginUser(email, password);
+      
+      // Guardar token en localStorage o sessionStorage según "Recordarme"
+      const storage = rememberMe ? localStorage : sessionStorage;
+      storage.setItem('accessToken', data.accessToken);
+      storage.setItem('user', JSON.stringify(data.user));
+      
+      // Redirigir al dashboard
+      router.push('/dashboard');
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Error al iniciar sesión');
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <main className="min-h-screen relative flex items-center justify-center overflow-hidden bg-[#050812] text-white">
-      {/* Fondo animado azul IA */}
-      <div className="absolute inset-0 bg-gradient-to-br from-sky-900/10 via-sky-500/5 to-transparent" />
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(56,189,248,0.15)_0%,transparent_70%)] animate-pulse" />
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 via-blue-900 to-gray-900">
+      <div className="bg-white p-8 rounded-2xl shadow-2xl w-full max-w-md">
+        <div className="text-center mb-8">
+          <div className="flex justify-center mb-4">
+            <Image 
+              src="/images/omega-logo.png" 
+              alt="OMEGA Logo" 
+              width={120} 
+              height={120}
+              priority
+            />
+          </div>
+          <h1 className="text-3xl font-bold text-gray-900">OMEGA</h1>
+          <p className="text-gray-600 mt-2">Trading Platform</p>
+        </div>
 
-      <motion.div
-        initial={{ opacity: 0, y: 25 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.8, ease: "easeOut" }}
-        className="relative z-10 w-full max-w-sm bg-slate-900/70 backdrop-blur-lg p-8 rounded-2xl border border-sky-500/30 shadow-xl shadow-sky-900/10"
-      >
-        <h1 className="text-3xl font-bold text-sky-400 mb-2 text-center">
-          Iniciar sesión
-        </h1>
-        <p className="text-sm text-slate-400 text-center mb-6">
-          Bienvenido a <span className="text-sky-300 font-semibold">OMEGA Web</span>
-        </p>
-
-        <form onSubmit={handleLogin} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-6">
           <div>
-            <label className="block text-sm mb-1 text-slate-300">
-              Correo electrónico
+            <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+              Email
             </label>
             <input
+              id="email"
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              className="w-full bg-slate-800/80 rounded-lg px-3 py-2 outline-none border border-sky-800/40 focus:border-sky-400 focus:ring-1 focus:ring-sky-400/40 transition-all"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
               placeholder="tu@email.com"
             />
           </div>
 
           <div>
-            <label className="block text-sm mb-1 text-slate-300">
+            <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
               Contraseña
             </label>
             <input
+              id="password"
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
-              className="w-full bg-slate-800/80 rounded-lg px-3 py-2 outline-none border border-sky-800/40 focus:border-sky-400 focus:ring-1 focus:ring-sky-400/40 transition-all"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
               placeholder="••••••••"
             />
           </div>
 
-          <AnimatePresence>
-            {error && (
-              <motion.p
-                initial={{ opacity: 0, y: -5 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -5 }}
-                className="text-red-400 text-sm mt-2"
-              >
-                {error}
-              </motion.p>
-            )}
-          </AnimatePresence>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center">
+              <input
+                id="remember-me"
+                type="checkbox"
+                checked={rememberMe}
+                onChange={(e) => setRememberMe(e.target.checked)}
+                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+              />
+              <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-700">
+                Recordarme
+              </label>
+            </div>
 
-          <motion.button
+            <a 
+              href="/forgot-password" 
+              className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+            >
+              ¿Olvidaste tu contraseña?
+            </a>
+          </div>
+
+          {error && (
+            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+              {error}
+            </div>
+          )}
+
+          <button
             type="submit"
             disabled={loading}
-            whileTap={{ scale: 0.97 }}
-            className="w-full bg-gradient-to-r from-sky-600 to-sky-500 hover:from-sky-500 hover:to-sky-400 text-white font-semibold rounded-lg py-2 mt-4 transition-all duration-300 shadow-md hover:shadow-sky-700/30"
+            className="w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white py-3 px-4 rounded-lg hover:from-blue-700 hover:to-blue-800 focus:ring-4 focus:ring-blue-300 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 font-semibold"
           >
-            {loading ? "Cargando..." : "Entrar"}
-          </motion.button>
-
-          {/* Botón Face ID (placeholder) */}
-          <button
-            type="button"
-            disabled={loading}
-            className="w-full mt-3 py-2 rounded-lg bg-slate-800/70 hover:bg-slate-700/80 border border-sky-400/20 text-sky-300 text-sm flex items-center justify-center gap-2 transition-all"
-          >
-            <span>🔒 Iniciar con Face ID</span>
+            {loading ? 'Iniciando sesión...' : 'Iniciar Sesión'}
           </button>
-
-          <p className="text-center text-sm text-slate-400 mt-4">
-            ¿No tienes cuenta?{" "}
-            <a
-              href="/register"
-              className="text-sky-400 hover:underline hover:text-sky-300"
-            >
-              Regístrate
-            </a>
-          </p>
         </form>
-      </motion.div>
-    </main>
+
+        <div className="mt-6 text-center">
+          <a href="/register" className="text-blue-600 hover:text-blue-700 text-sm font-medium">
+            ¿No tienes cuenta? <span className="underline">Regístrate</span>
+          </a>
+        </div>
+      </div>
+    </div>
   );
 }

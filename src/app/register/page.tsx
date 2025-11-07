@@ -1,109 +1,142 @@
-"use client";
+'use client';
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { motion, AnimatePresence } from "framer-motion";
-import { useAuth } from "@/context/AuthContext";
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { registerUser } from '@/lib/auth';
+import Image from 'next/image';
 
 export default function RegisterPage() {
-  const { register, loading } = useAuth();
   const router = useRouter();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleRegister = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError("");
+    setError('');
+
+    // Validar que las contraseñas coincidan
+    if (password !== confirmPassword) {
+      setError('Las contraseñas no coinciden');
+      return;
+    }
+
+    // Validar longitud mínima de contraseña
+    if (password.length < 6) {
+      setError('La contraseña debe tener al menos 6 caracteres');
+      return;
+    }
+
+    setLoading(true);
+
     try {
-      await register(email, password);
-      router.push("/dashboard");
-    } catch {
-      setError("⚠️ No se pudo crear la cuenta. Intenta con otro correo.");
+      const data = await registerUser(email, password);
+      
+      // Guardar token en localStorage
+      localStorage.setItem('accessToken', data.accessToken);
+      localStorage.setItem('user', JSON.stringify(data.user));
+      
+      // Redirigir al dashboard
+      router.push('/dashboard');
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Error al crear la cuenta');
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <main className="min-h-screen relative flex items-center justify-center overflow-hidden bg-[#050812] text-white">
-      {/* Fondo animado neural */}
-      <div className="absolute inset-0 bg-gradient-to-br from-emerald-900/10 via-emerald-500/5 to-transparent" />
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(16,185,129,0.15)_0%,transparent_70%)] animate-pulse" />
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 via-blue-900 to-gray-900">
+      <div className="bg-white p-8 rounded-2xl shadow-2xl w-full max-w-md">
+        <div className="text-center mb-8">
+          <div className="flex justify-center mb-4">
+            <Image 
+              src="/images/omega-logo.png" 
+              alt="OMEGA Logo" 
+              width={120} 
+              height={120}
+              priority
+            />
+          </div>
+          <h1 className="text-3xl font-bold text-gray-900">Crear Cuenta</h1>
+          <p className="text-gray-600 mt-2">Únete a OMEGA Trading Platform</p>
+        </div>
 
-      <motion.div
-        initial={{ opacity: 0, y: 25 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.8, ease: "easeOut" }}
-        className="relative z-10 w-full max-w-sm bg-slate-900/70 backdrop-blur-lg p-8 rounded-2xl border border-emerald-500/30 shadow-xl shadow-emerald-900/10"
-      >
-        <h1 className="text-3xl font-bold text-emerald-400 mb-2 text-center">
-          Crear cuenta
-        </h1>
-        <p className="text-sm text-slate-400 text-center mb-6">
-          Accede al universo <span className="text-emerald-300 font-semibold">OMEGA</span>
-        </p>
-
-        <form onSubmit={handleRegister} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-6">
           <div>
-            <label className="block text-sm mb-1 text-slate-300">
-              Correo electrónico
+            <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+              Email
             </label>
             <input
+              id="email"
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              className="w-full bg-slate-800/80 rounded-lg px-3 py-2 outline-none border border-emerald-800/40 focus:border-emerald-400 focus:ring-1 focus:ring-emerald-400/40 transition-all"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
               placeholder="tu@email.com"
             />
           </div>
 
           <div>
-            <label className="block text-sm mb-1 text-slate-300">
+            <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
               Contraseña
             </label>
             <input
+              id="password"
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
-              className="w-full bg-slate-800/80 rounded-lg px-3 py-2 outline-none border border-emerald-800/40 focus:border-emerald-400 focus:ring-1 focus:ring-emerald-400/40 transition-all"
-              placeholder="••••••••"
+              minLength={6}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+              placeholder="Mínimo 6 caracteres"
             />
           </div>
 
-          <AnimatePresence>
-            {error && (
-              <motion.p
-                initial={{ opacity: 0, y: -5 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -5 }}
-                className="text-red-400 text-sm mt-2"
-              >
-                {error}
-              </motion.p>
-            )}
-          </AnimatePresence>
+          <div>
+            <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-2">
+              Confirmar Contraseña
+            </label>
+            <input
+              id="confirmPassword"
+              type="password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              required
+              minLength={6}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+              placeholder="Repite tu contraseña"
+            />
+          </div>
 
-          <motion.button
+          {error && (
+            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+              {error}
+            </div>
+          )}
+
+          <button
             type="submit"
             disabled={loading}
-            whileTap={{ scale: 0.97 }}
-            className="w-full bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 text-white font-semibold rounded-lg py-2 mt-4 transition-all duration-300 shadow-md hover:shadow-emerald-700/30"
+            className="w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white py-3 px-4 rounded-lg hover:from-blue-700 hover:to-blue-800 focus:ring-4 focus:ring-blue-300 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 font-semibold"
           >
-            {loading ? "Creando cuenta..." : "Registrarme"}
-          </motion.button>
-
-          <p className="text-center text-sm text-slate-400 mt-4">
-            ¿Ya tienes una cuenta?{" "}
-            <a
-              href="/login"
-              className="text-emerald-400 hover:underline hover:text-emerald-300"
-            >
-              Inicia sesión
-            </a>
-          </p>
+            {loading ? 'Creando cuenta...' : 'Crear Cuenta'}
+          </button>
         </form>
-      </motion.div>
-    </main>
+
+        <div className="mt-6 text-center">
+          <a href="/login" className="text-blue-600 hover:text-blue-700 text-sm font-medium">
+            ¿Ya tienes cuenta? <span className="underline">Inicia Sesión</span>
+          </a>
+        </div>
+
+        <div className="mt-4 text-center text-xs text-gray-500">
+          Al registrarte, aceptas nuestros términos y condiciones
+        </div>
+      </div>
+    </div>
   );
 }
