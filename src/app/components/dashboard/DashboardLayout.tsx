@@ -5,6 +5,7 @@ import { ReactNode } from "react";
 import Sidebar from "./Sidebar";
 import Topbar from "./Topbar";
 import { motion } from "framer-motion";
+import { colors } from "@/styles/theme";
 
 export default function DashboardLayout({
   user,
@@ -16,7 +17,7 @@ export default function DashboardLayout({
   children: ReactNode;
 }) {
   return (
-    <div className="flex min-h-screen bg-[#050812] text-white">
+    <div className="flex min-h-screen text-white" style={{ backgroundColor: colors.bgPrimary }}>
       {/* 🔹 Barra lateral izquierda */}
       <Sidebar onLogout={onLogout} />
 
@@ -33,15 +34,21 @@ export default function DashboardLayout({
           className="flex-1 grid grid-cols-1 xl:grid-cols-2 gap-6 p-6 overflow-y-auto"
         >
           {/* 🔹 Panel izquierdo: Trading o análisis */}
-          <section className="bg-slate-900/70 backdrop-blur-lg border border-sky-500/30 rounded-2xl p-4 shadow-xl shadow-sky-900/10">
-            <h2 className="text-lg font-semibold text-sky-400 mb-3">
+          <section className="rounded-2xl border p-4 shadow-lg" style={{
+            backgroundColor: colors.bgCard,
+            borderColor: colors.borderPrimary
+          }}>
+            <h2 className="text-lg font-semibold mb-3" style={{ color: colors.cyanPrimary }}>
               📈 Panel de Control
             </h2>
             {children}
           </section>
 
           {/* 🔹 Panel derecho: IA o Mercados */}
-          <section className="bg-slate-900/70 backdrop-blur-lg border border-sky-500/30 rounded-2xl p-4 shadow-xl shadow-sky-900/10 hidden xl:block">
+          <section className="rounded-2xl border p-4 shadow-lg hidden xl:block" style={{
+            backgroundColor: colors.bgCard,
+            borderColor: colors.borderPrimary
+          }}>
             <MarketIntelligence />
           </section>
         </motion.main>

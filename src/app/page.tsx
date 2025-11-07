@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import api from "@/lib/api";
 import axios from "axios";
 import { motion } from "framer-motion";
+import { colors } from "@/styles/theme";
 
 /**
  * 🌍 Panel Educativo de Mercado OMEGA v3.1
@@ -35,30 +36,33 @@ function MarketPanel() {
   }, []);
 
   if (loading) {
-    return <p className="text-slate-400 mt-6">Cargando mercado...</p>;
+    return <p style={{ color: colors.textSecondary }} className="mt-6">Cargando mercado...</p>;
   }
 
   const assets = [
-    { key: "BTCUSD", label: "Bitcoin (BTC/USD)", unit: "USD", color: "text-yellow-400" },
-    { key: "XAUUSD", label: "Oro (XAU/USD)", unit: "USD/oz", color: "text-amber-400" },
-    { key: "XAGUSD", label: "Plata (XAG/USD)", unit: "USD/oz", color: "text-gray-300" },
-    { key: "WTIUSD", label: "Petróleo (WTI/USD)", unit: "USD/barril", color: "text-orange-400" },
-    { key: "SP500", label: "S&P 500", unit: "Pts", color: "text-cyan-400" },
+    { key: "BTCUSD", label: "Bitcoin (BTC/USD)", unit: "USD", color: colors.yellowAccent },
+    { key: "XAUUSD", label: "Oro (XAU/USD)", unit: "USD/oz", color: colors.yellowAccent },
+    { key: "XAGUSD", label: "Plata (XAG/USD)", unit: "USD/oz", color: colors.textPrimary },
+    { key: "WTIUSD", label: "Petróleo (WTI/USD)", unit: "USD/barril", color: colors.goldDark },
+    { key: "SP500", label: "S&P 500", unit: "Pts", color: colors.cyanPrimary },
   ];
 
   const getChangeIndicator = (symbol: string) => {
     const current = data?.[symbol]?.price;
     const prev = previousData?.[symbol]?.price;
     if (!prev || !current) return null;
-    if (current > prev) return <span className="text-green-400">▲</span>;
-    if (current < prev) return <span className="text-red-400">▼</span>;
-    return <span className="text-slate-400">—</span>;
+    if (current > prev) return <span style={{ color: colors.greenBullish }}>▲</span>;
+    if (current < prev) return <span style={{ color: colors.redBearish }}>▼</span>;
+    return <span style={{ color: colors.textSecondary }}>—</span>;
   };
 
   return (
-    <section className="mt-10 bg-slate-800/50 p-6 rounded-2xl border border-sky-500/20 shadow-lg">
-      <h2 className="text-2xl font-semibold text-sky-300 mb-6 flex items-center gap-2">
-        🌐 Mercado Global — <span className="text-sky-400">Módulo Educativo</span>
+    <section className="mt-10 p-6 rounded-2xl border shadow-lg" style={{
+      backgroundColor: `${colors.bgSecondary}80`,
+      borderColor: colors.borderPrimary
+    }}>
+      <h2 className="text-2xl font-semibold mb-6 flex items-center gap-2" style={{ color: colors.cyanPrimary }}>
+        🌐 Mercado Global — <span>Módulo Educativo</span>
       </h2>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -67,18 +71,25 @@ function MarketPanel() {
           return (
             <motion.div
               key={a.key}
-              className="bg-slate-900/80 border border-sky-500/10 rounded-xl p-4 hover:border-sky-400/40 transition-all duration-300"
-              whileHover={{ scale: 1.03 }}
+              className="rounded-xl p-4 border transition-all duration-300"
+              style={{
+                backgroundColor: `${colors.bgCard}cc`,
+                borderColor: `${colors.borderPrimary}40`
+              }}
+              whileHover={{
+                scale: 1.03,
+                borderColor: colors.borderPrimary
+              }}
             >
-              <h3 className={`text-lg font-semibold ${a.color}`}>{a.label}</h3>
-              <p className="text-3xl font-bold text-cyan-400 mt-1 flex items-center gap-2">
+              <h3 className="text-lg font-semibold" style={{ color: a.color }}>{a.label}</h3>
+              <p className="text-3xl font-bold mt-1 flex items-center gap-2" style={{ color: colors.cyanPrimary }}>
                 {asset?.price ? asset.price.toLocaleString() : "—"}{" "}
-                <span className="text-sm text-slate-400">{a.unit}</span>
+                <span className="text-sm" style={{ color: colors.textSecondary }}>{a.unit}</span>
                 {getChangeIndicator(a.key)}
               </p>
-              <p className="text-sm text-slate-400 mt-1">Fuente: {asset?.source || "—"}</p>
+              <p className="text-sm mt-1" style={{ color: colors.textSecondary }}>Fuente: {asset?.source || "—"}</p>
               {asset?.error && (
-                <p className="text-xs text-red-400 mt-1">⚠ {asset.error}</p>
+                <p className="text-xs mt-1" style={{ color: colors.redBearish }}>⚠ {asset.error}</p>
               )}
             </motion.div>
           );
@@ -86,11 +97,11 @@ function MarketPanel() {
       </div>
 
       <div className="mt-4 text-center">
-        <p className="text-xs text-slate-500">
+        <p className="text-xs" style={{ color: colors.textMuted }}>
           Última actualización:{" "}
           {new Date().toLocaleTimeString("es-CO", { hour12: false })}
         </p>
-        <p className="text-xs text-amber-400 mt-1">
+        <p className="text-xs mt-1" style={{ color: colors.yellowAccent }}>
           ⚠️ Datos de mercado con fines educativos y de simulación.
         </p>
       </div>
@@ -113,20 +124,20 @@ export default function Home() {
   }, []);
 
   return (
-    <main className="min-h-screen bg-slate-900 text-white p-8">
-      <h1 className="text-3xl font-bold text-sky-400">OMEGA Web Dashboard</h1>
-      <p className="text-slate-400 mt-2">
+    <main className="min-h-screen text-white p-8" style={{ backgroundColor: colors.bgPrimary }}>
+      <h1 className="text-3xl font-bold" style={{ color: colors.cyanPrimary }}>OMEGA Web Dashboard</h1>
+      <p className="mt-2" style={{ color: colors.textSecondary }}>
         Conectado al servidor IA (Render Cloud)
       </p>
 
-      {error && <p className="mt-6 text-red-400">Error: {error}</p>}
+      {error && <p className="mt-6" style={{ color: colors.redBearish }}>Error: {error}</p>}
 
       {data ? (
-        <pre className="mt-6 bg-slate-800 p-4 rounded-lg overflow-auto">
+        <pre className="mt-6 p-4 rounded-lg overflow-auto" style={{ backgroundColor: colors.bgSecondary }}>
           {JSON.stringify(data, null, 2)}
         </pre>
       ) : !error ? (
-        <p className="mt-6 text-slate-500">Cargando manifest...</p>
+        <p className="mt-6" style={{ color: colors.textMuted }}>Cargando manifest...</p>
       ) : null}
 
       {/* 🌐 Panel educativo de mercado */}
