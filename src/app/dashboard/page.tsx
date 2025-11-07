@@ -3,7 +3,14 @@
 import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Home, Activity, Brain, BarChart2, Settings } from "lucide-react";
+import {
+  Home,
+  Activity,
+  Brain,
+  BarChart2,
+  Settings,
+  LineChart,
+} from "lucide-react";
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -46,6 +53,14 @@ export default function DashboardPage() {
               <Brain size={18} /> <span>Asistente IA</span>
             </button>
 
+            {/* 🔍 NUEVO BOTÓN — Análisis Cuántico */}
+            <button
+              onClick={() => router.push("/analysis")}
+              className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-blue-600/10 transition"
+            >
+              <LineChart size={18} /> <span>Análisis Cuántico</span>
+            </button>
+
             <button
               onClick={() => router.push("/reports")}
               className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-blue-600/10 transition"
@@ -76,20 +91,24 @@ export default function DashboardPage() {
             Bienvenido{user?.name ? `, ${user.name}` : ""} 👋
           </h2>
           <p className="text-gray-400 mb-10">
-            Tu panel de control cuántico está listo.  
-            Explora tus estrategias, IA y análisis de rendimiento.
+            Tu panel de control cuántico está listo. Explora tus estrategias, IA
+            y análisis de rendimiento.
           </p>
 
           {/* Tarjetas de resumen */}
           <div className="grid md:grid-cols-3 gap-6">
             <div className="bg-white/5 border border-white/10 rounded-xl p-6 hover:border-blue-400/40 transition">
-              <h3 className="text-lg font-semibold mb-2">💰 Rendimiento Total</h3>
+              <h3 className="text-lg font-semibold mb-2">
+                💰 Rendimiento Total
+              </h3>
               <p className="text-3xl font-bold text-blue-400">+12.5%</p>
               <p className="text-xs text-gray-400 mt-1">Últimos 30 días</p>
             </div>
 
             <div className="bg-white/5 border border-white/10 rounded-xl p-6 hover:border-blue-400/40 transition">
-              <h3 className="text-lg font-semibold mb-2">⚙️ Estrategias Activas</h3>
+              <h3 className="text-lg font-semibold mb-2">
+                ⚙️ Estrategias Activas
+              </h3>
               <p className="text-3xl font-bold text-purple-400">3</p>
               <p className="text-xs text-gray-400 mt-1">SMA, RSI, Neural v11</p>
             </div>
@@ -97,7 +116,9 @@ export default function DashboardPage() {
             <div className="bg-white/5 border border-white/10 rounded-xl p-6 hover:border-blue-400/40 transition">
               <h3 className="text-lg font-semibold mb-2">🧠 IA Analizando</h3>
               <p className="text-3xl font-bold text-cyan-400">BTCUSD</p>
-              <p className="text-xs text-gray-400 mt-1">Neural Advisor v11</p>
+              <p className="text-xs text-gray-400 mt-1">
+                Neural Advisor v11
+              </p>
             </div>
           </div>
 
