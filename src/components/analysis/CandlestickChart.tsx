@@ -52,106 +52,56 @@ export function CandlestickChart({
             vertLines: { color: "rgba(255, 255, 255, 0.05)" },
             horzLines: { color: "rgba(255, 255, 255, 0.05)" },
           },
-          crosshair: {
-            mode: 1,
-            vertLine: {
-              color: "#00d4ff",
-              width: 1,
-              style: 2,
-              labelBackgroundColor: "#00d4ff",
-            },
-            horzLine: {
-              color: "#00d4ff",
-              width: 1,
-              style: 2,
-              labelBackgroundColor: "#00d4ff",
-            },
-          },
-          rightPriceScale: {
-            borderColor: "rgba(0, 212, 255, 0.3)",
-          },
-          timeScale: {
-            borderColor: "rgba(0, 212, 255, 0.3)",
-            timeVisible: true,
-            secondsVisible: false,
-          },
-        });
+        },
+        rightPriceScale: {
+          borderColor: "rgba(0, 212, 255, 0.3)",
+        },
+        timeScale: {
+          borderColor: "rgba(0, 212, 255, 0.3)",
+          timeVisible: true,
+          secondsVisible: false,
+        },
+      });
 
-        // Candlestick series
-        const candleSeries = chart.addSeries(CandlestickSeries, {
-          upColor: "#10b981",
-          downColor: "#ef4444",
-          borderUpColor: "#10b981",
-          borderDownColor: "#ef4444",
-          wickUpColor: "#10b981",
-          wickDownColor: "#ef4444",
-        });
+      // Candlestick series
+      const candleSeries = chart.addCandlestickSeries({
+        upColor: "#10b981",
+        downColor: "#ef4444",
+        borderUpColor: "#10b981",
+        borderDownColor: "#ef4444",
+        wickUpColor: "#10b981",
+        wickDownColor: "#ef4444",
+      });
 
-        // Volume histogram
-        const volumeSeries = chart.addSeries(HistogramSeries, {
-          color: "#00d4ff",
-          priceFormat: {
-            type: "volume",
-          },
-          priceScaleId: "",
-        });
+      // Volume histogram
+      const volumeSeries = chart.addHistogramSeries({
+        color: "#00d4ff",
+        priceFormat: {
+          type: "volume",
+        },
+        priceScaleId: "",
+        scaleMargins: {
+          top: 0.8,
+          bottom: 0,
+        },
+      });
 
-        volumeSeries.priceScale().applyOptions({
-          scaleMargins: {
-            top: 0.8,
-            bottom: 0,
-          },
-        });
+      // MA Fast (cyan)
+      const maFastSeries = chart.addLineSeries({
+        color: "#00d4ff",
+        lineWidth: 2,
+        title: "MA Rápida",
+        priceLineVisible: false,
+        lastValueVisible: false,
+      });
 
-        // MA Fast (cyan)
-        const maFastSeries = chart.addSeries(LineSeries, {
-          color: "#00d4ff",
-          lineWidth: 2,
-          title: "MA Rápida",
-          priceLineVisible: false,
-          lastValueVisible: false,
-        });
-
-        // MA Slow (orange)
-        const maSlowSeries = chart.addSeries(LineSeries, {
-          color: "#fb923c",
-          lineWidth: 2,
-          title: "MA Lenta",
-          priceLineVisible: false,
-          lastValueVisible: false,
-        });
-
-        chartRef.current = chart;
-        candleSeriesRef.current = candleSeries;
-        volumeSeriesRef.current = volumeSeries;
-        maFastSeriesRef.current = maFastSeries;
-        maSlowSeriesRef.current = maSlowSeries;
-
-        setIsChartReady(true);
-
-        // Handle resize
-        const handleResize = () => {
-          if (chartContainerRef.current && chartRef.current) {
-            chartRef.current.applyOptions({
-              width: chartContainerRef.current.clientWidth,
-            });
-          }
-        };
-
-        window.addEventListener("resize", handleResize);
-        handleResize(); // Initial resize
-
-        return () => {
-          isMounted = false;
-          window.removeEventListener("resize", handleResize);
-          if (chartRef.current) {
-            chart.remove();
-            chartRef.current = null;
-          }
-        };
-      })
-      .catch((error) => {
-        console.error("Error loading lightweight-charts:", error);
+      // MA Slow (orange)
+      const maSlowSeries = chart.addLineSeries({
+        color: "#fb923c",
+        lineWidth: 2,
+        title: "MA Lenta",
+        priceLineVisible: false,
+        lastValueVisible: false,
       });
 
     return () => {

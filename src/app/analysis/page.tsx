@@ -1,12 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo, useCallback } from "react";
-import type {
-  CandlestickData,
-  LineData,
-  HistogramData,
-  UTCTimestamp,
-} from "lightweight-charts";
+import type { CandlestickData, LineData, HistogramData } from "lightweight-charts";
 import { AnalysisLayout } from "@/components/analysis/AnalysisLayout";
 import { AIModeBadge } from "@/components/analysis/AIModeBadge";
 import { AssetSelector } from "@/components/analysis/AssetSelector";

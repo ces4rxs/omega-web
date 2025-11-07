@@ -62,7 +62,7 @@ export function RSIChart({ data, secondaryData = [], height = 200 }: RSIChartPro
       });
 
       // RSI Line (cyan)
-      const rsiSeries = chart.addSeries(LineSeries, {
+      const rsiSeries = chart.addLineSeries({
         color: "#00d4ff",
         lineWidth: 2,
         title: "RSI",
@@ -70,7 +70,7 @@ export function RSIChart({ data, secondaryData = [], height = 200 }: RSIChartPro
       });
 
       // Secondary line (orange)
-      const secondarySeries = chart.addSeries(LineSeries, {
+      const secondarySeries = chart.addLineSeries({
         color: "#fb923c",
         lineWidth: 2,
         title: "Signal",
