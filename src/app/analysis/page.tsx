@@ -1,7 +1,7 @@
 "use client";
 // src/app/analysis/page.tsx
 
-import useAIEvents from "@/hooks/useAIEvents";
+import { useAIEvents } from "@/hooks/useAIEvents";
 import OptimizerOverlay from "@/components/OptimizerOverlay";
 import { motion } from "framer-motion";
 import { Cpu, LineChart, Loader2 } from "lucide-react";
