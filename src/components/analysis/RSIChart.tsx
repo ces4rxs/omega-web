@@ -22,7 +22,7 @@ export function RSIChart({ data, secondaryData = [], height = 200 }: RSIChartPro
     let isMounted = true;
 
     // Dynamic import to avoid SSR issues
-    import("lightweight-charts").then(({ createChart }) => {
+    import("lightweight-charts").then(({ createChart, LineSeries }) => {
       if (!isMounted || !chartContainerRef.current) return;
 
       const chart = createChart(chartContainerRef.current, {

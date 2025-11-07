@@ -38,32 +38,19 @@ export function CandlestickChart({
     let isMounted = true;
 
     // Dynamic import to avoid SSR issues with lightweight-charts
-    import("lightweight-charts").then(({ createChart }) => {
-      if (!isMounted || !chartContainerRef.current) return;
+    import("lightweight-charts")
+      .then(({ createChart, CandlestickSeries, HistogramSeries, LineSeries }) => {
+        if (!isMounted || !chartContainerRef.current) return;
 
-      const chart = createChart(chartContainerRef.current, {
-        height,
-        layout: {
-          background: { color: "#0a0e1a" },
-          textColor: "#9ca3af",
-        },
-        grid: {
-          vertLines: { color: "rgba(255, 255, 255, 0.05)" },
-          horzLines: { color: "rgba(255, 255, 255, 0.05)" },
-        },
-        crosshair: {
-          mode: 1,
-          vertLine: {
-            color: "#00d4ff",
-            width: 1,
-            style: 2,
-            labelBackgroundColor: "#00d4ff",
+        const chart = createChart(chartContainerRef.current, {
+          height,
+          layout: {
+            background: { color: "#0a0e1a" },
+            textColor: "#9ca3af",
           },
-          horzLine: {
-            color: "#00d4ff",
-            width: 1,
-            style: 2,
-            labelBackgroundColor: "#00d4ff",
+          grid: {
+            vertLines: { color: "rgba(255, 255, 255, 0.05)" },
+            horzLines: { color: "rgba(255, 255, 255, 0.05)" },
           },
         },
         rightPriceScale: {
@@ -116,38 +103,6 @@ export function CandlestickChart({
         priceLineVisible: false,
         lastValueVisible: false,
       });
-
-      chartRef.current = chart;
-      candleSeriesRef.current = candleSeries;
-      volumeSeriesRef.current = volumeSeries;
-      maFastSeriesRef.current = maFastSeries;
-      maSlowSeriesRef.current = maSlowSeries;
-
-      setIsChartReady(true);
-
-      // Handle resize
-      const handleResize = () => {
-        if (chartContainerRef.current && chartRef.current) {
-          chartRef.current.applyOptions({
-            width: chartContainerRef.current.clientWidth,
-          });
-        }
-      };
-
-      window.addEventListener("resize", handleResize);
-      handleResize(); // Initial resize
-
-      return () => {
-        isMounted = false;
-        window.removeEventListener("resize", handleResize);
-        if (chartRef.current) {
-          chart.remove();
-          chartRef.current = null;
-        }
-      };
-    }).catch((error) => {
-      console.error("Error loading lightweight-charts:", error);
-    });
 
     return () => {
       isMounted = false;
