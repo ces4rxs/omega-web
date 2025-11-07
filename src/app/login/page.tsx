@@ -57,29 +57,36 @@ export default function LoginPage() {
         {/* Halo animado con gradiente dinámico */}
         <motion.div
           animate={{ rotate: 360 }}
-          transition={{ repeat: Infinity, duration: 10, ease: "linear" }}
-          className="absolute w-44 h-44 rounded-full border-[1.5px] animate-gradient-spin"
+          transition={{ repeat: Infinity, duration: 12, ease: "linear" }}
+          className="absolute w-44 h-44 rounded-full animate-gradient-spin"
           style={{
             background:
-              "conic-gradient(from 0deg, rgba(0,120,255,0.25), rgba(140,0,255,0.25), rgba(0,255,255,0.2), rgba(0,120,255,0.25))",
+              "conic-gradient(from 0deg, rgba(0,120,255,0.2), rgba(140,0,255,0.25), rgba(0,255,255,0.2), rgba(0,120,255,0.2))",
             maskImage:
-              "radial-gradient(circle, transparent 55%, black 56%)",
+              "radial-gradient(circle, transparent 58%, black 59%)",
             WebkitMaskImage:
-              "radial-gradient(circle, transparent 55%, black 56%)",
+              "radial-gradient(circle, transparent 58%, black 59%)",
           }}
         ></motion.div>
 
         {/* Capa interna brillante */}
         <div className="absolute w-28 h-28 rounded-full blur-3xl bg-blue-600/25 animate-pulse-slow"></div>
 
-        {/* 🌀 Logo sin fondo */}
-        <Image
-          src="/images/omega-logo-transparent.png"
-          alt="Omega Quantum Logo"
-          width={130}
-          height={130}
-          className="drop-shadow-[0_0_25px_rgba(0,120,255,0.4)] relative z-10"
-        />
+        {/* 🌀 Logo realmente transparente */}
+        <motion.div
+          initial={{ y: 0 }}
+          animate={{ y: [0, -4, 0] }}
+          transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+        >
+          <Image
+            src="/images/omega-logo-transparent.png"
+            alt="Omega Quantum Logo"
+            width={130}
+            height={130}
+            priority
+            className="drop-shadow-[0_0_30px_rgba(0,120,255,0.5)] mix-blend-screen select-none"
+          />
+        </motion.div>
 
         <h1 className="text-3xl font-extrabold mt-4 tracking-wider text-center">
           Bienvenido a{" "}
