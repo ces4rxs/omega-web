@@ -3,6 +3,8 @@
 import Image from "next/image";
 import Link from "next/link";
 import { motion } from "framer-motion";
+import OmegaFeatures from "@/components/OmegaFeatures";
+import OmegaDifferentiators from "@/components/OmegaDifferentiators";
 
 export default function Home() {
   return (
@@ -29,6 +31,11 @@ export default function Home() {
             <li>
               <a href="#features" className="hover:text-white transition">
                 Características
+              </a>
+            </li>
+            <li>
+              <a href="#differentiators" className="hover:text-white transition">
+                Diferenciadores
               </a>
             </li>
             <li>
@@ -118,8 +125,12 @@ export default function Home() {
         </motion.div>
       </section>
 
+      {/* === SECCIONES NUEVAS === */}
+      <OmegaFeatures />
+      <OmegaDifferentiators />
+
       {/* EFECTO FONDO */}
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_50%,rgba(59,130,246,0.08),transparent_60%)] blur-2xl" />
+      <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_30%_50%,rgba(59,130,246,0.08),transparent_60%)] blur-2xl" />
     </main>
   );
 }
