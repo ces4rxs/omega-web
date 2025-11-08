@@ -18,6 +18,7 @@ import { ReturnsDistribution } from "@/components/charts/returns-distribution"
 import { MetricCard } from "@/components/metric-card"
 import { TradeTable } from "@/components/trade-table"
 import { Activity, TrendingUp, TrendingDown, Target, Percent, DollarSign, Play, Download, Sparkles } from "lucide-react"
+import { transformBacktestResponse } from "@/lib/transformBacktest"
 
 // Mapeo de timeframes del frontend al backend
 const timeframeMap: Record<string, string> = {
@@ -113,13 +114,16 @@ export default function BacktestPage() {
       // Convertir timeframe al formato del backend
       const backendTimeframe = timeframeMap[formData.timeframe] || formData.timeframe
 
-      const backtestData = await api.post<BacktestResult>('/api/backtest', {
+      const rawBacktestData = await api.post<any>('/api/backtest', {
         ...formData,
         timeframe: backendTimeframe,
         parameters
       })
 
-      setResult(backtestData)
+      // Transformar trades raw del backend al formato esperado
+      const backtestData = transformBacktestResponse(rawBacktestData, formData.symbol)
+
+      setResult(backtestData as BacktestResult)
 
       const totalReturn = backtestData.backtest.performance.totalReturn
       addToast({
