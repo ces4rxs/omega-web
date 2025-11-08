@@ -27,6 +27,10 @@ interface RawBacktestResponse {
 export function transformBacktestResponse(raw: RawBacktestResponse, symbol: string): any {
   const { backtest } = raw
 
+  // DEBUG: Ver qué devuelve el backend
+  console.log('🔍 RAW BACKEND RESPONSE:', JSON.stringify(raw, null, 2))
+  console.log('🔍 PERFORMANCE METRICS:', backtest.performance)
+
   // Emparejar trades: cada BUY con su SELL correspondiente
   const pairedTrades = pairTrades(backtest.trades, symbol)
 
