@@ -44,8 +44,16 @@ export default function BacktestPage() {
   useEffect(() => {
     const loadStrategies = async () => {
       try {
-        const response = await api.get<{ strategies: string[] }>('/api/backtest/strategies')
-        setStrategies(response.strategies)
+        const response = await api.get<{ strategies: any }>('/api/backtest/strategies')
+        // Handle both string[] and object[] responses
+        if (Array.isArray(response.strategies)) {
+          const strategyNames = response.strategies.map((s: any) =>
+            typeof s === 'string' ? s : (s.id || s.name || s)
+          )
+          setStrategies(strategyNames)
+        } else {
+          setStrategies(['smaCrossover', 'rsiMeanRevert', 'trend'])
+        }
       } catch (err) {
         console.error('Error loading strategies:', err)
         setStrategies(['smaCrossover', 'rsiMeanRevert', 'trend'])
@@ -114,8 +122,10 @@ export default function BacktestPage() {
                   value={formData.strategy}
                   onChange={(e) => setFormData({ ...formData, strategy: e.target.value })}
                 >
-                  {strategies.map(s => (
-                    <option key={s} value={s}>{s}</option>
+                  {strategies.map((s, idx) => (
+                    <option key={`${s}-${idx}`} value={s}>
+                      {typeof s === 'string' ? s : JSON.stringify(s)}
+                    </option>
                   ))}
                 </Select>
               </div>
