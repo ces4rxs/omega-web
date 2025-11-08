@@ -39,3 +39,10 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Documentos de análisis temporales
+ANALISIS_BACKTESTER_UNDEFINED_FIELDS.md
+CODE_SNIPPETS_UNDEFINED_ISSUES.md
+INDICE_ARCHIVOS_REFERENCIADOS.md
+INICIO_AQUI.md
+RESUMEN_EJECUTIVO_ANALISIS.md
