@@ -21,6 +21,7 @@ import {
 } from "lucide-react"
 import { useTier } from "@/hooks/use-tier"
 import { useRouter } from "next/navigation"
+import { SymbolLogo } from "@/components/symbol-logo"
 
 interface LoopConfig {
   strategy: string
@@ -294,12 +295,13 @@ export default function AutoLoopPage() {
                   {config.symbols.map((symbol) => (
                     <div
                       key={symbol}
-                      className="bg-gray-800 px-3 py-1 rounded-full text-sm flex items-center gap-2"
+                      className="bg-gray-800/80 backdrop-blur-sm px-3 py-2 rounded-lg text-sm flex items-center gap-2 border border-gray-700 hover:border-purple-500/50 transition-colors"
                     >
-                      <span>{symbol}</span>
+                      <SymbolLogo symbol={symbol} size="sm" />
+                      <span className="font-semibold text-white">{symbol}</span>
                       <button
                         onClick={() => removeSymbol(symbol)}
-                        className="text-red-400 hover:text-red-300"
+                        className="text-red-400 hover:text-red-300 ml-1 text-lg leading-none"
                         disabled={session?.status === 'running'}
                       >
                         ×
@@ -461,9 +463,12 @@ export default function AutoLoopPage() {
                           ) : (
                             <Clock className="w-5 h-5 text-blue-400 animate-spin" />
                           )}
+                          <SymbolLogo symbol={result.symbol} size="md" />
                           <div>
-                            <p className="font-semibold text-white">
-                              {result.symbol} · {result.timeframe}
+                            <p className="font-semibold text-white flex items-center gap-2">
+                              <span>{result.symbol}</span>
+                              <span className="text-gray-500">·</span>
+                              <span className="text-purple-400 text-sm">{result.timeframe}</span>
                             </p>
                             {result.error && (
                               <p className="text-xs text-red-400">{result.error}</p>
