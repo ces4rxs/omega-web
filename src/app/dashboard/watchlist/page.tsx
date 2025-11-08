@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Plus, Trash2, TrendingUp, TrendingDown, RefreshCw } from "lucide-react"
 import { polygonService } from "@/lib/polygon"
+import { SymbolLogo } from "@/components/symbol-logo"
 
 interface WatchlistItem {
   symbol: string
@@ -173,7 +174,10 @@ export default function WatchlistPage() {
               <Card className="relative overflow-hidden group">
                 <CardHeader className="pb-3">
                   <div className="flex items-center justify-between">
-                    <CardTitle className="text-lg font-bold">{item.symbol}</CardTitle>
+                    <div className="flex items-center gap-3">
+                      <SymbolLogo symbol={item.symbol} size="md" />
+                      <CardTitle className="text-lg font-bold">{item.symbol}</CardTitle>
+                    </div>
                     <Button
                       variant="ghost"
                       size="icon"

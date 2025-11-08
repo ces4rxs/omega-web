@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/table"
 import type { Trade } from "@/lib/types"
 import { ArrowUpRight, ArrowDownRight } from "lucide-react"
+import { SymbolLogo } from "@/components/symbol-logo"
 
 interface TradeTableProps {
   trades: Trade[]
@@ -86,7 +87,14 @@ export function TradeTable({ trades, maxRows = 10 }: TradeTableProps) {
 
                   return (
                     <TableRow key={trade.id || index}>
-                      <TableCell className="font-medium">{trade.symbol || 'N/A'}</TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          {trade.symbol && trade.symbol !== 'N/A' && (
+                            <SymbolLogo symbol={trade.symbol} size="sm" />
+                          )}
+                          <span className="font-medium">{trade.symbol || 'N/A'}</span>
+                        </div>
+                      </TableCell>
                       <TableCell>
                         <span className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-semibold ${
                           isLong

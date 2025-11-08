@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
 import { Eye, Download } from "lucide-react"
+import { SymbolLogo } from "@/components/symbol-logo"
 
 export default function HistoryPage() {
   // Mock data - replace with actual API call
@@ -69,7 +70,12 @@ export default function HistoryPage() {
                 <TableRow key={bt.id}>
                   <TableCell className="font-mono text-xs">{bt.id}</TableCell>
                   <TableCell>{bt.strategy}</TableCell>
-                  <TableCell>{bt.symbol}</TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      <SymbolLogo symbol={bt.symbol} size="sm" />
+                      <span className="font-semibold">{bt.symbol}</span>
+                    </div>
+                  </TableCell>
                   <TableCell className="text-gray-400">
                     {new Date(bt.date).toLocaleDateString()}
                   </TableCell>

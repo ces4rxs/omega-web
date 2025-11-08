@@ -130,26 +130,44 @@ const getSizeClasses = (size: "sm" | "md" | "lg") => {
 
 export function SymbolLogo({ symbol, size = "md", showName = false, className = "" }: SymbolLogoProps) {
   const [imgError, setImgError] = useState(false)
-  const domain = symbolToDomain[symbol.toUpperCase()]
+  const upperSymbol = symbol.toUpperCase()
 
-  // Use Clearbit Logo API
-  const logoUrl = domain ? `https://logo.clearbit.com/${domain}` : null
+  // Best logo sources that work directly (return images, not JSON)
+  // Priority order:
+  // 1. Financialmodelingprep - Free, works great for stocks, no auth needed
+  // 2. Logo.dev - Good fallback for general companies
+  // 3. Gradient badge with initials (always works)
+
+  const logoSources = [
+    `https://financialmodelingprep.com/image-stock/${upperSymbol}.png`,
+    `https://img.logo.dev/ticker/${upperSymbol}?token=pk_X-1ZBbAQTumJRM7-5dOOWg`,
+  ]
+
+  const [currentSourceIndex, setCurrentSourceIndex] = useState(0)
+
+  const handleImageError = () => {
+    if (currentSourceIndex < logoSources.length - 1) {
+      setCurrentSourceIndex(currentSourceIndex + 1)
+    } else {
+      setImgError(true)
+    }
+  }
 
   const sizeClasses = getSizeClasses(size)
 
   return (
     <div className={`flex items-center gap-2 ${className}`}>
-      {logoUrl && !imgError ? (
+      {!imgError ? (
         <div className={`${sizeClasses} rounded-lg overflow-hidden bg-white/10 flex items-center justify-center flex-shrink-0`}>
           <img
-            src={logoUrl}
+            src={logoSources[currentSourceIndex]}
             alt={symbol}
             className="w-full h-full object-contain p-0.5"
-            onError={() => setImgError(true)}
+            onError={handleImageError}
           />
         </div>
       ) : (
-        // Fallback to initials
+        // Fallback to initials with gradient
         <div className={`${sizeClasses} rounded-lg bg-gradient-to-br from-purple-600 to-pink-600 flex items-center justify-center font-bold text-white flex-shrink-0`}>
           {symbol.slice(0, 2).toUpperCase()}
         </div>
