@@ -122,10 +122,25 @@ const TIER_FEATURES: Record<TierLevel, TierFeatures> = {
 }
 
 export function useTier() {
-  const { user, isAuthenticated } = useAuth()
+  // Safe auth check - handle case when not in AuthProvider
+  let user = null
+  let isAuthenticated = false
+
+  try {
+    const auth = useAuth()
+    user = auth.user
+    isAuthenticated = auth.isAuthenticated
+  } catch (e) {
+    // Not inside AuthProvider - use defaults
+  }
 
   // Si no está autenticado, es tier free
-  const currentTier: TierLevel = user?.subscription?.planId || 'free'
+  // Validar que planId sea uno de los valores esperados
+  const planId = user?.subscription?.planId
+  const currentTier: TierLevel =
+    (planId === 'free' || planId === 'professional' || planId === 'enterprise')
+      ? planId
+      : 'free'
 
   // Verificar si tiene acceso a un tier específico
   const hasTier = (requiredTier: TierLevel): boolean => {
