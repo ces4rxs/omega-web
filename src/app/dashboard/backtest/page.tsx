@@ -78,6 +78,33 @@ export default function BacktestPage() {
     rsiOversold: 30
   })
 
+  // Date preset helper function
+  const setDatePreset = (preset: 'lastMonth' | 'last3Months' | 'last6Months' | 'lastYear' | 'ytd') => {
+    const today = new Date()
+    const endDate = today.toISOString().split('T')[0]
+    let startDate = ''
+
+    switch (preset) {
+      case 'lastMonth':
+        startDate = new Date(today.setMonth(today.getMonth() - 1)).toISOString().split('T')[0]
+        break
+      case 'last3Months':
+        startDate = new Date(today.setMonth(today.getMonth() - 3)).toISOString().split('T')[0]
+        break
+      case 'last6Months':
+        startDate = new Date(today.setMonth(today.getMonth() - 6)).toISOString().split('T')[0]
+        break
+      case 'lastYear':
+        startDate = new Date(today.setFullYear(today.getFullYear() - 1)).toISOString().split('T')[0]
+        break
+      case 'ytd':
+        startDate = `${new Date().getFullYear()}-01-01`
+        break
+    }
+
+    setFormData({ ...formData, startDate, endDate })
+  }
+
   // Load available strategies
   useEffect(() => {
     const loadStrategies = async () => {
@@ -313,6 +340,23 @@ export default function BacktestPage() {
                       className="uppercase flex-1"
                     />
                   </div>
+                  {/* Quick Symbol Buttons */}
+                  <div className="flex flex-wrap gap-2">
+                    {['AAPL', 'TSLA', 'GOOGL', 'MSFT', 'NVDA', 'META', 'AMZN'].map((sym) => (
+                      <button
+                        key={sym}
+                        type="button"
+                        onClick={() => setFormData({ ...formData, symbol: sym })}
+                        className={`px-3 py-1 rounded-md text-xs font-semibold transition-all ${
+                          formData.symbol === sym
+                            ? 'bg-blue-600 text-white'
+                            : 'bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white'
+                        }`}
+                      >
+                        {sym}
+                      </button>
+                    ))}
+                  </div>
                 </div>
 
                 {/* Timeframe */}
@@ -362,6 +406,27 @@ export default function BacktestPage() {
                     onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
                   />
                 </div>
+              </div>
+
+              {/* Date Presets */}
+              <div className="flex flex-wrap gap-2">
+                <span className="text-xs text-gray-400 self-center mr-2">Períodos rápidos:</span>
+                {[
+                  { label: '1 Mes', value: 'lastMonth' as const },
+                  { label: '3 Meses', value: 'last3Months' as const },
+                  { label: '6 Meses', value: 'last6Months' as const },
+                  { label: '1 Año', value: 'lastYear' as const },
+                  { label: 'YTD', value: 'ytd' as const },
+                ].map((preset) => (
+                  <button
+                    key={preset.value}
+                    type="button"
+                    onClick={() => setDatePreset(preset.value)}
+                    className="px-3 py-1 rounded-md text-xs font-medium bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white transition-all"
+                  >
+                    {preset.label}
+                  </button>
+                ))}
               </div>
 
               {/* Strategy Parameters */}
