@@ -130,26 +130,46 @@ const getSizeClasses = (size: "sm" | "md" | "lg") => {
 
 export function SymbolLogo({ symbol, size = "md", showName = false, className = "" }: SymbolLogoProps) {
   const [imgError, setImgError] = useState(false)
-  const domain = symbolToDomain[symbol.toUpperCase()]
+  const upperSymbol = symbol.toUpperCase()
 
-  // Use Clearbit Logo API
-  const logoUrl = domain ? `https://logo.clearbit.com/${domain}` : null
+  // Try multiple logo sources with fallbacks
+  // 1. Logo.dev (free, no auth required)
+  // 2. Financialmodelingprep (we might use this API)
+  // 3. Fallback to initials
+
+  const logoSources = [
+    `https://img.logo.dev/ticker/${upperSymbol}?token=pk_X-1ZBbAQTumJRM7-5dOOWg`, // Logo.dev with free token
+    `https://financialmodelingprep.com/image-stock/${upperSymbol}.png`, // FMP
+  ]
+
+  const [currentSourceIndex, setCurrentSourceIndex] = useState(0)
+
+  const handleImageError = () => {
+    if (currentSourceIndex < logoSources.length - 1) {
+      // Try next source
+      setCurrentSourceIndex(currentSourceIndex + 1)
+    } else {
+      // All sources failed, show fallback
+      setImgError(true)
+    }
+  }
 
   const sizeClasses = getSizeClasses(size)
 
   return (
     <div className={`flex items-center gap-2 ${className}`}>
-      {logoUrl && !imgError ? (
+      {!imgError ? (
         <div className={`${sizeClasses} rounded-lg overflow-hidden bg-white/10 flex items-center justify-center flex-shrink-0`}>
           <img
-            src={logoUrl}
+            src={logoSources[currentSourceIndex]}
             alt={symbol}
             className="w-full h-full object-contain p-0.5"
-            onError={() => setImgError(true)}
+            onError={handleImageError}
+            crossOrigin="anonymous"
           />
         </div>
       ) : (
-        // Fallback to initials
+        // Fallback to initials with gradient
         <div className={`${sizeClasses} rounded-lg bg-gradient-to-br from-purple-600 to-pink-600 flex items-center justify-center font-bold text-white flex-shrink-0`}>
           {symbol.slice(0, 2).toUpperCase()}
         </div>
