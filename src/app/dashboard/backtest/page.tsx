@@ -18,10 +18,18 @@ import { ReturnsDistribution } from "@/components/charts/returns-distribution"
 import { CandlestickChart } from "@/components/charts/candlestick-chart"
 import { RSIChart } from "@/components/charts/rsi-chart"
 import { MACDChart } from "@/components/charts/macd-chart"
+import { BollingerBandsChart } from "@/components/charts/bollinger-bands-chart"
+import { ATRChart } from "@/components/charts/atr-chart"
+import { StochasticChart } from "@/components/charts/stochastic-chart"
+import { BacktestReplay } from "@/components/backtest-replay"
+import { PerformanceHeatmap, MonthlyPerformanceHeatmap } from "@/components/performance-heatmap"
 import { MetricCard } from "@/components/metric-card"
 import { TradeTable } from "@/components/trade-table"
-import { Activity, TrendingUp, TrendingDown, Target, Percent, DollarSign, Play, Download, Sparkles } from "lucide-react"
+import { Activity, TrendingUp, TrendingDown, Target, Percent, DollarSign, Play, Download, Sparkles, FileText } from "lucide-react"
 import { transformBacktestResponse } from "@/lib/transformBacktest"
+import { polygonService } from "@/lib/polygon"
+import { exportBacktestToPDF } from "@/lib/pdf-export"
+import type { CandlestickData } from "lightweight-charts"
 
 // Mapeo de timeframes del frontend al backend
 const timeframeMap: Record<string, string> = {
@@ -40,6 +48,7 @@ export default function BacktestPage() {
   const [loading, setLoading] = useState(false)
   const [loadingStrategies, setLoadingStrategies] = useState(true)
   const [result, setResult] = useState<BacktestResult | null>(null)
+  const [candlestickData, setCandlestickData] = useState<CandlestickData[]>([])
   const { addToast } = useToast()
 
   // Form state
@@ -85,6 +94,40 @@ export default function BacktestPage() {
     }
     loadStrategies()
   }, [])
+
+  // Cargar datos de candlestick cuando haya resultados
+  useEffect(() => {
+    const loadCandlestickData = async () => {
+      if (!result) {
+        setCandlestickData([])
+        return
+      }
+
+      try {
+        const ohlcData = await polygonService.getOHLC(
+          formData.symbol,
+          formData.timeframe,
+          formData.startDate,
+          formData.endDate
+        )
+
+        // Convertir a formato de lightweight-charts
+        const candleData: CandlestickData[] = ohlcData.map(bar => ({
+          time: (bar.time / 1000) as any,
+          open: bar.open,
+          high: bar.high,
+          low: bar.low,
+          close: bar.close,
+        }))
+
+        setCandlestickData(candleData)
+      } catch (error) {
+        console.error('Error cargando candlestick data:', error)
+      }
+    }
+
+    loadCandlestickData()
+  }, [result, formData.symbol, formData.timeframe, formData.startDate, formData.endDate])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -408,9 +451,13 @@ export default function BacktestPage() {
           {/* Action Bar */}
           <motion.div variants={itemVariants} className="flex justify-between items-center">
             <h2 className="text-2xl font-bold text-white">Resultados del Backtest</h2>
-            <Button variant="outline" size="sm">
-              <Download className="w-4 h-4 mr-2" />
-              Exportar Reporte
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => exportBacktestToPDF(result, formData.symbol, formData.strategy)}
+            >
+              <FileText className="w-4 h-4 mr-2" />
+              Exportar PDF
             </Button>
           </motion.div>
 
@@ -478,6 +525,9 @@ export default function BacktestPage() {
               data={result.backtest.equityCurve}
               trades={result.backtest.trades}
               symbol={formData.symbol}
+              startDate={formData.startDate}
+              endDate={formData.endDate}
+              timeframe={formData.timeframe}
               parameters={{
                 fastPeriod: strategyParams.fastPeriod,
                 slowPeriod: strategyParams.slowPeriod
@@ -485,16 +535,48 @@ export default function BacktestPage() {
             />
           </motion.div>
 
-          {/* Technical Indicators */}
+          {/* Technical Indicators - Basic */}
           <motion.div variants={itemVariants} className="grid md:grid-cols-2 gap-6">
             <RSIChart data={result.backtest.equityCurve} period={strategyParams.rsiPeriod} />
             <MACDChart data={result.backtest.equityCurve} />
           </motion.div>
 
+          {/* Advanced Indicators - Using Real OHLC Data */}
+          {candlestickData.length > 0 && (
+            <motion.div variants={itemVariants} className="space-y-6">
+              <h3 className="text-lg font-semibold text-white">Indicadores Técnicos Avanzados</h3>
+
+              {/* Bollinger Bands */}
+              <BollingerBandsChart data={candlestickData} period={20} stdDev={2} />
+
+              {/* ATR & Stochastic */}
+              <div className="grid md:grid-cols-2 gap-6">
+                <ATRChart data={candlestickData} period={14} />
+                <StochasticChart data={candlestickData} kPeriod={14} dPeriod={3} />
+              </div>
+            </motion.div>
+          )}
+
           {/* Charts Row 2 - Drawdown & Distribution */}
           <motion.div variants={itemVariants} className="grid md:grid-cols-2 gap-6">
             <DrawdownChart data={result.backtest.equityCurve} />
             <ReturnsDistribution trades={result.backtest.trades} />
+          </motion.div>
+
+          {/* Backtest Replay */}
+          <motion.div variants={itemVariants}>
+            <BacktestReplay
+              equityCurve={result.backtest.equityCurve}
+              trades={result.backtest.trades}
+              initialCapital={formData.initialCapital || 10000}
+            />
+          </motion.div>
+
+          {/* Performance Heatmaps */}
+          <motion.div variants={itemVariants} className="space-y-6">
+            <h3 className="text-lg font-semibold text-white">Análisis de Rendimiento</h3>
+            <PerformanceHeatmap trades={result.backtest.trades} />
+            <MonthlyPerformanceHeatmap trades={result.backtest.trades} />
           </motion.div>
 
           {/* Trade History */}
