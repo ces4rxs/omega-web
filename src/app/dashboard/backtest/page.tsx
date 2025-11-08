@@ -69,24 +69,12 @@ export default function BacktestPage() {
             typeof s === 'string' ? s : (s.id || s.name || s)
           )
           setStrategies(strategyNames)
-          addToast({
-            title: "Estrategias cargadas",
-            description: `${strategyNames.length} estrategias disponibles`,
-            type: "success",
-            duration: 2000
-          })
         } else {
           setStrategies(['smaCrossover', 'rsiMeanRevert', 'trend'])
         }
       } catch (err) {
         console.error('Error loading strategies:', err)
         setStrategies(['smaCrossover', 'rsiMeanRevert', 'trend'])
-        addToast({
-          title: "Error al cargar estrategias",
-          description: "Usando estrategias predeterminadas",
-          type: "warning",
-          duration: 3000
-        })
       } finally {
         setLoadingStrategies(false)
       }
