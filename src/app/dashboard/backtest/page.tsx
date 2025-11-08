@@ -544,7 +544,13 @@ export default function BacktestPage() {
         >
           {/* Action Bar */}
           <motion.div variants={itemVariants} className="flex justify-between items-center">
-            <h2 className="text-2xl font-bold text-white">Resultados del Backtest</h2>
+            <div className="flex items-center gap-3">
+              <SymbolLogo symbol={formData.symbol} size="lg" />
+              <div>
+                <h2 className="text-2xl font-bold text-white">Resultados del Backtest</h2>
+                <p className="text-sm text-gray-400">{formData.symbol} · {formData.strategy}</p>
+              </div>
+            </div>
             <Button
               variant="outline"
               size="sm"
