@@ -18,21 +18,30 @@ interface TradeTableProps {
 }
 
 export function TradeTable({ trades, maxRows = 10 }: TradeTableProps) {
-  const displayTrades = maxRows ? trades.slice(0, maxRows) : trades
+  // Filtrar trades inválidos y limitar
+  const validTrades = trades.filter(trade => trade && trade.id)
+  const displayTrades = maxRows ? validTrades.slice(0, maxRows) : validTrades
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric'
-    })
+  const formatDate = (dateString?: string) => {
+    if (!dateString) return 'N/A'
+    try {
+      return new Date(dateString).toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric'
+      })
+    } catch {
+      return 'N/A'
+    }
   }
 
-  const formatCurrency = (value: number) => {
+  const formatCurrency = (value?: number) => {
+    if (value === undefined || value === null || isNaN(value)) return 'N/A'
     return `$${value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
   }
 
-  const formatPercent = (value: number) => {
+  const formatPercent = (value?: number) => {
+    if (value === undefined || value === null || isNaN(value)) return 'N/A'
     const sign = value >= 0 ? '+' : ''
     return `${sign}${value.toFixed(2)}%`
   }
@@ -71,52 +80,57 @@ export function TradeTable({ trades, maxRows = 10 }: TradeTableProps) {
                   </TableCell>
                 </TableRow>
               ) : (
-                displayTrades.map((trade) => (
-                  <TableRow key={trade.id}>
-                    <TableCell className="font-medium">{trade.symbol}</TableCell>
-                    <TableCell>
-                      <span className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-semibold ${
-                        trade.side === 'long'
-                          ? 'bg-green-500/20 text-green-400'
-                          : 'bg-red-500/20 text-red-400'
+                displayTrades.map((trade, index) => {
+                  const side = trade.side?.toLowerCase() || 'long'
+                  const isLong = side === 'long'
+
+                  return (
+                    <TableRow key={trade.id || index}>
+                      <TableCell className="font-medium">{trade.symbol || 'N/A'}</TableCell>
+                      <TableCell>
+                        <span className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-semibold ${
+                          isLong
+                            ? 'bg-green-500/20 text-green-400'
+                            : 'bg-red-500/20 text-red-400'
+                        }`}>
+                          {isLong ? (
+                            <ArrowUpRight className="w-3 h-3" />
+                          ) : (
+                            <ArrowDownRight className="w-3 h-3" />
+                          )}
+                          {side.toUpperCase()}
+                        </span>
+                      </TableCell>
+                      <TableCell className="text-sm text-gray-400">
+                        {formatDate(trade.entryDate)}
+                      </TableCell>
+                      <TableCell className="text-sm text-gray-400">
+                        {formatDate(trade.exitDate)}
+                      </TableCell>
+                      <TableCell>{trade.quantity ?? 'N/A'}</TableCell>
+                      <TableCell>{formatCurrency(trade.entryPrice)}</TableCell>
+                      <TableCell>{formatCurrency(trade.exitPrice)}</TableCell>
+                      <TableCell className={`text-right font-semibold ${
+                        (trade.pnl ?? 0) >= 0 ? 'text-green-400' : 'text-red-400'
                       }`}>
-                        {trade.side === 'long' ? (
-                          <ArrowUpRight className="w-3 h-3" />
-                        ) : (
-                          <ArrowDownRight className="w-3 h-3" />
-                        )}
-                        {trade.side.toUpperCase()}
-                      </span>
-                    </TableCell>
-                    <TableCell className="text-sm text-gray-400">
-                      {formatDate(trade.entryDate)}
-                    </TableCell>
-                    <TableCell className="text-sm text-gray-400">
-                      {formatDate(trade.exitDate)}
-                    </TableCell>
-                    <TableCell>{trade.quantity}</TableCell>
-                    <TableCell>{formatCurrency(trade.entryPrice)}</TableCell>
-                    <TableCell>{formatCurrency(trade.exitPrice)}</TableCell>
-                    <TableCell className={`text-right font-semibold ${
-                      trade.pnl >= 0 ? 'text-green-400' : 'text-red-400'
-                    }`}>
-                      {formatCurrency(trade.pnl)}
-                    </TableCell>
-                    <TableCell className={`text-right font-semibold ${
-                      trade.pnlPercent >= 0 ? 'text-green-400' : 'text-red-400'
-                    }`}>
-                      {formatPercent(trade.pnlPercent)}
-                    </TableCell>
-                  </TableRow>
-                ))
+                        {formatCurrency(trade.pnl)}
+                      </TableCell>
+                      <TableCell className={`text-right font-semibold ${
+                        (trade.pnlPercent ?? 0) >= 0 ? 'text-green-400' : 'text-red-400'
+                      }`}>
+                        {formatPercent(trade.pnlPercent)}
+                      </TableCell>
+                    </TableRow>
+                  )
+                })
               )}
             </TableBody>
           </Table>
         </div>
 
-        {trades.length > maxRows && (
+        {validTrades.length > maxRows && (
           <div className="mt-4 text-center text-sm text-gray-400">
-            Showing {maxRows} of {trades.length} trades
+            Showing {maxRows} of {validTrades.length} trades
           </div>
         )}
       </CardContent>
