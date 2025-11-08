@@ -29,7 +29,7 @@ import { AIInsights } from "@/components/ai/ai-insights"
 import { QuantumRisk } from "@/components/ai/quantum-risk"
 import { AIOptimizer } from "@/components/ai/ai-optimizer"
 import { PredictiveScore } from "@/components/ai/predictive-score"
-import { Activity, TrendingUp, TrendingDown, Target, Percent, DollarSign, Play, Download, Sparkles, FileText, Crown, Brain } from "lucide-react"
+import { Activity, TrendingUp, TrendingDown, Target, Percent, DollarSign, Play, Download, Sparkles, FileText, Crown, Brain, Shield, ChevronDown, ChevronUp } from "lucide-react"
 import { transformBacktestResponse } from "@/lib/transformBacktest"
 import { polygonService } from "@/lib/polygon"
 import { exportBacktestToPDF } from "@/lib/pdf-export"
@@ -76,6 +76,22 @@ export default function BacktestPage() {
     rsiPeriod: 14,
     rsiOverbought: 70,
     rsiOversold: 30
+  })
+
+  // Risk Management state
+  const [showRiskManagement, setShowRiskManagement] = useState(false)
+  const [riskManagement, setRiskManagement] = useState({
+    enableCommission: true,
+    commission: 0.50,
+    enableSlippage: true,
+    slippage: 0.05,
+    enableStopLoss: false,
+    stopLoss: 2.0,
+    enableTakeProfit: false,
+    takeProfit: 5.0,
+    enablePositionSizing: false,
+    positionSize: 100,
+    maxPositions: 1
   })
 
   // Date preset helper function
@@ -194,10 +210,30 @@ export default function BacktestPage() {
       // Convertir timeframe al formato del backend
       const backendTimeframe = timeframeMap[formData.timeframe] || formData.timeframe
 
+      // Build risk management parameters
+      const riskManagementParams: any = {}
+      if (riskManagement.enableCommission) {
+        riskManagementParams.commission = riskManagement.commission
+      }
+      if (riskManagement.enableSlippage) {
+        riskManagementParams.slippage = riskManagement.slippage
+      }
+      if (riskManagement.enableStopLoss) {
+        riskManagementParams.stopLoss = riskManagement.stopLoss
+      }
+      if (riskManagement.enableTakeProfit) {
+        riskManagementParams.takeProfit = riskManagement.takeProfit
+      }
+      if (riskManagement.enablePositionSizing) {
+        riskManagementParams.positionSize = riskManagement.positionSize
+        riskManagementParams.maxPositions = riskManagement.maxPositions
+      }
+
       const rawBacktestData = await api.post<any>('/api/backtest', {
         ...formData,
         timeframe: backendTimeframe,
-        parameters
+        parameters,
+        riskManagement: Object.keys(riskManagementParams).length > 0 ? riskManagementParams : undefined
       })
 
       // Transformar trades raw del backend al formato esperado
@@ -427,6 +463,225 @@ export default function BacktestPage() {
                     {preset.label}
                   </button>
                 ))}
+              </div>
+
+              {/* Risk Management Section */}
+              <div className="space-y-4">
+                <button
+                  type="button"
+                  onClick={() => setShowRiskManagement(!showRiskManagement)}
+                  className="w-full flex items-center justify-between p-4 bg-gradient-to-br from-orange-500/10 to-red-500/10 rounded-lg border border-orange-500/30 hover:border-orange-500/50 transition-all group"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-orange-500/20 flex items-center justify-center">
+                      <Shield className="w-5 h-5 text-orange-400" />
+                    </div>
+                    <div className="text-left">
+                      <h4 className="font-semibold text-white flex items-center gap-2">
+                        Risk Management
+                        <span className="text-xs px-2 py-0.5 bg-orange-500/20 text-orange-400 rounded-full">
+                          Profesional
+                        </span>
+                      </h4>
+                      <p className="text-xs text-gray-400">
+                        Comisiones, Slippage, Stop Loss, Take Profit
+                      </p>
+                    </div>
+                  </div>
+                  {showRiskManagement ? (
+                    <ChevronUp className="w-5 h-5 text-gray-400 group-hover:text-white transition-colors" />
+                  ) : (
+                    <ChevronDown className="w-5 h-5 text-gray-400 group-hover:text-white transition-colors" />
+                  )}
+                </button>
+
+                {showRiskManagement && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: "auto" }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="space-y-4 p-4 bg-gradient-to-br from-orange-500/5 to-red-500/5 rounded-lg border border-orange-500/20"
+                  >
+                    <div className="grid md:grid-cols-2 gap-4">
+                      {/* Commission */}
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <Label className="text-sm text-gray-300">Comisión por Trade</Label>
+                          <button
+                            type="button"
+                            onClick={() => setRiskManagement({ ...riskManagement, enableCommission: !riskManagement.enableCommission })}
+                            className={`px-2 py-1 rounded text-xs font-semibold transition-all ${
+                              riskManagement.enableCommission
+                                ? 'bg-green-500/20 text-green-400'
+                                : 'bg-gray-500/20 text-gray-400'
+                            }`}
+                          >
+                            {riskManagement.enableCommission ? 'ON' : 'OFF'}
+                          </button>
+                        </div>
+                        {riskManagement.enableCommission && (
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm text-gray-400">$</span>
+                            <Input
+                              type="number"
+                              step="0.01"
+                              value={riskManagement.commission}
+                              onChange={(e) => setRiskManagement({ ...riskManagement, commission: Number(e.target.value) })}
+                              className="flex-1"
+                            />
+                            <span className="text-xs text-gray-500">por trade</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Slippage */}
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <Label className="text-sm text-gray-300">Slippage</Label>
+                          <button
+                            type="button"
+                            onClick={() => setRiskManagement({ ...riskManagement, enableSlippage: !riskManagement.enableSlippage })}
+                            className={`px-2 py-1 rounded text-xs font-semibold transition-all ${
+                              riskManagement.enableSlippage
+                                ? 'bg-green-500/20 text-green-400'
+                                : 'bg-gray-500/20 text-gray-400'
+                            }`}
+                          >
+                            {riskManagement.enableSlippage ? 'ON' : 'OFF'}
+                          </button>
+                        </div>
+                        {riskManagement.enableSlippage && (
+                          <div className="flex items-center gap-2">
+                            <Input
+                              type="number"
+                              step="0.01"
+                              value={riskManagement.slippage}
+                              onChange={(e) => setRiskManagement({ ...riskManagement, slippage: Number(e.target.value) })}
+                              className="flex-1"
+                            />
+                            <span className="text-xs text-gray-500">%</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Stop Loss */}
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <Label className="text-sm text-gray-300">Stop Loss</Label>
+                          <button
+                            type="button"
+                            onClick={() => setRiskManagement({ ...riskManagement, enableStopLoss: !riskManagement.enableStopLoss })}
+                            className={`px-2 py-1 rounded text-xs font-semibold transition-all ${
+                              riskManagement.enableStopLoss
+                                ? 'bg-green-500/20 text-green-400'
+                                : 'bg-gray-500/20 text-gray-400'
+                            }`}
+                          >
+                            {riskManagement.enableStopLoss ? 'ON' : 'OFF'}
+                          </button>
+                        </div>
+                        {riskManagement.enableStopLoss && (
+                          <div className="flex items-center gap-2">
+                            <Input
+                              type="number"
+                              step="0.1"
+                              value={riskManagement.stopLoss}
+                              onChange={(e) => setRiskManagement({ ...riskManagement, stopLoss: Number(e.target.value) })}
+                              className="flex-1"
+                            />
+                            <span className="text-xs text-gray-500">%</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Take Profit */}
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <Label className="text-sm text-gray-300">Take Profit</Label>
+                          <button
+                            type="button"
+                            onClick={() => setRiskManagement({ ...riskManagement, enableTakeProfit: !riskManagement.enableTakeProfit })}
+                            className={`px-2 py-1 rounded text-xs font-semibold transition-all ${
+                              riskManagement.enableTakeProfit
+                                ? 'bg-green-500/20 text-green-400'
+                                : 'bg-gray-500/20 text-gray-400'
+                            }`}
+                          >
+                            {riskManagement.enableTakeProfit ? 'ON' : 'OFF'}
+                          </button>
+                        </div>
+                        {riskManagement.enableTakeProfit && (
+                          <div className="flex items-center gap-2">
+                            <Input
+                              type="number"
+                              step="0.1"
+                              value={riskManagement.takeProfit}
+                              onChange={(e) => setRiskManagement({ ...riskManagement, takeProfit: Number(e.target.value) })}
+                              className="flex-1"
+                            />
+                            <span className="text-xs text-gray-500">%</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Position Sizing */}
+                      <div className="space-y-2 md:col-span-2">
+                        <div className="flex items-center justify-between">
+                          <Label className="text-sm text-gray-300">Position Sizing</Label>
+                          <button
+                            type="button"
+                            onClick={() => setRiskManagement({ ...riskManagement, enablePositionSizing: !riskManagement.enablePositionSizing })}
+                            className={`px-2 py-1 rounded text-xs font-semibold transition-all ${
+                              riskManagement.enablePositionSizing
+                                ? 'bg-green-500/20 text-green-400'
+                                : 'bg-gray-500/20 text-gray-400'
+                            }`}
+                          >
+                            {riskManagement.enablePositionSizing ? 'ON' : 'OFF'}
+                          </button>
+                        </div>
+                        {riskManagement.enablePositionSizing && (
+                          <div className="space-y-3">
+                            <div>
+                              <div className="flex justify-between items-center mb-2">
+                                <span className="text-xs text-gray-400">Porcentaje del capital por trade</span>
+                                <span className="text-sm font-semibold text-white">{riskManagement.positionSize}%</span>
+                              </div>
+                              <Slider
+                                min={1}
+                                max={100}
+                                step={1}
+                                value={riskManagement.positionSize}
+                                onValueChange={(val) => setRiskManagement({ ...riskManagement, positionSize: val })}
+                              />
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Label className="text-xs text-gray-400 whitespace-nowrap">Posiciones máximas:</Label>
+                              <Input
+                                type="number"
+                                min={1}
+                                value={riskManagement.maxPositions}
+                                onChange={(e) => setRiskManagement({ ...riskManagement, maxPositions: Number(e.target.value) })}
+                                className="w-20"
+                              />
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Summary */}
+                    <div className="mt-4 p-3 bg-orange-900/20 border border-orange-500/30 rounded-lg">
+                      <p className="text-xs text-orange-300 font-semibold mb-1">💡 Impacto estimado:</p>
+                      <p className="text-xs text-gray-400">
+                        {riskManagement.enableCommission && `Comisiones: ~$${(riskManagement.commission * 100).toFixed(0)} por 100 trades. `}
+                        {riskManagement.enableSlippage && `Slippage: ${riskManagement.slippage}% por entrada/salida. `}
+                        {riskManagement.enableStopLoss && `Stop Loss protegerá tu capital a -${riskManagement.stopLoss}%. `}
+                        {riskManagement.enableTakeProfit && `Take Profit cerrará en +${riskManagement.takeProfit}%.`}
+                      </p>
+                    </div>
+                  </motion.div>
+                )}
               </div>
 
               {/* Strategy Parameters */}
