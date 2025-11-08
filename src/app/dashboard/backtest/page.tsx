@@ -19,6 +19,18 @@ import { MetricCard } from "@/components/metric-card"
 import { TradeTable } from "@/components/trade-table"
 import { Activity, TrendingUp, TrendingDown, Target, Percent, DollarSign, Play, Download, Sparkles } from "lucide-react"
 
+// Mapeo de timeframes del frontend al backend
+const timeframeMap: Record<string, string> = {
+  '1min': 'minute',
+  '5min': 'minute',
+  '15min': 'minute',
+  '1h': 'hour',
+  '4h': 'hour',
+  '1d': 'day',
+  '1w': 'week',
+  '1M': 'month'
+}
+
 export default function BacktestPage() {
   const [strategies, setStrategies] = useState<string[]>([])
   const [loading, setLoading] = useState(false)
@@ -110,8 +122,12 @@ export default function BacktestPage() {
         }
       }
 
+      // Convertir timeframe al formato del backend
+      const backendTimeframe = timeframeMap[formData.timeframe] || formData.timeframe
+
       const backtestData = await api.post<BacktestResult>('/api/backtest', {
         ...formData,
+        timeframe: backendTimeframe,
         parameters
       })
 
