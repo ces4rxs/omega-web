@@ -2,17 +2,19 @@
 
 import { useRouter, usePathname } from "next/navigation"
 import { useEffect, useState } from "react"
+import { motion, AnimatePresence } from "framer-motion"
 import {
   Home,
   Activity,
-  Brain,
-  BarChart2,
   Settings,
   LineChart,
   TrendingUp,
   BookOpen,
   History,
   LogOut,
+  Menu,
+  X,
+  Sparkles,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
@@ -41,6 +43,7 @@ export default function DashboardLayout({
   const pathname = usePathname()
   const [user, setUser] = useState<any>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -63,10 +66,17 @@ export default function DashboardLayout({
     }
   }, [router])
 
+  useEffect(() => {
+    setIsMobileMenuOpen(false)
+  }, [pathname])
+
   if (isLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-black via-zinc-950 to-zinc-900">
-        <div className="text-white text-lg">Loading...</div>
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
+          <p className="text-white text-lg">Cargando...</p>
+        </div>
       </div>
     )
   }
@@ -81,84 +91,160 @@ export default function DashboardLayout({
 
   const isPro = user?.subscription?.planId === 'professional'
 
-  return (
-    <div className="flex min-h-screen bg-gradient-to-br from-black via-zinc-950 to-zinc-900 text-white">
-      {/* Sidebar */}
-      <aside className="w-64 border-r border-white/10 bg-black/30 backdrop-blur-xl flex flex-col justify-between p-4">
-        <div>
-          {/* Logo */}
-          <div className="mb-8 text-center">
+  const SidebarContent = () => (
+    <>
+      <div>
+        {/* Logo */}
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-8 text-center"
+        >
+          <div className="flex items-center justify-center gap-2 mb-2">
+            <Sparkles className="w-6 h-6 text-blue-400" />
             <h1 className="text-xl font-bold tracking-widest">
               BACKTESTER <span className="text-blue-400">PRO</span>
             </h1>
-            {isPro && (
-              <span className="inline-block mt-2 px-2 py-1 text-xs font-semibold bg-gradient-to-r from-yellow-500 to-orange-500 rounded-full">
-                PRO
-              </span>
-            )}
           </div>
+          {isPro && (
+            <motion.span
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              className="inline-block mt-2 px-3 py-1 text-xs font-semibold bg-gradient-to-r from-yellow-500 to-orange-500 rounded-full shadow-lg"
+            >
+              ⭐ PRO
+            </motion.span>
+          )}
+        </motion.div>
 
-          {/* Navigation */}
-          <nav className="space-y-2">
-            {navItems.map((item) => {
-              const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
-              return (
-                <button
-                  key={item.href}
-                  onClick={() => router.push(item.href)}
-                  className={`flex items-center justify-between w-full px-3 py-2 rounded-md transition ${
-                    isActive
-                      ? "bg-blue-600/20 text-blue-400 border border-blue-500/30"
-                      : "hover:bg-white/5"
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
+        {/* Navigation */}
+        <nav className="space-y-1.5">
+          {navItems.map((item, index) => {
+            const isActive = pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href))
+            return (
+              <motion.button
+                key={item.href}
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: index * 0.05 }}
+                onClick={() => router.push(item.href)}
+                className={`flex items-center justify-between w-full px-3 py-2.5 rounded-lg transition-all group relative overflow-hidden ${
+                  isActive
+                    ? "bg-gradient-to-r from-blue-600/20 to-cyan-600/20 text-blue-400 border border-blue-500/30 shadow-lg shadow-blue-500/10"
+                    : "hover:bg-white/5 hover:translate-x-1"
+                }`}
+              >
+                {isActive && (
+                  <motion.div
+                    layoutId="activeNav"
+                    className="absolute inset-0 bg-gradient-to-r from-blue-600/10 to-cyan-600/10"
+                    transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+                  />
+                )}
+                <div className="flex items-center gap-3 relative z-10">
+                  <div className={isActive ? "text-blue-400" : "text-gray-400 group-hover:text-white transition"}>
                     {item.icon}
-                    <span>{item.name}</span>
                   </div>
-                  {item.badge && !isPro && (
-                    <span className="text-xs px-1.5 py-0.5 bg-yellow-500/20 text-yellow-400 rounded">
-                      {item.badge}
-                    </span>
-                  )}
-                </button>
-              )
-            })}
-          </nav>
-        </div>
+                  <span className={`font-medium ${isActive ? "text-white" : "text-gray-300"}`}>
+                    {item.name}
+                  </span>
+                </div>
+                {item.badge && !isPro && (
+                  <span className="text-xs px-2 py-0.5 bg-yellow-500/20 text-yellow-400 rounded-full font-semibold relative z-10">
+                    {item.badge}
+                  </span>
+                )}
+              </motion.button>
+            )
+          })}
+        </nav>
+      </div>
 
-        {/* Bottom section */}
-        <div className="space-y-2">
-          <button
-            onClick={() => router.push('/dashboard/settings')}
-            className={`flex items-center gap-3 w-full px-3 py-2 rounded-md transition ${
-              pathname === '/dashboard/settings'
-                ? "bg-blue-600/20 text-blue-400"
-                : "hover:bg-white/5"
-            }`}
-          >
-            <Settings size={18} />
-            <span>Settings</span>
-          </button>
+      {/* Bottom section */}
+      <div className="space-y-2">
+        <button
+          onClick={() => router.push('/dashboard/settings')}
+          className={`flex items-center gap-3 w-full px-3 py-2.5 rounded-lg transition-all ${
+            pathname === '/dashboard/settings'
+              ? "bg-blue-600/20 text-blue-400 border border-blue-500/30"
+              : "hover:bg-white/5 text-gray-300 hover:text-white"
+          }`}
+        >
+          <Settings size={18} />
+          <span className="font-medium">Settings</span>
+        </button>
 
-          <Button
-            onClick={handleLogout}
-            variant="outline"
-            className="w-full justify-start"
-          >
-            <LogOut size={18} className="mr-2" />
-            Logout
-          </Button>
+        <Button
+          onClick={handleLogout}
+          variant="outline"
+          className="w-full justify-start hover:bg-red-500/10 hover:border-red-500/30 hover:text-red-400 transition-all"
+        >
+          <LogOut size={18} className="mr-2" />
+          Cerrar Sesión
+        </Button>
 
-          {/* User info */}
-          <div className="pt-4 border-t border-white/10 text-xs text-gray-400">
-            <p className="truncate">{user?.email}</p>
+        {/* User info */}
+        <div className="pt-4 border-t border-white/10">
+          <div className="px-3 py-2 rounded-lg bg-white/5">
+            <p className="text-xs text-gray-500 mb-1">Usuario</p>
+            <p className="text-sm text-white font-medium truncate">{user?.email}</p>
           </div>
         </div>
+      </div>
+    </>
+  )
+
+  return (
+    <div className="flex min-h-screen bg-gradient-to-br from-black via-zinc-950 to-zinc-900 text-white">
+      {/* Desktop Sidebar */}
+      <aside className="hidden lg:flex w-72 border-r border-white/10 bg-black/30 backdrop-blur-xl flex-col justify-between p-6">
+        <SidebarContent />
       </aside>
 
+      {/* Mobile Header */}
+      <div className="lg:hidden fixed top-0 left-0 right-0 z-50 bg-black/90 backdrop-blur-xl border-b border-white/10">
+        <div className="flex items-center justify-between p-4">
+          <div className="flex items-center gap-2">
+            <Sparkles className="w-6 h-6 text-blue-400" />
+            <h1 className="text-lg font-bold">
+              BACKTESTER <span className="text-blue-400">PRO</span>
+            </h1>
+          </div>
+          <button
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            className="p-2 hover:bg-white/10 rounded-lg transition"
+          >
+            {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+          </button>
+        </div>
+      </div>
+
+      {/* Mobile Menu */}
+      <AnimatePresence>
+        {isMobileMenuOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="lg:hidden fixed inset-0 z-40 bg-black/80 backdrop-blur-sm"
+            onClick={() => setIsMobileMenuOpen(false)}
+          >
+            <motion.aside
+              initial={{ x: "-100%" }}
+              animate={{ x: 0 }}
+              exit={{ x: "-100%" }}
+              transition={{ type: "spring", bounce: 0, duration: 0.4 }}
+              className="w-80 h-full bg-black/95 backdrop-blur-xl border-r border-white/10 flex flex-col justify-between p-6"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <SidebarContent />
+            </motion.aside>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Main content */}
-      <main className="flex-1 overflow-y-auto">
+      <main className="flex-1 overflow-y-auto lg:pt-0 pt-16">
         {children}
       </main>
     </div>

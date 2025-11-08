@@ -1,24 +1,30 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { motion } from "framer-motion"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select } from "@/components/ui/select"
 import { Slider } from "@/components/ui/slider"
+import { CardSkeleton, ChartSkeleton } from "@/components/ui/skeleton"
+import { useToast } from "@/components/ui/toast"
 import { api } from "@/lib/api"
-import type { BacktestParams, BacktestResult, BuiltInStrategy } from "@/lib/types"
+import type { BacktestParams, BacktestResult } from "@/lib/types"
 import { EquityCurve } from "@/components/charts/equity-curve"
+import { DrawdownChart } from "@/components/charts/drawdown-chart"
+import { ReturnsDistribution } from "@/components/charts/returns-distribution"
 import { MetricCard } from "@/components/metric-card"
 import { TradeTable } from "@/components/trade-table"
-import { Activity, TrendingUp, TrendingDown, Target, Percent, DollarSign } from "lucide-react"
+import { Activity, TrendingUp, TrendingDown, Target, Percent, DollarSign, Play, Download, Sparkles } from "lucide-react"
 
 export default function BacktestPage() {
   const [strategies, setStrategies] = useState<string[]>([])
   const [loading, setLoading] = useState(false)
+  const [loadingStrategies, setLoadingStrategies] = useState(true)
   const [result, setResult] = useState<BacktestResult | null>(null)
-  const [error, setError] = useState<string | null>(null)
+  const { addToast } = useToast()
 
   // Form state
   const [formData, setFormData] = useState<BacktestParams>({
@@ -31,7 +37,7 @@ export default function BacktestPage() {
     parameters: {}
   })
 
-  // Strategy parameters (simplified - you can expand this)
+  // Strategy parameters
   const [strategyParams, setStrategyParams] = useState({
     fastPeriod: 10,
     slowPeriod: 30,
@@ -43,20 +49,34 @@ export default function BacktestPage() {
   // Load available strategies
   useEffect(() => {
     const loadStrategies = async () => {
+      setLoadingStrategies(true)
       try {
         const response = await api.get<{ strategies: any }>('/api/backtest/strategies')
-        // Handle both string[] and object[] responses
         if (Array.isArray(response.strategies)) {
           const strategyNames = response.strategies.map((s: any) =>
             typeof s === 'string' ? s : (s.id || s.name || s)
           )
           setStrategies(strategyNames)
+          addToast({
+            title: "Estrategias cargadas",
+            description: `${strategyNames.length} estrategias disponibles`,
+            type: "success",
+            duration: 2000
+          })
         } else {
           setStrategies(['smaCrossover', 'rsiMeanRevert', 'trend'])
         }
       } catch (err) {
         console.error('Error loading strategies:', err)
         setStrategies(['smaCrossover', 'rsiMeanRevert', 'trend'])
+        addToast({
+          title: "Error al cargar estrategias",
+          description: "Usando estrategias predeterminadas",
+          type: "warning",
+          duration: 3000
+        })
+      } finally {
+        setLoadingStrategies(false)
       }
     }
     loadStrategies()
@@ -65,8 +85,14 @@ export default function BacktestPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
-    setError(null)
     setResult(null)
+
+    addToast({
+      title: "Iniciando backtest",
+      description: `Probando estrategia ${formData.strategy} en ${formData.symbol}`,
+      type: "info",
+      duration: 2000
+    })
 
     try {
       // Build parameters based on strategy
@@ -90,202 +116,297 @@ export default function BacktestPage() {
       })
 
       setResult(backtestData)
+
+      const totalReturn = backtestData.backtest.performance.totalReturn
+      addToast({
+        title: "¡Backtest completado!",
+        description: `Retorno total: ${(totalReturn * 100).toFixed(2)}%`,
+        type: totalReturn >= 0 ? "success" : "warning",
+        duration: 4000
+      })
     } catch (err: any) {
-      setError(err.message || 'Failed to run backtest')
+      addToast({
+        title: "Error en backtest",
+        description: err.message || 'No se pudo ejecutar el backtest',
+        type: "error",
+        duration: 5000
+      })
       console.error('Backtest error:', err)
     } finally {
       setLoading(false)
     }
   }
 
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.1
+      }
+    }
+  }
+
+  const itemVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: { opacity: 1, y: 0 }
+  }
+
   return (
     <div className="p-6 space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold mb-2">Backtest Strategy</h1>
-        <p className="text-gray-400">Test your trading strategies with real historical data</p>
-      </div>
+      {/* Header */}
+      <motion.div
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+      >
+        <div className="flex items-center gap-3 mb-2">
+          <Sparkles className="w-8 h-8 text-blue-400" />
+          <h1 className="text-3xl font-bold bg-gradient-to-r from-white via-blue-100 to-white bg-clip-text text-transparent">
+            Backtest Strategy
+          </h1>
+        </div>
+        <p className="text-gray-400">Prueba tus estrategias con datos históricos reales</p>
+      </motion.div>
 
       {/* Configuration Form */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Backtest Configuration</CardTitle>
-          <CardDescription>Configure your backtest parameters</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="grid md:grid-cols-2 gap-6">
-              {/* Strategy Selection */}
-              <div className="space-y-2">
-                <Label htmlFor="strategy">Strategy</Label>
-                <Select
-                  id="strategy"
-                  value={formData.strategy}
-                  onChange={(e) => setFormData({ ...formData, strategy: e.target.value })}
-                >
-                  {strategies.map((s, idx) => (
-                    <option key={`${s}-${idx}`} value={s}>
-                      {typeof s === 'string' ? s : JSON.stringify(s)}
-                    </option>
-                  ))}
-                </Select>
-              </div>
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.5, delay: 0.1 }}
+      >
+        <Card>
+          <CardHeader>
+            <CardTitle>Configuración del Backtest</CardTitle>
+            <CardDescription>Configura los parámetros de tu backtest</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSubmit} className="space-y-6">
+              <div className="grid md:grid-cols-2 gap-6">
+                {/* Strategy Selection */}
+                <div className="space-y-2">
+                  <Label htmlFor="strategy">Estrategia</Label>
+                  {loadingStrategies ? (
+                    <div className="h-10 bg-white/10 rounded-md animate-skeleton-pulse" />
+                  ) : (
+                    <Select
+                      id="strategy"
+                      value={formData.strategy}
+                      onChange={(e) => setFormData({ ...formData, strategy: e.target.value })}
+                    >
+                      {strategies.map((s, idx) => (
+                        <option key={`${s}-${idx}`} value={s}>
+                          {typeof s === 'string' ? s : JSON.stringify(s)}
+                        </option>
+                      ))}
+                    </Select>
+                  )}
+                </div>
 
-              {/* Symbol */}
-              <div className="space-y-2">
-                <Label htmlFor="symbol">Symbol</Label>
-                <Input
-                  id="symbol"
-                  value={formData.symbol}
-                  onChange={(e) => setFormData({ ...formData, symbol: e.target.value.toUpperCase() })}
-                  placeholder="AAPL, TSLA, BTC..."
-                />
-              </div>
+                {/* Symbol */}
+                <div className="space-y-2">
+                  <Label htmlFor="symbol">Símbolo</Label>
+                  <Input
+                    id="symbol"
+                    value={formData.symbol}
+                    onChange={(e) => setFormData({ ...formData, symbol: e.target.value.toUpperCase() })}
+                    placeholder="AAPL, TSLA, BTC..."
+                    className="uppercase"
+                  />
+                </div>
 
-              {/* Timeframe */}
-              <div className="space-y-2">
-                <Label htmlFor="timeframe">Timeframe</Label>
-                <Select
-                  id="timeframe"
-                  value={formData.timeframe}
-                  onChange={(e) => setFormData({ ...formData, timeframe: e.target.value as any })}
-                >
-                  <option value="1min">1 Minute</option>
-                  <option value="5min">5 Minutes</option>
-                  <option value="15min">15 Minutes</option>
-                  <option value="1h">1 Hour</option>
-                  <option value="1d">1 Day</option>
-                </Select>
-              </div>
+                {/* Timeframe */}
+                <div className="space-y-2">
+                  <Label htmlFor="timeframe">Temporalidad</Label>
+                  <Select
+                    id="timeframe"
+                    value={formData.timeframe}
+                    onChange={(e) => setFormData({ ...formData, timeframe: e.target.value as any })}
+                  >
+                    <option value="1min">1 Minuto</option>
+                    <option value="5min">5 Minutos</option>
+                    <option value="15min">15 Minutos</option>
+                    <option value="1h">1 Hora</option>
+                    <option value="1d">1 Día</option>
+                  </Select>
+                </div>
 
-              {/* Initial Capital */}
-              <div className="space-y-2">
-                <Label htmlFor="capital">Initial Capital</Label>
-                <Input
-                  id="capital"
-                  type="number"
-                  value={formData.initialCapital}
-                  onChange={(e) => setFormData({ ...formData, initialCapital: Number(e.target.value) })}
-                />
-              </div>
+                {/* Initial Capital */}
+                <div className="space-y-2">
+                  <Label htmlFor="capital">Capital Inicial</Label>
+                  <Input
+                    id="capital"
+                    type="number"
+                    value={formData.initialCapital}
+                    onChange={(e) => setFormData({ ...formData, initialCapital: Number(e.target.value) })}
+                  />
+                </div>
 
-              {/* Date Range */}
-              <div className="space-y-2">
-                <Label htmlFor="startDate">Start Date</Label>
-                <Input
-                  id="startDate"
-                  type="date"
-                  value={formData.startDate}
-                  onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
-                />
-              </div>
+                {/* Date Range */}
+                <div className="space-y-2">
+                  <Label htmlFor="startDate">Fecha Inicio</Label>
+                  <Input
+                    id="startDate"
+                    type="date"
+                    value={formData.startDate}
+                    onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
+                  />
+                </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="endDate">End Date</Label>
-                <Input
-                  id="endDate"
-                  type="date"
-                  value={formData.endDate}
-                  onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
-                />
-              </div>
-            </div>
-
-            {/* Strategy Parameters */}
-            {formData.strategy === 'smaCrossover' && (
-              <div className="space-y-4 p-4 bg-white/5 rounded-lg">
-                <h4 className="font-semibold text-sm text-gray-300">SMA Crossover Parameters</h4>
-                <div className="space-y-4">
-                  <div>
-                    <Label>Fast Period: {strategyParams.fastPeriod}</Label>
-                    <Slider
-                      min={5}
-                      max={50}
-                      step={1}
-                      value={strategyParams.fastPeriod}
-                      onValueChange={(val) => setStrategyParams({ ...strategyParams, fastPeriod: val })}
-                    />
-                  </div>
-                  <div>
-                    <Label>Slow Period: {strategyParams.slowPeriod}</Label>
-                    <Slider
-                      min={20}
-                      max={200}
-                      step={5}
-                      value={strategyParams.slowPeriod}
-                      onValueChange={(val) => setStrategyParams({ ...strategyParams, slowPeriod: val })}
-                    />
-                  </div>
+                <div className="space-y-2">
+                  <Label htmlFor="endDate">Fecha Fin</Label>
+                  <Input
+                    id="endDate"
+                    type="date"
+                    value={formData.endDate}
+                    onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
+                  />
                 </div>
               </div>
-            )}
 
-            {formData.strategy === 'rsiMeanRevert' && (
-              <div className="space-y-4 p-4 bg-white/5 rounded-lg">
-                <h4 className="font-semibold text-sm text-gray-300">RSI Mean Reversion Parameters</h4>
-                <div className="space-y-4">
-                  <div>
-                    <Label>RSI Period: {strategyParams.rsiPeriod}</Label>
-                    <Slider
-                      min={7}
-                      max={28}
-                      step={1}
-                      value={strategyParams.rsiPeriod}
-                      onValueChange={(val) => setStrategyParams({ ...strategyParams, rsiPeriod: val })}
-                    />
+              {/* Strategy Parameters */}
+              {formData.strategy === 'smaCrossover' && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  className="space-y-4 p-4 bg-gradient-to-br from-blue-500/10 to-cyan-500/10 rounded-lg border border-blue-500/20"
+                >
+                  <h4 className="font-semibold text-sm text-blue-300 flex items-center gap-2">
+                    <Target className="w-4 h-4" />
+                    Parámetros SMA Crossover
+                  </h4>
+                  <div className="space-y-4">
+                    <div>
+                      <Label>Período Rápido: {strategyParams.fastPeriod}</Label>
+                      <Slider
+                        min={5}
+                        max={50}
+                        step={1}
+                        value={strategyParams.fastPeriod}
+                        onValueChange={(val) => setStrategyParams({ ...strategyParams, fastPeriod: val })}
+                      />
+                    </div>
+                    <div>
+                      <Label>Período Lento: {strategyParams.slowPeriod}</Label>
+                      <Slider
+                        min={20}
+                        max={200}
+                        step={5}
+                        value={strategyParams.slowPeriod}
+                        onValueChange={(val) => setStrategyParams({ ...strategyParams, slowPeriod: val })}
+                      />
+                    </div>
                   </div>
-                  <div>
-                    <Label>Overbought: {strategyParams.rsiOverbought}</Label>
-                    <Slider
-                      min={60}
-                      max={90}
-                      step={5}
-                      value={strategyParams.rsiOverbought}
-                      onValueChange={(val) => setStrategyParams({ ...strategyParams, rsiOverbought: val })}
-                    />
-                  </div>
-                  <div>
-                    <Label>Oversold: {strategyParams.rsiOversold}</Label>
-                    <Slider
-                      min={10}
-                      max={40}
-                      step={5}
-                      value={strategyParams.rsiOversold}
-                      onValueChange={(val) => setStrategyParams({ ...strategyParams, rsiOversold: val })}
-                    />
-                  </div>
-                </div>
-              </div>
-            )}
+                </motion.div>
+              )}
 
-            {/* Submit Button */}
-            <Button
-              type="submit"
-              disabled={loading}
-              className="w-full"
-              size="lg"
-            >
-              {loading ? 'Running Backtest...' : 'Run Backtest'}
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
+              {formData.strategy === 'rsiMeanRevert' && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  className="space-y-4 p-4 bg-gradient-to-br from-purple-500/10 to-pink-500/10 rounded-lg border border-purple-500/20"
+                >
+                  <h4 className="font-semibold text-sm text-purple-300 flex items-center gap-2">
+                    <Activity className="w-4 h-4" />
+                    Parámetros RSI Mean Reversion
+                  </h4>
+                  <div className="space-y-4">
+                    <div>
+                      <Label>Período RSI: {strategyParams.rsiPeriod}</Label>
+                      <Slider
+                        min={7}
+                        max={28}
+                        step={1}
+                        value={strategyParams.rsiPeriod}
+                        onValueChange={(val) => setStrategyParams({ ...strategyParams, rsiPeriod: val })}
+                      />
+                    </div>
+                    <div>
+                      <Label>Sobrecompra: {strategyParams.rsiOverbought}</Label>
+                      <Slider
+                        min={60}
+                        max={90}
+                        step={5}
+                        value={strategyParams.rsiOverbought}
+                        onValueChange={(val) => setStrategyParams({ ...strategyParams, rsiOverbought: val })}
+                      />
+                    </div>
+                    <div>
+                      <Label>Sobreventa: {strategyParams.rsiOversold}</Label>
+                      <Slider
+                        min={10}
+                        max={40}
+                        step={5}
+                        value={strategyParams.rsiOversold}
+                        onValueChange={(val) => setStrategyParams({ ...strategyParams, rsiOversold: val })}
+                      />
+                    </div>
+                  </div>
+                </motion.div>
+              )}
 
-      {/* Error Display */}
-      {error && (
-        <Card className="border-red-500/50">
-          <CardContent className="pt-6">
-            <p className="text-red-400">Error: {error}</p>
+              {/* Submit Button */}
+              <Button
+                type="submit"
+                disabled={loading || loadingStrategies}
+                className="w-full bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 transition-all"
+                size="lg"
+              >
+                {loading ? (
+                  <span className="flex items-center gap-2">
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    Ejecutando Backtest...
+                  </span>
+                ) : (
+                  <span className="flex items-center gap-2">
+                    <Play className="w-4 h-4" />
+                    Ejecutar Backtest
+                  </span>
+                )}
+              </Button>
+            </form>
           </CardContent>
         </Card>
+      </motion.div>
+
+      {/* Loading State */}
+      {loading && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="space-y-6"
+        >
+          <div className="grid md:grid-cols-3 lg:grid-cols-4 gap-4">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <CardSkeleton key={i} />
+            ))}
+          </div>
+          <ChartSkeleton />
+          <ChartSkeleton />
+        </motion.div>
       )}
 
       {/* Results */}
-      {result && (
-        <div className="space-y-6">
+      {result && !loading && (
+        <motion.div
+          variants={containerVariants}
+          initial="hidden"
+          animate="visible"
+          className="space-y-6"
+        >
+          {/* Action Bar */}
+          <motion.div variants={itemVariants} className="flex justify-between items-center">
+            <h2 className="text-2xl font-bold text-white">Resultados del Backtest</h2>
+            <Button variant="outline" size="sm">
+              <Download className="w-4 h-4 mr-2" />
+              Exportar Reporte
+            </Button>
+          </motion.div>
+
           {/* Performance Metrics */}
-          <div className="grid md:grid-cols-3 lg:grid-cols-4 gap-4">
+          <motion.div variants={itemVariants} className="grid md:grid-cols-3 lg:grid-cols-4 gap-4">
             <MetricCard
-              title="Total Return"
+              title="Retorno Total"
               value={result.backtest.performance.totalReturn}
               formatAsPercent
               trend={result.backtest.performance.totalReturn >= 0 ? 'up' : 'down'}
@@ -333,14 +454,24 @@ export default function BacktestPage() {
               trend={result.backtest.performance.expectancy >= 0 ? 'up' : 'down'}
               icon={<DollarSign className="w-4 h-4" />}
             />
-          </div>
+          </motion.div>
 
-          {/* Equity Curve */}
-          <EquityCurve data={result.backtest.equityCurve} />
+          {/* Charts Row 1 */}
+          <motion.div variants={itemVariants}>
+            <EquityCurve data={result.backtest.equityCurve} />
+          </motion.div>
+
+          {/* Charts Row 2 */}
+          <motion.div variants={itemVariants} className="grid md:grid-cols-2 gap-6">
+            <DrawdownChart data={result.backtest.equityCurve} />
+            <ReturnsDistribution trades={result.backtest.trades} />
+          </motion.div>
 
           {/* Trade History */}
-          <TradeTable trades={result.backtest.trades} maxRows={20} />
-        </div>
+          <motion.div variants={itemVariants}>
+            <TradeTable trades={result.backtest.trades} maxRows={20} />
+          </motion.div>
+        </motion.div>
       )}
     </div>
   )
