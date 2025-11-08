@@ -5,12 +5,7 @@ import { useRouter } from "next/navigation";
 import { loginUser, registerUser, getCurrentUser } from "@/lib/auth";
 import { saveAuthSession, clearAuthSession, getStoredUser, isAuthenticated } from "@/lib/auth-helpers";
 import type { AuthResponse } from "@/types/api";
-
-interface User {
-  id: string;
-  email: string;
-  name?: string;
-}
+import type { User } from "@/lib/types";
 
 interface AuthContextType {
   user: User | null;

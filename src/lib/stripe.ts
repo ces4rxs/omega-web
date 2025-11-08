@@ -1,96 +1,41 @@
-// src/lib/stripe.ts - Stripe integration
-
-import api from "@/lib/api";
+// src/lib/stripe.ts
+// Funciones para Stripe Checkout y manejo de suscripciones
+import { api } from "@/lib/api";
 import type {
   CreateCheckoutSessionRequest,
   CreateCheckoutSessionResponse,
   UserSubscription,
   CancelSubscriptionResponse,
+  PricingPlan,
 } from "@/types/api";
 
-export interface PricingPlan {
-  id: string;
-  name: string;
-  price: number;
-  priceId: string;
-  interval: "month" | "year";
-  features: string[];
-  popular?: boolean;
-  color: string;
-}
-
-// 💳 Plans configuration
+// Placeholder plans - Replace with actual Stripe Price IDs
 export const PRICING_PLANS: PricingPlan[] = [
   {
-    id: "trader",
-    name: "Trader",
-    price: 99.99,
-    priceId: process.env.NEXT_PUBLIC_STRIPE_TRADER_PRICE_ID || "price_trader",
-    interval: "month",
-    popular: false,
-    color: "from-blue-500 to-cyan-500",
-    features: [
-      "5 estrategias activas",
-      "Backtesting ilimitado",
-      "AI Neural Advisor v11",
-      "Optimización básica",
-      "Datos históricos 1 año",
-      "Soporte por email",
-    ],
+    id: "free",
+    name: "Free",
+    price: 0,
   },
   {
     id: "professional",
     name: "Professional",
-    price: 199.99,
-    priceId: process.env.NEXT_PUBLIC_STRIPE_PROFESSIONAL_PRICE_ID || "price_professional",
-    interval: "month",
-    popular: true,
-    color: "from-emerald-500 to-teal-500",
-    features: [
-      "20 estrategias activas",
-      "Backtesting ilimitado",
-      "Todos los módulos AI (v11-v15)",
-      "Optimización avanzada",
-      "Monte Carlo 10,000 runs",
-      "Datos históricos 5 años",
-      "API access",
-      "Soporte prioritario",
-    ],
-  },
-  {
-    id: "institutional",
-    name: "Institutional",
-    price: 499.99,
-    priceId: process.env.NEXT_PUBLIC_STRIPE_INSTITUTIONAL_PRICE_ID || "price_institutional",
-    interval: "month",
-    popular: false,
-    color: "from-purple-500 to-pink-500",
-    features: [
-      "Estrategias ilimitadas",
-      "Backtesting ilimitado",
-      "Todos los módulos AI",
-      "Optimización quantum",
-      "Monte Carlo ilimitado",
-      "Datos históricos completos",
-      "API access ilimitado",
-      "White-label disponible",
-      "Soporte 24/7 dedicado",
-      "Custom integrations",
-    ],
+    price: 29,
   },
 ];
 
 /**
- * Create a Stripe Checkout session
+ * Create Stripe checkout session
  */
-export async function createCheckoutSession(priceId: string): Promise<string> {
+export async function createCheckoutSession(
+  priceId: string
+): Promise<string> {
   const request: CreateCheckoutSessionRequest = {
     priceId,
-    successUrl: `${window.location.origin}/dashboard?subscription=success`,
+    successUrl: `${window.location.origin}/dashboard?success=true`,
     cancelUrl: `${window.location.origin}/pricing?canceled=true`,
   };
 
-  const { data } = await api.post<CreateCheckoutSessionResponse>(
+  const data = await api.post<CreateCheckoutSessionResponse>(
     "/stripe/create-checkout-session",
     request
   );
@@ -103,13 +48,10 @@ export async function createCheckoutSession(priceId: string): Promise<string> {
  */
 export async function getUserSubscription(): Promise<UserSubscription | null> {
   try {
-    const { data } = await api.get<UserSubscription>("/stripe/subscription");
+    const data = await api.get<UserSubscription>("/stripe/subscription");
     return data;
   } catch (error: any) {
-    if (error.response?.status === 404) {
-      return null;
-    }
-    throw error;
+    return null;
   }
 }
 
@@ -117,7 +59,7 @@ export async function getUserSubscription(): Promise<UserSubscription | null> {
  * Create a Stripe Billing Portal session
  */
 export async function createBillingPortalSession(): Promise<string> {
-  const { data } = await api.post<{ url: string }>(
+  const data = await api.post<{ url: string }>(
     "/stripe/create-portal-session",
     {
       returnUrl: `${window.location.origin}/dashboard/billing`,
@@ -131,7 +73,7 @@ export async function createBillingPortalSession(): Promise<string> {
  * Cancel user's subscription (at period end)
  */
 export async function cancelSubscription(): Promise<UserSubscription> {
-  const { data } = await api.post<CancelSubscriptionResponse>(
+  const data = await api.post<CancelSubscriptionResponse>(
     "/stripe/cancel-subscription"
   );
 
@@ -142,7 +84,7 @@ export async function cancelSubscription(): Promise<UserSubscription> {
  * Reactivate a canceled subscription
  */
 export async function reactivateSubscription(): Promise<UserSubscription> {
-  const { data } = await api.post<{ ok: boolean; subscription: UserSubscription }>(
+  const data = await api.post<{ ok: boolean; subscription: UserSubscription }>(
     "/stripe/reactivate-subscription"
   );
 
@@ -173,18 +115,18 @@ export function formatSubscriptionStatus(
 ): { text: string; color: string } {
   switch (status) {
     case "active":
-      return { text: "Activa", color: "text-emerald-400" };
+      return { text: "Active", color: "text-emerald-400" };
     case "trialing":
-      return { text: "Período de prueba", color: "text-blue-400" };
+      return { text: "Trial Period", color: "text-blue-400" };
     case "canceled":
-      return { text: "Cancelada", color: "text-orange-400" };
+      return { text: "Canceled", color: "text-orange-400" };
     case "past_due":
-      return { text: "Pago pendiente", color: "text-red-400" };
+      return { text: "Payment Pending", color: "text-red-400" };
     case "unpaid":
-      return { text: "Impaga", color: "text-red-400" };
+      return { text: "Unpaid", color: "text-red-400" };
     case "incomplete":
-      return { text: "Incompleta", color: "text-yellow-400" };
+      return { text: "Incomplete", color: "text-yellow-400" };
     default:
-      return { text: "Sin suscripción", color: "text-slate-400" };
+      return { text: "No Subscription", color: "text-slate-400" };
   }
 }

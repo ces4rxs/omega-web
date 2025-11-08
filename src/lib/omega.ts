@@ -2,12 +2,12 @@
 // 🌐 Cliente híbrido para Omega AI Server (v9 → v10.3-B)
 // Auto: usa backend real (Render) si está disponible, o fallback educativo offline.
 
-import api from "@/lib/api";
+import { api } from "@/lib/api";
 
 // ---------- ⚙️ Helper: verificar conexión ----------
-async function tryBackend(path: string) {
+async function tryBackend<T = any>(path: string): Promise<T | null> {
   try {
-    const { data } = await api.get(path);
+    const data = await api.get<T>(path);
     return data;
   } catch (err: any) {
     console.warn(`⚠️ Backend no disponible para ${path}:`, err.message);
@@ -15,9 +15,9 @@ async function tryBackend(path: string) {
   }
 }
 
-async function postBackend(path: string, payload: any) {
+async function postBackend<T = any>(path: string, payload: any): Promise<T | null> {
   try {
-    const { data } = await api.post(path, payload);
+    const data = await api.post<T>(path, payload);
     return data;
   } catch (err: any) {
     console.warn(`⚠️ Backend no disponible para ${path} (POST):`, err.message);
@@ -284,7 +284,7 @@ export async function runOptimizerV5(payload: OptimizerRequest) {
 // 🔍 Backtest History (tu función antigua debe seguir aquí)
 // ======================================================
 export async function fetchBacktestHistory(symbol: string) {
-  const { data } = await api.get(`/ai/backtest/history/${symbol}`);
+  const data = await api.get(`/ai/backtest/history/${symbol}`);
   return data;
 }
 

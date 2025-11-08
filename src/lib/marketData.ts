@@ -1,5 +1,5 @@
 // src/lib/marketData.ts
-import api from "@/lib/api";
+import { api } from "@/lib/api";
 
 export type LiveSnapshot = {
   BTCUSD?: { price: number|null; source: string|null };
@@ -9,7 +9,7 @@ export type LiveSnapshot = {
 };
 
 export async function fetchLiveMarket(): Promise<LiveSnapshot> {
-  const { data } = await api.get("/ai/market/external-live");
+  const data = await api.get<{ ok: boolean; data: LiveSnapshot }>("/ai/market/external-live");
   if (!data?.ok) throw new Error("Fuente externa no disponible");
   return data.data as LiveSnapshot;
 }
