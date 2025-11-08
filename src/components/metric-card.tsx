@@ -25,15 +25,22 @@ export function MetricCard({
   const formatValue = (val: string | number): string => {
     if (typeof val === 'string') return val
 
+    // Manejar valores undefined, null o NaN
+    if (val === undefined || val === null || isNaN(Number(val))) {
+      return 'N/A'
+    }
+
+    const numVal = Number(val)
+
     if (formatAsCurrency) {
-      return `$${val.toLocaleString('en-US', { maximumFractionDigits: 2 })}`
+      return `$${numVal.toLocaleString('en-US', { maximumFractionDigits: 2 })}`
     }
 
     if (formatAsPercent) {
-      return `${val.toFixed(2)}%`
+      return `${(numVal * 100).toFixed(2)}%`
     }
 
-    return val.toLocaleString('en-US', { maximumFractionDigits: 2 })
+    return numVal.toLocaleString('en-US', { maximumFractionDigits: 2 })
   }
 
   const getTrendColor = () => {
