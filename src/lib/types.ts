@@ -9,7 +9,7 @@ export interface User {
 }
 
 export interface Subscription {
-  planId: 'free' | 'professional'
+  planId: 'free' | 'professional' | 'enterprise'
   status: 'active' | 'canceled' | 'expired'
   currentPeriodEnd?: string
 }

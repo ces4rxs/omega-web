@@ -25,11 +25,16 @@ import { BacktestReplay } from "@/components/backtest-replay"
 import { PerformanceHeatmap, MonthlyPerformanceHeatmap } from "@/components/performance-heatmap"
 import { MetricCard } from "@/components/metric-card"
 import { TradeTable } from "@/components/trade-table"
-import { Activity, TrendingUp, TrendingDown, Target, Percent, DollarSign, Play, Download, Sparkles, FileText } from "lucide-react"
+import { AIInsights } from "@/components/ai/ai-insights"
+import { QuantumRisk } from "@/components/ai/quantum-risk"
+import { AIOptimizer } from "@/components/ai/ai-optimizer"
+import { PredictiveScore } from "@/components/ai/predictive-score"
+import { Activity, TrendingUp, TrendingDown, Target, Percent, DollarSign, Play, Download, Sparkles, FileText, Crown, Brain } from "lucide-react"
 import { transformBacktestResponse } from "@/lib/transformBacktest"
 import { polygonService } from "@/lib/polygon"
 import { exportBacktestToPDF } from "@/lib/pdf-export"
 import type { CandlestickData } from "lightweight-charts"
+import { useTier } from "@/hooks/use-tier"
 
 // Mapeo de timeframes del frontend al backend
 const timeframeMap: Record<string, string> = {
@@ -44,6 +49,7 @@ const timeframeMap: Record<string, string> = {
 }
 
 export default function BacktestPage() {
+  const { canUseAI, canUsePredictiveAI, isProfessional, isEnterprise } = useTier()
   const [strategies, setStrategies] = useState<string[]>([])
   const [loading, setLoading] = useState(false)
   const [loadingStrategies, setLoadingStrategies] = useState(true)
@@ -214,14 +220,48 @@ export default function BacktestPage() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
       >
-        <div className="flex items-center gap-3 mb-2">
-          <Sparkles className="w-8 h-8 text-blue-400" />
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-white via-blue-100 to-white bg-clip-text text-transparent">
-            Backtest Strategy
-          </h1>
+        <div className="flex items-center justify-between">
+          <div>
+            <div className="flex items-center gap-3 mb-2">
+              <Sparkles className="w-8 h-8 text-blue-400" />
+              <h1 className="text-3xl font-bold bg-gradient-to-r from-white via-blue-100 to-white bg-clip-text text-transparent">
+                Backtest Strategy
+              </h1>
+              {(isProfessional || isEnterprise) && (
+                <span className="text-xs px-3 py-1 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-full flex items-center gap-1">
+                  <Brain className="w-3 h-3" />
+                  AI Powered
+                </span>
+              )}
+            </div>
+            <p className="text-gray-400">
+              {canUseAI
+                ? 'Prueba tus estrategias con análisis de IA avanzado'
+                : 'Prueba tus estrategias con datos históricos reales'}
+            </p>
+          </div>
         </div>
-        <p className="text-gray-400">Prueba tus estrategias con datos históricos reales</p>
       </motion.div>
+
+      {/* Predictive Score - ENTERPRISE ONLY (Before Backtest) */}
+      {canUsePredictiveAI && !result && !loading && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.1 }}
+        >
+          <PredictiveScore
+            strategy={formData.strategy}
+            symbol={formData.symbol}
+            timeframe={formData.timeframe}
+            parameters={
+              formData.strategy === 'smaCrossover'
+                ? { fastPeriod: strategyParams.fastPeriod, slowPeriod: strategyParams.slowPeriod }
+                : { rsiPeriod: strategyParams.rsiPeriod, overbought: strategyParams.rsiOverbought, oversold: strategyParams.rsiOversold }
+            }
+          />
+        </motion.div>
+      )}
 
       {/* Configuration Form */}
       <motion.div
@@ -423,6 +463,54 @@ export default function BacktestPage() {
         </Card>
       </motion.div>
 
+      {/* AI Optimizer - PROFESSIONAL (Before Results) */}
+      {canUseAI && !result && !loading && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.2 }}
+        >
+          <AIOptimizer
+            strategy={formData.strategy}
+            symbol={formData.symbol}
+            timeframe={formData.timeframe}
+            dateRange={{
+              startDate: formData.startDate,
+              endDate: formData.endDate
+            }}
+            currentParameters={
+              formData.strategy === 'smaCrossover'
+                ? [
+                    { name: 'fastPeriod', currentValue: strategyParams.fastPeriod, min: 5, max: 50, step: 1 },
+                    { name: 'slowPeriod', currentValue: strategyParams.slowPeriod, min: 20, max: 200, step: 5 }
+                  ]
+                : [
+                    { name: 'rsiPeriod', currentValue: strategyParams.rsiPeriod, min: 7, max: 28, step: 1 },
+                    { name: 'overbought', currentValue: strategyParams.rsiOverbought, min: 60, max: 90, step: 5 },
+                    { name: 'oversold', currentValue: strategyParams.rsiOversold, min: 10, max: 40, step: 5 }
+                  ]
+            }
+            onOptimized={(params) => {
+              // Apply optimized parameters
+              if (formData.strategy === 'smaCrossover') {
+                setStrategyParams({
+                  ...strategyParams,
+                  fastPeriod: params.fastPeriod,
+                  slowPeriod: params.slowPeriod
+                })
+              } else {
+                setStrategyParams({
+                  ...strategyParams,
+                  rsiPeriod: params.rsiPeriod,
+                  rsiOverbought: params.overbought,
+                  rsiOversold: params.oversold
+                })
+              }
+            }}
+          />
+        </motion.div>
+      )}
+
       {/* Loading State */}
       {loading && (
         <motion.div
@@ -513,6 +601,43 @@ export default function BacktestPage() {
               icon={<DollarSign className="w-4 h-4" />}
             />
           </motion.div>
+
+          {/* AI Analysis Section - PROFESSIONAL & ENTERPRISE */}
+          {canUseAI && (
+            <motion.div variants={itemVariants} className="space-y-6">
+              <div className="flex items-center gap-2 mb-4">
+                <Brain className="w-6 h-6 text-purple-400" />
+                <h3 className="text-xl font-bold text-white">Análisis de IA</h3>
+                <span className="text-xs px-2 py-1 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-full">
+                  {isEnterprise ? 'ENTERPRISE' : 'PROFESSIONAL'}
+                </span>
+              </div>
+
+              <div className="grid lg:grid-cols-2 gap-6">
+                {/* AI Insights */}
+                <AIInsights
+                  backtestId={result.backtest.id}
+                  strategyName={formData.strategy}
+                  performanceMetrics={{
+                    sharpeRatio: result.backtest.performance.sharpeRatio,
+                    maxDrawdown: result.backtest.performance.maxDrawdown,
+                    winRate: result.backtest.performance.winRate,
+                    totalTrades: result.backtest.performance.totalTrades
+                  }}
+                />
+
+                {/* Quantum Risk */}
+                <QuantumRisk
+                  backtestId={result.backtest.id}
+                  performanceMetrics={{
+                    sharpeRatio: result.backtest.performance.sharpeRatio,
+                    maxDrawdown: result.backtest.performance.maxDrawdown,
+                    totalTrades: result.backtest.performance.totalTrades
+                  }}
+                />
+              </div>
+            </motion.div>
+          )}
 
           {/* Charts Row 1 - Equity Curve */}
           <motion.div variants={itemVariants}>

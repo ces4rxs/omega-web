@@ -15,13 +15,20 @@ import {
   Clock,
   CheckCircle2,
   Sparkles,
-  ArrowRight
+  ArrowRight,
+  Crown,
+  Brain,
+  Shield,
+  MessageSquare,
+  Repeat,
+  Lock
 } from "lucide-react"
+import { useTier } from "@/hooks/use-tier"
 
 export default function DashboardPage() {
   const router = useRouter()
+  const { currentTier, isEnterprise, isProfessional, isFree, features } = useTier()
   const [userName, setUserName] = useState<string | null>(null)
-  const [isPro, setIsPro] = useState(false)
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -30,7 +37,6 @@ export default function DashboardPage() {
         try {
           const user = JSON.parse(storedUser)
           setUserName(user.name || user.email?.split('@')[0])
-          setIsPro(user?.subscription?.planId === 'professional')
         } catch (e) {
           console.error('Error parsing user:', e)
         }
@@ -86,8 +92,8 @@ export default function DashboardPage() {
     },
     {
       title: "Total Backtests",
-      value: "127",
-      change: "+23 este mes",
+      value: features.backtestsPerMonth === 'unlimited' ? '∞' : '5',
+      change: features.backtestsPerMonth === 'unlimited' ? 'Ilimitados' : `${features.backtestsPerMonth} este mes`,
       trend: "neutral",
       icon: <BarChart3 className="w-5 h-5" />,
       color: "text-cyan-400",
@@ -102,23 +108,52 @@ export default function DashboardPage() {
       description: "Ejecuta una nueva prueba de estrategia",
       icon: <Zap className="w-6 h-6" />,
       color: "from-blue-600 to-cyan-600",
-      action: () => router.push("/dashboard/backtest")
+      action: () => router.push("/dashboard/backtest"),
+      tierRequired: null
     },
     {
-      title: "Optimizar",
-      description: "Optimiza parámetros de tus estrategias",
-      icon: <Target className="w-6 h-6" />,
+      title: "AI Insights",
+      description: "Análisis inteligente con Hybrid + Neural AI",
+      icon: <Brain className="w-6 h-6" />,
       color: "from-purple-600 to-pink-600",
-      action: () => router.push("/dashboard/optimizer"),
-      pro: true
+      action: () => router.push("/dashboard/backtest"),
+      tierRequired: 'professional',
+      tierBadge: 'PRO'
     },
     {
-      title: "Análisis Avanzado",
-      description: "Monte Carlo, Walk-Forward y más",
-      icon: <Sparkles className="w-6 h-6" />,
-      color: "from-indigo-600 to-blue-600",
-      action: () => router.push("/dashboard/analysis/monte-carlo"),
-      pro: true
+      title: "Quantum Risk",
+      description: "Análisis de riesgo cuántico avanzado",
+      icon: <Shield className="w-6 h-6" />,
+      color: "from-orange-600 to-red-600",
+      action: () => router.push("/dashboard/backtest"),
+      tierRequired: 'professional',
+      tierBadge: 'PRO'
+    },
+    {
+      title: "AI Copilot",
+      description: "Chat inteligente para optimizar estrategias",
+      icon: <MessageSquare className="w-6 h-6" />,
+      color: "from-indigo-600 to-purple-600",
+      action: () => router.push("/dashboard/ai-copilot"),
+      tierRequired: 'enterprise',
+      tierBadge: 'ENTERPRISE'
+    },
+    {
+      title: "Auto-Loop",
+      description: "Ejecuta hasta 100 backtests automáticamente",
+      icon: <Repeat className="w-6 h-6" />,
+      color: "from-pink-600 to-rose-600",
+      action: () => router.push("/dashboard/auto-loop"),
+      tierRequired: 'enterprise',
+      tierBadge: 'ENTERPRISE'
+    },
+    {
+      title: "Watchlist",
+      description: `Monitorea hasta ${features.watchlistSymbols} símbolos`,
+      icon: <Target className="w-6 h-6" />,
+      color: "from-teal-600 to-green-600",
+      action: () => router.push("/dashboard/watchlist"),
+      tierRequired: null
     }
   ]
 
@@ -128,6 +163,29 @@ export default function DashboardPage() {
     { strategy: "Trend Following", symbol: "BTC", return: "+28.5%", date: "Ayer", status: "success" },
     { strategy: "Breakout", symbol: "SPY", return: "+9.2%", date: "Hace 2 días", status: "success" }
   ]
+
+  const getTierBadge = (tier: string) => {
+    if (tier === 'enterprise') {
+      return (
+        <span className="text-xs px-2 py-1 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-full flex items-center gap-1">
+          <Crown className="w-3 h-3" />
+          ENTERPRISE
+        </span>
+      )
+    }
+    return (
+      <span className="text-xs px-2 py-1 bg-blue-600/20 text-blue-400 rounded-full">
+        PRO
+      </span>
+    )
+  }
+
+  const canAccessAction = (tierRequired: string | null) => {
+    if (!tierRequired) return true
+    if (tierRequired === 'professional') return isProfessional || isEnterprise
+    if (tierRequired === 'enterprise') return isEnterprise
+    return true
+  }
 
   return (
     <div className="p-6 space-y-8">
@@ -141,14 +199,34 @@ export default function DashboardPage() {
           <h2 className="text-4xl font-bold bg-gradient-to-r from-white via-blue-100 to-white bg-clip-text text-transparent">
             Bienvenido{userName ? `, ${userName}` : ""} 👋
           </h2>
-          {isPro && (
-            <span className="px-3 py-1 text-xs font-bold bg-gradient-to-r from-yellow-500 to-orange-500 rounded-full">
-              PRO
+          {isProfessional && (
+            <span className="px-3 py-1 text-xs font-bold bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-full">
+              PROFESSIONAL
             </span>
+          )}
+          {isEnterprise && (
+            <span className="px-3 py-1 text-xs font-bold bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-full flex items-center gap-1">
+              <Crown className="w-3 h-3" />
+              ENTERPRISE
+            </span>
+          )}
+          {isFree && (
+            <Button
+              size="sm"
+              onClick={() => router.push('/pricing')}
+              className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+            >
+              <Sparkles className="w-3 h-3 mr-1" />
+              Upgrade
+            </Button>
           )}
         </div>
         <p className="text-gray-400 text-lg">
-          Tu dashboard de backtesting está listo. Explora estrategias, analiza rendimiento y optimiza tu trading.
+          {isEnterprise
+            ? 'Tienes acceso completo a todas las características de IA y análisis avanzado.'
+            : isProfessional
+            ? 'Disfruta de backtesting ilimitado y análisis de IA profesional.'
+            : 'Tu dashboard de backtesting está listo. Actualiza para desbloquear características de IA.'}
         </p>
       </motion.div>
 
@@ -193,40 +271,132 @@ export default function DashboardPage() {
           Acciones Rápidas
         </h3>
         <div className="grid md:grid-cols-3 gap-4">
-          {quickActions.map((action, index) => (
-            <motion.div
-              key={index}
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              <Card
-                className="cursor-pointer hover:border-blue-500/50 transition-all group relative overflow-hidden"
-                onClick={action.action}
+          {quickActions.map((action, index) => {
+            const hasAccess = canAccessAction(action.tierRequired)
+            const isLocked = action.tierRequired && !hasAccess
+
+            return (
+              <motion.div
+                key={index}
+                whileHover={{ scale: isLocked ? 1 : 1.05 }}
+                whileTap={{ scale: isLocked ? 1 : 0.95 }}
               >
-                <div className={`absolute inset-0 bg-gradient-to-br ${action.color} opacity-5 group-hover:opacity-10 transition-opacity`} />
-                <CardContent className="p-6 relative">
-                  <div className="flex items-start justify-between mb-3">
-                    <div className={`p-3 rounded-lg bg-gradient-to-br ${action.color} text-white`}>
-                      {action.icon}
+                <Card
+                  className={`cursor-pointer transition-all group relative overflow-hidden ${
+                    isLocked
+                      ? 'opacity-75 hover:border-yellow-500/50'
+                      : 'hover:border-blue-500/50'
+                  }`}
+                  onClick={() => {
+                    if (isLocked) {
+                      router.push('/pricing')
+                    } else {
+                      action.action()
+                    }
+                  }}
+                >
+                  <div className={`absolute inset-0 bg-gradient-to-br ${action.color} opacity-5 group-hover:opacity-10 transition-opacity`} />
+                  <CardContent className="p-6 relative">
+                    <div className="flex items-start justify-between mb-3">
+                      <div className={`p-3 rounded-lg bg-gradient-to-br ${action.color} text-white relative`}>
+                        {action.icon}
+                        {isLocked && (
+                          <div className="absolute -top-1 -right-1 w-5 h-5 bg-yellow-500 rounded-full flex items-center justify-center">
+                            <Lock className="w-3 h-3 text-black" />
+                          </div>
+                        )}
+                      </div>
+                      {action.tierBadge && (
+                        getTierBadge(action.tierRequired || '')
+                      )}
                     </div>
-                    {action.pro && !isPro && (
-                      <span className="text-xs px-2 py-1 bg-yellow-500/20 text-yellow-400 rounded-full">
-                        PRO
-                      </span>
-                    )}
-                  </div>
-                  <h4 className="font-semibold text-white mb-1">{action.title}</h4>
-                  <p className="text-sm text-gray-400">{action.description}</p>
-                  <div className="mt-4 flex items-center gap-1 text-blue-400 text-sm group-hover:gap-2 transition-all">
-                    Comenzar
-                    <ArrowRight className="w-4 h-4" />
-                  </div>
-                </CardContent>
-              </Card>
-            </motion.div>
-          ))}
+                    <h4 className="font-semibold text-white mb-1">{action.title}</h4>
+                    <p className="text-sm text-gray-400">{action.description}</p>
+                    <div className={`mt-4 flex items-center gap-1 text-sm group-hover:gap-2 transition-all ${
+                      isLocked ? 'text-yellow-400' : 'text-blue-400'
+                    }`}>
+                      {isLocked ? (
+                        <>
+                          <Sparkles className="w-4 h-4" />
+                          Desbloquear
+                        </>
+                      ) : (
+                        <>
+                          Comenzar
+                          <ArrowRight className="w-4 h-4" />
+                        </>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            )
+          })}
         </div>
       </motion.div>
+
+      {/* AI Features Banner - Only for FREE users */}
+      {isFree && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.5 }}
+        >
+          <Card className="border-purple-500/30 bg-gradient-to-br from-purple-900/20 to-pink-900/20 overflow-hidden relative">
+            <div className="absolute inset-0 bg-gradient-to-r from-purple-600/10 to-pink-600/10" />
+            <CardContent className="p-8 relative">
+              <div className="flex items-start justify-between">
+                <div className="flex-1">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-600 to-pink-600 flex items-center justify-center">
+                      <Sparkles className="w-6 h-6 text-white" />
+                    </div>
+                    <div>
+                      <h3 className="text-2xl font-bold text-white">
+                        Desbloquea el Poder de la IA
+                      </h3>
+                      <p className="text-purple-300">
+                        Accede a 15 módulos de IA para optimizar tus estrategias
+                      </p>
+                    </div>
+                  </div>
+                  <div className="grid md:grid-cols-3 gap-4 mt-6">
+                    <div className="flex items-start gap-2">
+                      <Brain className="w-5 h-5 text-purple-400 flex-shrink-0 mt-0.5" />
+                      <div>
+                        <p className="text-sm font-semibold text-white">AI Insights</p>
+                        <p className="text-xs text-gray-400">Análisis inteligente con calificación A+ a F</p>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-2">
+                      <Shield className="w-5 h-5 text-orange-400 flex-shrink-0 mt-0.5" />
+                      <div>
+                        <p className="text-sm font-semibold text-white">Quantum Risk</p>
+                        <p className="text-xs text-gray-400">Índice de riesgo 0-100 en tiempo real</p>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-2">
+                      <MessageSquare className="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5" />
+                      <div>
+                        <p className="text-sm font-semibold text-white">AI Copilot</p>
+                        <p className="text-xs text-gray-400">Chat inteligente 24/7</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <Button
+                  onClick={() => router.push('/pricing')}
+                  size="lg"
+                  className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 ml-6"
+                >
+                  <Crown className="w-4 h-4 mr-2" />
+                  Ver Planes
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+      )}
 
       {/* Recent Backtests */}
       <motion.div
