@@ -29,6 +29,15 @@ export interface BacktestParams {
   endDate: string
   initialCapital?: number
   parameters?: Record<string, any>
+  // Risk Management
+  riskManagement?: {
+    commission?: number // $ per trade
+    slippage?: number // % slippage
+    stopLoss?: number // % stop loss
+    takeProfit?: number // % take profit
+    positionSize?: number // % of capital per trade
+    maxPositions?: number // max concurrent positions
+  }
 }
 
 export interface BacktestResult {
