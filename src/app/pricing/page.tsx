@@ -168,8 +168,18 @@ const PRICING_TIERS: PricingTier[] = [
 
 export default function PricingPage() {
   const [billingCycle, setBillingCycle] = useState<BillingCycle>('monthly')
-  const { user, isAuthenticated } = useAuth()
   const router = useRouter()
+
+  // Safe auth check - handle SSR case
+  let user = null
+  let isAuthenticated = false
+  try {
+    const auth = useAuth()
+    user = auth.user
+    isAuthenticated = auth.isAuthenticated
+  } catch (e) {
+    // Not inside AuthProvider (SSR case)
+  }
 
   const handleSelectPlan = (tierId: string) => {
     if (!isAuthenticated) {
