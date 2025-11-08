@@ -15,8 +15,22 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import type { Trade } from "@/lib/types"
-import { ZoomIn, ZoomOut, Maximize2, TrendingUp } from "lucide-react"
+import {
+  ZoomIn,
+  ZoomOut,
+  Maximize2,
+  TrendingUp,
+  MousePointer2,
+  TrendingUp as TrendLine,
+  Minus,
+  GitBranch,
+  Square,
+  Type,
+  MoveUpRight
+} from "lucide-react"
 import { polygonService, type OHLCData } from "@/lib/polygon"
+
+type DrawingTool = 'cursor' | 'trendline' | 'horizontal' | 'fibonacci' | 'rectangle' | 'text' | 'arrow'
 
 interface CandlestickChartProps {
   data: Array<{ date: string; equity: number }>
@@ -49,6 +63,7 @@ export function CandlestickChart({
   const [ohlcData, setOhlcData] = useState<OHLCData[]>([])
   const [loading, setLoading] = useState(true)
   const [usingRealData, setUsingRealData] = useState(false)
+  const [activeTool, setActiveTool] = useState<DrawingTool>('cursor')
 
   // Cargar datos OHLC de Polygon
   useEffect(() => {
@@ -308,26 +323,133 @@ export function CandlestickChart({
         </div>
       </CardHeader>
       <CardContent>
-        <div ref={chartContainerRef} className="w-full" />
+        <div className="relative">
+          {/* Drawing Tools Toolbar - Vertical Bar */}
+          <div className="absolute left-0 top-0 z-10 flex flex-col gap-1 bg-gray-900/90 backdrop-blur-sm rounded-r-lg p-2 border border-gray-700/50 shadow-xl">
+            {/* Cursor Tool */}
+            <Button
+              variant={activeTool === 'cursor' ? 'default' : 'ghost'}
+              size="icon"
+              onClick={() => setActiveTool('cursor')}
+              className={`h-9 w-9 ${activeTool === 'cursor' ? 'bg-blue-600 hover:bg-blue-700' : 'hover:bg-gray-800'}`}
+              title="Cursor (Arrastrar gráfico)"
+            >
+              <MousePointer2 className="h-4 w-4" />
+            </Button>
 
-        {/* Legend */}
-        <div className="flex items-center gap-4 mt-4 text-sm">
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 bg-blue-500 rounded-sm" />
-            <span className="text-gray-400">SMA {parameters?.fastPeriod || 10}</span>
+            {/* Separator */}
+            <div className="w-full h-px bg-gray-700/50 my-1" />
+
+            {/* Trend Line Tool */}
+            <Button
+              variant={activeTool === 'trendline' ? 'default' : 'ghost'}
+              size="icon"
+              onClick={() => setActiveTool('trendline')}
+              className={`h-9 w-9 ${activeTool === 'trendline' ? 'bg-blue-600 hover:bg-blue-700' : 'hover:bg-gray-800'}`}
+              title="Línea de Tendencia"
+            >
+              <TrendLine className="h-4 w-4" />
+            </Button>
+
+            {/* Horizontal Line Tool */}
+            <Button
+              variant={activeTool === 'horizontal' ? 'default' : 'ghost'}
+              size="icon"
+              onClick={() => setActiveTool('horizontal')}
+              className={`h-9 w-9 ${activeTool === 'horizontal' ? 'bg-blue-600 hover:bg-blue-700' : 'hover:bg-gray-800'}`}
+              title="Línea Horizontal (Soporte/Resistencia)"
+            >
+              <Minus className="h-4 w-4" />
+            </Button>
+
+            {/* Fibonacci Tool */}
+            <Button
+              variant={activeTool === 'fibonacci' ? 'default' : 'ghost'}
+              size="icon"
+              onClick={() => setActiveTool('fibonacci')}
+              className={`h-9 w-9 ${activeTool === 'fibonacci' ? 'bg-blue-600 hover:bg-blue-700' : 'hover:bg-gray-800'}`}
+              title="Retroceso de Fibonacci"
+            >
+              <GitBranch className="h-4 w-4" />
+            </Button>
+
+            {/* Rectangle Tool */}
+            <Button
+              variant={activeTool === 'rectangle' ? 'default' : 'ghost'}
+              size="icon"
+              onClick={() => setActiveTool('rectangle')}
+              className={`h-9 w-9 ${activeTool === 'rectangle' ? 'bg-blue-600 hover:bg-blue-700' : 'hover:bg-gray-800'}`}
+              title="Rectángulo (Zona de S/R)"
+            >
+              <Square className="h-4 w-4" />
+            </Button>
+
+            {/* Separator */}
+            <div className="w-full h-px bg-gray-700/50 my-1" />
+
+            {/* Text Tool */}
+            <Button
+              variant={activeTool === 'text' ? 'default' : 'ghost'}
+              size="icon"
+              onClick={() => setActiveTool('text')}
+              className={`h-9 w-9 ${activeTool === 'text' ? 'bg-blue-600 hover:bg-blue-700' : 'hover:bg-gray-800'}`}
+              title="Texto (Anotaciones)"
+            >
+              <Type className="h-4 w-4" />
+            </Button>
+
+            {/* Arrow Tool */}
+            <Button
+              variant={activeTool === 'arrow' ? 'default' : 'ghost'}
+              size="icon"
+              onClick={() => setActiveTool('arrow')}
+              className={`h-9 w-9 ${activeTool === 'arrow' ? 'bg-blue-600 hover:bg-blue-700' : 'hover:bg-gray-800'}`}
+              title="Flecha (Señalar)"
+            >
+              <MoveUpRight className="h-4 w-4" />
+            </Button>
           </div>
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 bg-orange-500 rounded-sm" />
-            <span className="text-gray-400">SMA {parameters?.slowPeriod || 20}</span>
+
+          {/* Chart Container */}
+          <div ref={chartContainerRef} className="w-full" />
+        </div>
+
+        {/* Legend and Active Tool Indicator */}
+        <div className="flex items-center justify-between mt-4 text-sm">
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 bg-blue-500 rounded-sm" />
+              <span className="text-gray-400">SMA {parameters?.fastPeriod || 10}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 bg-orange-500 rounded-sm" />
+              <span className="text-gray-400">SMA {parameters?.slowPeriod || 20}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-b-[8px] border-b-green-500" />
+              <span className="text-gray-400">Long Entry</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-[8px] border-t-red-500" />
+              <span className="text-gray-400">Exit</span>
+            </div>
           </div>
-          <div className="flex items-center gap-2">
-            <div className="w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-b-[8px] border-b-green-500" />
-            <span className="text-gray-400">Long Entry</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-[8px] border-t-red-500" />
-            <span className="text-gray-400">Exit</span>
-          </div>
+
+          {/* Active Tool Indicator */}
+          {activeTool !== 'cursor' && (
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-500/10 border border-blue-500/30 rounded-md">
+              <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" />
+              <span className="text-blue-400 font-medium text-xs uppercase">
+                {activeTool === 'trendline' && 'Línea de Tendencia'}
+                {activeTool === 'horizontal' && 'Línea Horizontal'}
+                {activeTool === 'fibonacci' && 'Fibonacci'}
+                {activeTool === 'rectangle' && 'Rectángulo'}
+                {activeTool === 'text' && 'Texto'}
+                {activeTool === 'arrow' && 'Flecha'}
+              </span>
+              <span className="text-gray-500 text-xs">● Click en el gráfico para dibujar</span>
+            </div>
+          )}
         </div>
       </CardContent>
     </Card>
