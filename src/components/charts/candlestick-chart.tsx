@@ -71,6 +71,9 @@ export function CandlestickChart({ data, trades, symbol, parameters }: Candlesti
       rightPriceScale: {
         borderColor: '#2B2B43',
       },
+      watermark: {
+        visible: false,
+      },
     })
 
     // Crear serie de candlesticks
