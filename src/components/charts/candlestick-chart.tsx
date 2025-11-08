@@ -15,28 +15,76 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import type { Trade } from "@/lib/types"
-import { ZoomIn, ZoomOut, Maximize2 } from "lucide-react"
+import { ZoomIn, ZoomOut, Maximize2, TrendingUp } from "lucide-react"
+import { polygonService, type OHLCData } from "@/lib/polygon"
 
 interface CandlestickChartProps {
   data: Array<{ date: string; equity: number }>
   trades: Trade[]
   symbol: string
+  startDate?: string
+  endDate?: string
+  timeframe?: string
   parameters?: {
     fastPeriod?: number
     slowPeriod?: number
   }
 }
 
-export function CandlestickChart({ data, trades, symbol, parameters }: CandlestickChartProps) {
+export function CandlestickChart({
+  data,
+  trades,
+  symbol,
+  startDate,
+  endDate,
+  timeframe: initialTimeframe = '1d',
+  parameters
+}: CandlestickChartProps) {
   const chartContainerRef = useRef<HTMLDivElement>(null)
   const chart = useRef<IChartApi | null>(null)
   const candlestickSeries = useRef<ISeriesApi<"Candlestick"> | null>(null)
   const smaFastSeries = useRef<ISeriesApi<"Line"> | null>(null)
   const smaSlowSeries = useRef<ISeriesApi<"Line"> | null>(null)
-  const [timeframe, setTimeframe] = useState<'1D' | '1H' | '4H'>('1D')
+  const [timeframe, setTimeframe] = useState<'1H' | '4H' | '1D'>('1D')
+  const [ohlcData, setOhlcData] = useState<OHLCData[]>([])
+  const [loading, setLoading] = useState(true)
+  const [usingRealData, setUsingRealData] = useState(false)
 
+  // Cargar datos OHLC de Polygon
   useEffect(() => {
-    if (!chartContainerRef.current) return
+    const loadOHLCData = async () => {
+      if (!startDate || !endDate) {
+        // Si no hay fechas, usar datos simulados de equity curve
+        setLoading(false)
+        return
+      }
+
+      setLoading(true)
+      try {
+        const timeframeMap: Record<string, string> = {
+          '1H': '1h',
+          '4H': '4h',
+          '1D': '1d',
+        }
+
+        const polygonTimeframe = timeframeMap[timeframe] || '1d'
+        const data = await polygonService.getOHLC(symbol, polygonTimeframe, startDate, endDate)
+
+        setOhlcData(data)
+        setUsingRealData(data.length > 0 && data[0].time !== undefined)
+      } catch (error) {
+        console.error('Error cargando datos OHLC:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadOHLCData()
+  }, [symbol, startDate, endDate, timeframe])
+
+  // Crear y actualizar el gráfico
+  useEffect(() => {
+    if (!chartContainerRef.current || loading) return
 
     // Crear el gráfico principal
     chart.current = createChart(chartContainerRef.current, {
@@ -71,9 +119,6 @@ export function CandlestickChart({ data, trades, symbol, parameters }: Candlesti
       rightPriceScale: {
         borderColor: '#2B2B43',
       },
-      watermark: {
-        visible: false,
-      },
     })
 
     // Crear serie de candlesticks
@@ -99,8 +144,11 @@ export function CandlestickChart({ data, trades, symbol, parameters }: Candlesti
       title: `SMA ${parameters?.slowPeriod || 20}`,
     })
 
-    // Generar datos de candlestick a partir de equityCurve
-    const candleData = generateCandlestickData(data, timeframe)
+    // Usar datos OHLC reales de Polygon o generar desde equity curve
+    const candleData = ohlcData.length > 0
+      ? convertOHLCToCandlestick(ohlcData)
+      : generateCandlestickData(data, timeframe)
+
     candlestickSeries.current.setData(candleData)
 
     // Calcular y mostrar SMAs
@@ -133,7 +181,7 @@ export function CandlestickChart({ data, trades, symbol, parameters }: Candlesti
       window.removeEventListener('resize', handleResize)
       chart.current?.remove()
     }
-  }, [data, trades, timeframe, parameters])
+  }, [data, trades, timeframe, parameters, ohlcData, loading])
 
   const handleZoomIn = () => {
     if (chart.current) {
@@ -177,14 +225,37 @@ export function CandlestickChart({ data, trades, symbol, parameters }: Candlesti
     }
   }
 
+  if (loading) {
+    return (
+      <Card>
+        <CardContent className="h-[600px] flex items-center justify-center">
+          <div className="flex flex-col items-center gap-3">
+            <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
+            <p className="text-gray-400">Cargando datos de mercado...</p>
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
+
   return (
     <Card>
       <CardHeader>
         <div className="flex items-center justify-between">
           <div>
-            <CardTitle>{symbol} Price Chart</CardTitle>
+            <div className="flex items-center gap-2">
+              <CardTitle>{symbol} Price Chart</CardTitle>
+              {usingRealData && (
+                <span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium bg-green-500/10 text-green-400 rounded-full border border-green-500/20">
+                  <TrendingUp className="w-3 h-3" />
+                  Datos Reales (Polygon)
+                </span>
+              )}
+            </div>
             <p className="text-sm text-gray-400 mt-1">
-              Candlestick chart with SMA indicators and trade markers
+              {usingRealData
+                ? 'Datos OHLC en tiempo real con indicadores técnicos'
+                : 'Candlestick chart con SMA y marcadores de trades'}
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -264,8 +335,21 @@ export function CandlestickChart({ data, trades, symbol, parameters }: Candlesti
 }
 
 /**
- * Genera datos de candlestick a partir de equity curve
- * En producción, estos datos vendrían del backend con OHLC real
+ * Convierte datos OHLC de Polygon al formato de lightweight-charts
+ */
+function convertOHLCToCandlestick(ohlcData: OHLCData[]): CandlestickData[] {
+  return ohlcData.map(bar => ({
+    time: (bar.time / 1000) as UTCTimestamp, // Polygon usa milisegundos, lightweight-charts usa segundos
+    open: bar.open,
+    high: bar.high,
+    low: bar.low,
+    close: bar.close,
+  }))
+}
+
+/**
+ * Genera datos de candlestick a partir de equity curve (fallback)
+ * Usado cuando no hay datos OHLC reales disponibles
  */
 function generateCandlestickData(
   equityData: Array<{ date: string; equity: number }>,
@@ -274,7 +358,6 @@ function generateCandlestickData(
   if (!equityData || equityData.length === 0) return []
 
   // Simular OHLC basándose en equity
-  // TODO: Reemplazar con datos OHLC reales del backend
   return equityData.map((point, index) => {
     const timestamp = new Date(point.date).getTime() / 1000 as UTCTimestamp
     const equity = point.equity

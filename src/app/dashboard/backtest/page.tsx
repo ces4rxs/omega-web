@@ -478,6 +478,9 @@ export default function BacktestPage() {
               data={result.backtest.equityCurve}
               trades={result.backtest.trades}
               symbol={formData.symbol}
+              startDate={formData.startDate}
+              endDate={formData.endDate}
+              timeframe={formData.timeframe}
               parameters={{
                 fastPeriod: strategyParams.fastPeriod,
                 slowPeriod: strategyParams.slowPeriod
