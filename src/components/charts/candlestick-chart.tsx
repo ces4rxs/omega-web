@@ -32,6 +32,20 @@ import { polygonService, type OHLCData } from "@/lib/polygon"
 
 type DrawingTool = 'cursor' | 'trendline' | 'horizontal' | 'fibonacci' | 'rectangle' | 'text' | 'arrow'
 
+interface DrawingPoint {
+  time: number
+  price: number
+}
+
+interface Drawing {
+  id: string
+  type: DrawingTool
+  points: DrawingPoint[]
+  text?: string
+  color?: string
+  style?: 'solid' | 'dashed'
+}
+
 interface CandlestickChartProps {
   data: Array<{ date: string; equity: number }>
   trades: Trade[]
@@ -64,6 +78,9 @@ export function CandlestickChart({
   const [loading, setLoading] = useState(true)
   const [usingRealData, setUsingRealData] = useState(false)
   const [activeTool, setActiveTool] = useState<DrawingTool>('cursor')
+  const [drawings, setDrawings] = useState<Drawing[]>([])
+  const [currentDrawing, setCurrentDrawing] = useState<Drawing | null>(null)
+  const [isDrawing, setIsDrawing] = useState(false)
 
   // Cargar datos OHLC de Polygon
   useEffect(() => {
@@ -197,6 +214,125 @@ export function CandlestickChart({
       chart.current?.remove()
     }
   }, [data, trades, timeframe, parameters, ohlcData, loading])
+
+  // Handle mouse events for drawing
+  const handleChartClick = (event: React.MouseEvent<HTMLDivElement>) => {
+    if (!chart.current || !candlestickSeries.current || activeTool === 'cursor') return
+
+    const rect = chartContainerRef.current?.getBoundingClientRect()
+    if (!rect) return
+
+    const x = event.clientX - rect.left
+    const y = event.clientY - rect.top
+
+    // Convert pixel coordinates to chart coordinates
+    const timeScale = chart.current.timeScale()
+    const time = timeScale.coordinateToTime(x)
+
+    // Use series coordinate conversion for price
+    const seriesPrice = candlestickSeries.current.coordinateToPrice(y)
+
+    if (!time || seriesPrice === null) return
+
+    const price = seriesPrice
+
+    const point: DrawingPoint = { time: time as number, price }
+
+    if (activeTool === 'text') {
+      // For text, create immediately with prompt
+      const text = window.prompt('Ingresa el texto:')
+      if (text) {
+        const newDrawing: Drawing = {
+          id: Date.now().toString(),
+          type: 'text',
+          points: [point],
+          text,
+          color: '#3b82f6'
+        }
+        setDrawings([...drawings, newDrawing])
+      }
+      setActiveTool('cursor')
+      return
+    }
+
+    if (!isDrawing) {
+      // Start new drawing
+      const newDrawing: Drawing = {
+        id: Date.now().toString(),
+        type: activeTool,
+        points: [point],
+        color: '#3b82f6',
+        style: 'solid'
+      }
+      setCurrentDrawing(newDrawing)
+      setIsDrawing(true)
+    } else {
+      // Complete drawing
+      if (currentDrawing) {
+        const completedDrawing = {
+          ...currentDrawing,
+          points: [...currentDrawing.points, point]
+        }
+        setDrawings([...drawings, completedDrawing])
+        setCurrentDrawing(null)
+        setIsDrawing(false)
+        setActiveTool('cursor')
+      }
+    }
+  }
+
+  const handleMouseMove = (event: React.MouseEvent<HTMLDivElement>) => {
+    if (!chart.current || !candlestickSeries.current || !isDrawing || !currentDrawing) return
+
+    const rect = chartContainerRef.current?.getBoundingClientRect()
+    if (!rect) return
+
+    const x = event.clientX - rect.left
+    const y = event.clientY - rect.top
+
+    const timeScale = chart.current.timeScale()
+    const time = timeScale.coordinateToTime(x)
+
+    const seriesPrice = candlestickSeries.current.coordinateToPrice(y)
+
+    if (!time || seriesPrice === null) return
+
+    const price = seriesPrice
+
+    const point: DrawingPoint = { time: time as number, price }
+
+    setCurrentDrawing({
+      ...currentDrawing,
+      points: [currentDrawing.points[0], point]
+    })
+  }
+
+  const deleteDrawing = (id: string) => {
+    setDrawings(drawings.filter(d => d.id !== id))
+  }
+
+  const clearAllDrawings = () => {
+    if (window.confirm('¿Eliminar todos los dibujos?')) {
+      setDrawings([])
+      setCurrentDrawing(null)
+      setIsDrawing(false)
+    }
+  }
+
+  // Convert chart coordinates to pixel coordinates
+  const getPixelCoordinates = (point: DrawingPoint): { x: number; y: number } | null => {
+    if (!chart.current || !candlestickSeries.current) return null
+
+    const timeScale = chart.current.timeScale()
+    const x = timeScale.timeToCoordinate(point.time as UTCTimestamp)
+
+    // Use series price conversion
+    const y = candlestickSeries.current.priceToCoordinate(point.price)
+
+    if (x === null || y === null) return null
+
+    return { x, y }
+  }
 
   const handleZoomIn = () => {
     if (chart.current) {
@@ -410,8 +546,406 @@ export function CandlestickChart({
             </Button>
           </div>
 
-          {/* Chart Container */}
-          <div ref={chartContainerRef} className="w-full" />
+          {/* Chart Container with Drawing Handlers */}
+          <div
+            ref={chartContainerRef}
+            className="w-full cursor-crosshair relative"
+            onClick={handleChartClick}
+            onMouseMove={handleMouseMove}
+            style={{ cursor: activeTool === 'cursor' ? 'default' : 'crosshair' }}
+          >
+            {/* Drawing Overlay - SVG */}
+            <svg
+              className="absolute top-0 left-0 w-full h-full pointer-events-none"
+              style={{ height: 500 }}
+            >
+              {/* Render completed drawings */}
+              {drawings.map(drawing => (
+                <g key={drawing.id}>
+                  {drawing.type === 'trendline' && drawing.points.length === 2 && (() => {
+                    const p1 = getPixelCoordinates(drawing.points[0])
+                    const p2 = getPixelCoordinates(drawing.points[1])
+                    if (!p1 || !p2) return null
+                    return (
+                      <>
+                        <line
+                          x1={p1.x}
+                          y1={p1.y}
+                          x2={p2.x}
+                          y2={p2.y}
+                          stroke={drawing.color}
+                          strokeWidth={2}
+                          strokeDasharray={drawing.style === 'dashed' ? '5,5' : '0'}
+                        />
+                        {/* Delete button */}
+                        <circle
+                          cx={p2.x}
+                          cy={p2.y}
+                          r={8}
+                          fill="#ef4444"
+                          className="pointer-events-auto cursor-pointer hover:r-10 transition-all"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            deleteDrawing(drawing.id)
+                          }}
+                        />
+                        <text
+                          x={p2.x}
+                          y={p2.y}
+                          textAnchor="middle"
+                          dominantBaseline="middle"
+                          fill="white"
+                          fontSize="10"
+                          className="pointer-events-none"
+                        >×</text>
+                      </>
+                    )
+                  })()}
+
+                  {drawing.type === 'horizontal' && drawing.points.length >= 1 && (() => {
+                    const p1 = getPixelCoordinates(drawing.points[0])
+                    if (!p1) return null
+                    return (
+                      <>
+                        <line
+                          x1={0}
+                          y1={p1.y}
+                          x2="100%"
+                          y2={p1.y}
+                          stroke={drawing.color}
+                          strokeWidth={2}
+                          strokeDasharray="5,5"
+                        />
+                        <text
+                          x={10}
+                          y={p1.y - 5}
+                          fill={drawing.color}
+                          fontSize="12"
+                          fontWeight="bold"
+                        >
+                          ${drawing.points[0].price.toFixed(2)}
+                        </text>
+                        <circle
+                          cx={20}
+                          cy={p1.y}
+                          r={8}
+                          fill="#ef4444"
+                          className="pointer-events-auto cursor-pointer"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            deleteDrawing(drawing.id)
+                          }}
+                        />
+                        <text
+                          x={20}
+                          y={p1.y}
+                          textAnchor="middle"
+                          dominantBaseline="middle"
+                          fill="white"
+                          fontSize="10"
+                          className="pointer-events-none"
+                        >×</text>
+                      </>
+                    )
+                  })()}
+
+                  {drawing.type === 'fibonacci' && drawing.points.length === 2 && (() => {
+                    const p1 = getPixelCoordinates(drawing.points[0])
+                    const p2 = getPixelCoordinates(drawing.points[1])
+                    if (!p1 || !p2) return null
+
+                    const levels = [0, 0.236, 0.382, 0.5, 0.618, 0.786, 1]
+                    const priceRange = drawing.points[1].price - drawing.points[0].price
+
+                    return (
+                      <>
+                        {levels.map((level, idx) => {
+                          const price = drawing.points[0].price + priceRange * level
+                          const coords = getPixelCoordinates({ time: drawing.points[0].time, price })
+                          if (!coords) return null
+
+                          const colors = ['#ef4444', '#f59e0b', '#eab308', '#22c55e', '#3b82f6', '#8b5cf6', '#ec4899']
+
+                          return (
+                            <g key={level}>
+                              <line
+                                x1={0}
+                                y1={coords.y}
+                                x2="100%"
+                                y2={coords.y}
+                                stroke={colors[idx]}
+                                strokeWidth={1.5}
+                                strokeDasharray="3,3"
+                                opacity={0.7}
+                              />
+                              <text
+                                x={10}
+                                y={coords.y - 5}
+                                fill={colors[idx]}
+                                fontSize="11"
+                                fontWeight="bold"
+                              >
+                                {(level * 100).toFixed(1)}% (${price.toFixed(2)})
+                              </text>
+                            </g>
+                          )
+                        })}
+                        <circle
+                          cx={p2.x}
+                          cy={p2.y}
+                          r={8}
+                          fill="#ef4444"
+                          className="pointer-events-auto cursor-pointer"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            deleteDrawing(drawing.id)
+                          }}
+                        />
+                        <text
+                          x={p2.x}
+                          y={p2.y}
+                          textAnchor="middle"
+                          dominantBaseline="middle"
+                          fill="white"
+                          fontSize="10"
+                          className="pointer-events-none"
+                        >×</text>
+                      </>
+                    )
+                  })()}
+
+                  {drawing.type === 'rectangle' && drawing.points.length === 2 && (() => {
+                    const p1 = getPixelCoordinates(drawing.points[0])
+                    const p2 = getPixelCoordinates(drawing.points[1])
+                    if (!p1 || !p2) return null
+
+                    const x = Math.min(p1.x, p2.x)
+                    const y = Math.min(p1.y, p2.y)
+                    const width = Math.abs(p2.x - p1.x)
+                    const height = Math.abs(p2.y - p1.y)
+
+                    return (
+                      <>
+                        <rect
+                          x={x}
+                          y={y}
+                          width={width}
+                          height={height}
+                          fill={drawing.color}
+                          fillOpacity={0.1}
+                          stroke={drawing.color}
+                          strokeWidth={2}
+                        />
+                        <circle
+                          cx={p2.x}
+                          cy={p2.y}
+                          r={8}
+                          fill="#ef4444"
+                          className="pointer-events-auto cursor-pointer"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            deleteDrawing(drawing.id)
+                          }}
+                        />
+                        <text
+                          x={p2.x}
+                          y={p2.y}
+                          textAnchor="middle"
+                          dominantBaseline="middle"
+                          fill="white"
+                          fontSize="10"
+                          className="pointer-events-none"
+                        >×</text>
+                      </>
+                    )
+                  })()}
+
+                  {drawing.type === 'text' && drawing.points.length >= 1 && (() => {
+                    const p1 = getPixelCoordinates(drawing.points[0])
+                    if (!p1) return null
+                    return (
+                      <>
+                        <rect
+                          x={p1.x - 5}
+                          y={p1.y - 20}
+                          width={(drawing.text?.length || 0) * 8 + 10}
+                          height={25}
+                          fill="#1f2937"
+                          stroke={drawing.color}
+                          strokeWidth={2}
+                          rx={4}
+                        />
+                        <text
+                          x={p1.x}
+                          y={p1.y - 5}
+                          fill={drawing.color}
+                          fontSize="14"
+                          fontWeight="bold"
+                        >
+                          {drawing.text}
+                        </text>
+                        <circle
+                          cx={p1.x + (drawing.text?.length || 0) * 4 + 10}
+                          cy={p1.y - 8}
+                          r={8}
+                          fill="#ef4444"
+                          className="pointer-events-auto cursor-pointer"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            deleteDrawing(drawing.id)
+                          }}
+                        />
+                        <text
+                          x={p1.x + (drawing.text?.length || 0) * 4 + 10}
+                          y={p1.y - 8}
+                          textAnchor="middle"
+                          dominantBaseline="middle"
+                          fill="white"
+                          fontSize="10"
+                          className="pointer-events-none"
+                        >×</text>
+                      </>
+                    )
+                  })()}
+
+                  {drawing.type === 'arrow' && drawing.points.length === 2 && (() => {
+                    const p1 = getPixelCoordinates(drawing.points[0])
+                    const p2 = getPixelCoordinates(drawing.points[1])
+                    if (!p1 || !p2) return null
+
+                    const angle = Math.atan2(p2.y - p1.y, p2.x - p1.x)
+                    const arrowLength = 15
+                    const arrowAngle = Math.PI / 6
+
+                    return (
+                      <>
+                        <line
+                          x1={p1.x}
+                          y1={p1.y}
+                          x2={p2.x}
+                          y2={p2.y}
+                          stroke={drawing.color}
+                          strokeWidth={3}
+                          markerEnd="url(#arrowhead)"
+                        />
+                        <defs>
+                          <marker
+                            id="arrowhead"
+                            markerWidth="10"
+                            markerHeight="10"
+                            refX="9"
+                            refY="3"
+                            orient="auto"
+                          >
+                            <polygon
+                              points="0 0, 10 3, 0 6"
+                              fill={drawing.color}
+                            />
+                          </marker>
+                        </defs>
+                        <circle
+                          cx={p2.x}
+                          cy={p2.y}
+                          r={8}
+                          fill="#ef4444"
+                          className="pointer-events-auto cursor-pointer"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            deleteDrawing(drawing.id)
+                          }}
+                        />
+                        <text
+                          x={p2.x}
+                          y={p2.y}
+                          textAnchor="middle"
+                          dominantBaseline="middle"
+                          fill="white"
+                          fontSize="10"
+                          className="pointer-events-none"
+                        >×</text>
+                      </>
+                    )
+                  })()}
+                </g>
+              ))}
+
+              {/* Render current drawing in progress */}
+              {currentDrawing && currentDrawing.points.length > 0 && (() => {
+                if (currentDrawing.points.length === 2) {
+                  const p1 = getPixelCoordinates(currentDrawing.points[0])
+                  const p2 = getPixelCoordinates(currentDrawing.points[1])
+                  if (!p1 || !p2) return null
+
+                  if (currentDrawing.type === 'trendline') {
+                    return (
+                      <line
+                        x1={p1.x}
+                        y1={p1.y}
+                        x2={p2.x}
+                        y2={p2.y}
+                        stroke="#3b82f6"
+                        strokeWidth={2}
+                        strokeDasharray="5,5"
+                        opacity={0.7}
+                      />
+                    )
+                  }
+
+                  if (currentDrawing.type === 'rectangle') {
+                    const x = Math.min(p1.x, p2.x)
+                    const y = Math.min(p1.y, p2.y)
+                    const width = Math.abs(p2.x - p1.x)
+                    const height = Math.abs(p2.y - p1.y)
+
+                    return (
+                      <rect
+                        x={x}
+                        y={y}
+                        width={width}
+                        height={height}
+                        fill="#3b82f6"
+                        fillOpacity={0.1}
+                        stroke="#3b82f6"
+                        strokeWidth={2}
+                        strokeDasharray="5,5"
+                      />
+                    )
+                  }
+
+                  if (currentDrawing.type === 'arrow') {
+                    return (
+                      <line
+                        x1={p1.x}
+                        y1={p1.y}
+                        x2={p2.x}
+                        y2={p2.y}
+                        stroke="#3b82f6"
+                        strokeWidth={3}
+                        strokeDasharray="5,5"
+                        opacity={0.7}
+                      />
+                    )
+                  }
+
+                  if (currentDrawing.type === 'fibonacci') {
+                    return (
+                      <line
+                        x1={p1.x}
+                        y1={p1.y}
+                        x2={p2.x}
+                        y2={p2.y}
+                        stroke="#3b82f6"
+                        strokeWidth={2}
+                        strokeDasharray="5,5"
+                        opacity={0.7}
+                      />
+                    )
+                  }
+                }
+                return null
+              })()}
+            </svg>
+          </div>
         </div>
 
         {/* Legend and Active Tool Indicator */}
@@ -435,21 +969,34 @@ export function CandlestickChart({
             </div>
           </div>
 
-          {/* Active Tool Indicator */}
-          {activeTool !== 'cursor' && (
-            <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-500/10 border border-blue-500/30 rounded-md">
-              <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" />
-              <span className="text-blue-400 font-medium text-xs uppercase">
-                {activeTool === 'trendline' && 'Línea de Tendencia'}
-                {activeTool === 'horizontal' && 'Línea Horizontal'}
-                {activeTool === 'fibonacci' && 'Fibonacci'}
-                {activeTool === 'rectangle' && 'Rectángulo'}
-                {activeTool === 'text' && 'Texto'}
-                {activeTool === 'arrow' && 'Flecha'}
-              </span>
-              <span className="text-gray-500 text-xs">● Click en el gráfico para dibujar</span>
-            </div>
-          )}
+          {/* Active Tool Indicator & Controls */}
+          <div className="flex items-center gap-3">
+            {activeTool !== 'cursor' && (
+              <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-500/10 border border-blue-500/30 rounded-md">
+                <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" />
+                <span className="text-blue-400 font-medium text-xs uppercase">
+                  {activeTool === 'trendline' && 'Línea de Tendencia'}
+                  {activeTool === 'horizontal' && 'Línea Horizontal'}
+                  {activeTool === 'fibonacci' && 'Fibonacci'}
+                  {activeTool === 'rectangle' && 'Rectángulo'}
+                  {activeTool === 'text' && 'Texto'}
+                  {activeTool === 'arrow' && 'Flecha'}
+                </span>
+                <span className="text-gray-500 text-xs">● Click en el gráfico para dibujar</span>
+              </div>
+            )}
+
+            {drawings.length > 0 && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={clearAllDrawings}
+                className="h-7 px-3 text-xs bg-red-500/10 border-red-500/30 text-red-400 hover:bg-red-500/20"
+              >
+                Limpiar Dibujos ({drawings.length})
+              </Button>
+            )}
+          </div>
         </div>
       </CardContent>
     </Card>
