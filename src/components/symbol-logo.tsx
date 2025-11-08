@@ -132,24 +132,23 @@ export function SymbolLogo({ symbol, size = "md", showName = false, className = 
   const [imgError, setImgError] = useState(false)
   const upperSymbol = symbol.toUpperCase()
 
-  // Try multiple logo sources with fallbacks
-  // 1. Logo.dev (free, no auth required)
-  // 2. Financialmodelingprep (we might use this API)
-  // 3. Fallback to initials
+  // Best logo sources that work directly (return images, not JSON)
+  // Priority order:
+  // 1. Financialmodelingprep - Free, works great for stocks, no auth needed
+  // 2. Logo.dev - Good fallback for general companies
+  // 3. Gradient badge with initials (always works)
 
   const logoSources = [
-    `https://img.logo.dev/ticker/${upperSymbol}?token=pk_X-1ZBbAQTumJRM7-5dOOWg`, // Logo.dev with free token
-    `https://financialmodelingprep.com/image-stock/${upperSymbol}.png`, // FMP
+    `https://financialmodelingprep.com/image-stock/${upperSymbol}.png`,
+    `https://img.logo.dev/ticker/${upperSymbol}?token=pk_X-1ZBbAQTumJRM7-5dOOWg`,
   ]
 
   const [currentSourceIndex, setCurrentSourceIndex] = useState(0)
 
   const handleImageError = () => {
     if (currentSourceIndex < logoSources.length - 1) {
-      // Try next source
       setCurrentSourceIndex(currentSourceIndex + 1)
     } else {
-      // All sources failed, show fallback
       setImgError(true)
     }
   }
@@ -165,7 +164,6 @@ export function SymbolLogo({ symbol, size = "md", showName = false, className = 
             alt={symbol}
             className="w-full h-full object-contain p-0.5"
             onError={handleImageError}
-            crossOrigin="anonymous"
           />
         </div>
       ) : (
