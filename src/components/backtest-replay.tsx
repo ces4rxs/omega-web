@@ -49,11 +49,20 @@ export function BacktestReplay({ equityCurve, trades, initialCapital, priceData,
   const [showTradeMarkers, setShowTradeMarkers] = useState(true)
   const [showBenchmark, setShowBenchmark] = useState(false)
   const [showDrawdownZones, setShowDrawdownZones] = useState(true)
+  const [showVolume, setShowVolume] = useState(true)
+  const [showSMAs, setShowSMAs] = useState(true)
+  const [showMinimap, setShowMinimap] = useState(true)
+  const [showHeatmap, setShowHeatmap] = useState(true)
+  const [soundEnabled, setSoundEnabled] = useState(false)
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [viewMode, setViewMode] = useState<'single' | 'dual'>('dual')
+  const [lastTradeSound, setLastTradeSound] = useState<'win' | 'loss' | null>(null)
   const intervalRef = useRef<NodeJS.Timeout | null>(null)
   const equityCanvasRef = useRef<HTMLCanvasElement>(null)
   const priceCanvasRef = useRef<HTMLCanvasElement>(null)
+  const volumeCanvasRef = useRef<HTMLCanvasElement>(null)
+  const underwaterCanvasRef = useRef<HTMLCanvasElement>(null)
+  const minimapCanvasRef = useRef<HTMLCanvasElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
 
   const maxSteps = equityCurve.length
@@ -183,6 +192,335 @@ export function BacktestReplay({ equityCurve, trades, initialCapital, priceData,
   }
 
   const drawdownZones = getDrawdownZones()
+
+  // Calcular SMAs (Simple Moving Averages)
+  const calculateSMAs = (period: number) => {
+    if (!priceData || priceData.length < period) return []
+
+    const smas: number[] = []
+    for (let i = 0; i < priceData.length; i++) {
+      if (i < period - 1) {
+        smas.push(NaN)
+      } else {
+        const sum = priceData.slice(i - period + 1, i + 1).reduce((acc, d) => acc + d.close, 0)
+        smas.push(sum / period)
+      }
+    }
+    return smas
+  }
+
+  const sma20 = priceData ? calculateSMAs(20) : []
+  const sma50 = priceData ? calculateSMAs(50) : []
+
+  // Performance Heatmap por hora del día
+  const getPerformanceByHour = () => {
+    const hourlyPerformance: { [hour: number]: { profit: number; trades: number } } = {}
+
+    for (let h = 0; h < 24; h++) {
+      hourlyPerformance[h] = { profit: 0, trades: 0 }
+    }
+
+    completedTrades.forEach(trade => {
+      const hour = new Date(trade.entryDate).getHours()
+      hourlyPerformance[hour].profit += trade.pnl
+      hourlyPerformance[hour].trades += 1
+    })
+
+    return hourlyPerformance
+  }
+
+  const hourlyPerformance = getPerformanceByHour()
+
+  // Calcular Best/Worst hours
+  const bestHour = Object.entries(hourlyPerformance).reduce((best, [hour, data]) => {
+    return data.profit > (hourlyPerformance[parseInt(best)] || { profit: -Infinity }).profit ? hour : best
+  }, '0')
+
+  const worstHour = Object.entries(hourlyPerformance).reduce((worst, [hour, data]) => {
+    return data.profit < (hourlyPerformance[parseInt(worst)] || { profit: Infinity }).profit ? hour : worst
+  }, '0')
+
+  // Underwater Equity (drawdown en tiempo)
+  const getUnderwaterEquity = () => {
+    const underwater: number[] = []
+    let peak = initialCapital
+
+    visibleData.forEach(point => {
+      if (point.equity > peak) peak = point.equity
+      const dd = ((peak - point.equity) / peak) * 100
+      underwater.push(-dd)
+    })
+
+    return underwater
+  }
+
+  const underwaterData = getUnderwaterEquity()
+
+  // Sound effects
+  const playSound = (type: 'win' | 'loss') => {
+    if (!soundEnabled) return
+
+    const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)()
+    const oscillator = audioContext.createOscillator()
+    const gainNode = audioContext.createGain()
+
+    oscillator.connect(gainNode)
+    gainNode.connect(audioContext.destination)
+
+    if (type === 'win') {
+      oscillator.frequency.value = 800
+      oscillator.type = 'sine'
+    } else {
+      oscillator.frequency.value = 200
+      oscillator.type = 'square'
+    }
+
+    gainNode.gain.setValueAtTime(0.1, audioContext.currentTime)
+    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3)
+
+    oscillator.start(audioContext.currentTime)
+    oscillator.stop(audioContext.currentTime + 0.3)
+  }
+
+  // Detectar nuevo trade completado para sound
+  useEffect(() => {
+    if (completedTrades.length > 0 && lastTrade) {
+      const wasWin = lastTrade.pnl >= 0
+      if (lastTradeSound !== (wasWin ? 'win' : 'loss')) {
+        playSound(wasWin ? 'win' : 'loss')
+        setLastTradeSound(wasWin ? 'win' : 'loss')
+      }
+    }
+  }, [completedTrades.length])
+
+  // Dibujar gráfico de PRECIO (candlesticks) si hay priceData
+  useEffect(() => {
+    if (!priceData || priceData.length === 0) return
+
+    const canvas = priceCanvasRef.current
+    if (!canvas || visibleData.length === 0) return
+
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return
+
+    const rect = canvas.getBoundingClientRect()
+    canvas.width = rect.width * window.devicePixelRatio
+    canvas.height = rect.height * window.devicePixelRatio
+    ctx.scale(window.devicePixelRatio, window.devicePixelRatio)
+
+    const width = rect.width
+    const height = rect.height
+    const padding = 50
+
+    // Clear canvas
+    ctx.fillStyle = '#0a0f1e'
+    ctx.fillRect(0, 0, width, height)
+
+    // Obtener datos visibles de precio (sincronizado con equity)
+    const visiblePriceData = priceData.slice(0, currentStep + 1)
+
+    if (visiblePriceData.length === 0) return
+
+    // Calculate scale
+    const minPrice = Math.min(...visiblePriceData.map((d) => d.low))
+    const maxPrice = Math.max(...visiblePriceData.map((d) => d.high))
+    const priceRange = maxPrice - minPrice || 1
+
+    const xScale = (width - 2 * padding) / Math.max(1, visiblePriceData.length - 1)
+    const yScale = (height - 2 * padding) / priceRange
+
+    // Draw grid
+    ctx.strokeStyle = '#1e293b'
+    ctx.lineWidth = 1
+    for (let i = 0; i <= 5; i++) {
+      const y = padding + (i * (height - 2 * padding)) / 5
+      ctx.beginPath()
+      ctx.moveTo(padding, y)
+      ctx.lineTo(width - padding, y)
+      ctx.stroke()
+    }
+
+    // Vertical time grid
+    for (let i = 0; i <= 10; i++) {
+      const x = padding + (i * (width - 2 * padding)) / 10
+      ctx.beginPath()
+      ctx.moveTo(x, padding)
+      ctx.lineTo(x, height - padding)
+      ctx.stroke()
+    }
+
+    // Draw candlesticks
+    const candleWidth = Math.max(2, xScale * 0.6)
+
+    visiblePriceData.forEach((candle, i) => {
+      const x = padding + i * xScale
+      const openY = height - padding - (candle.open - minPrice) * yScale
+      const closeY = height - padding - (candle.close - minPrice) * yScale
+      const highY = height - padding - (candle.high - minPrice) * yScale
+      const lowY = height - padding - (candle.low - minPrice) * yScale
+
+      const isGreen = candle.close >= candle.open
+
+      // Draw wick (high-low line)
+      ctx.strokeStyle = isGreen ? '#10b981' : '#ef4444'
+      ctx.lineWidth = 1
+      ctx.beginPath()
+      ctx.moveTo(x, highY)
+      ctx.lineTo(x, lowY)
+      ctx.stroke()
+
+      // Draw body (open-close)
+      ctx.fillStyle = isGreen ? '#10b981' : '#ef4444'
+      const bodyHeight = Math.abs(openY - closeY) || 1
+      const bodyY = Math.min(openY, closeY)
+      ctx.fillRect(x - candleWidth / 2, bodyY, candleWidth, bodyHeight)
+
+      // Draw border
+      ctx.strokeStyle = isGreen ? '#059669' : '#dc2626'
+      ctx.lineWidth = 1
+      ctx.strokeRect(x - candleWidth / 2, bodyY, candleWidth, bodyHeight)
+    })
+
+    // Draw SMAs if enabled
+    if (showSMAs && sma20.length > 0) {
+      // SMA 20 (rápida) - Naranja
+      ctx.beginPath()
+      ctx.strokeStyle = '#f97316'
+      ctx.lineWidth = 2
+      ctx.setLineDash([])
+
+      visiblePriceData.forEach((_, i) => {
+        if (!isNaN(sma20[i])) {
+          const x = padding + i * xScale
+          const y = height - padding - (sma20[i] - minPrice) * yScale
+
+          if (i === 0 || isNaN(sma20[i - 1])) {
+            ctx.moveTo(x, y)
+          } else {
+            ctx.lineTo(x, y)
+          }
+        }
+      })
+      ctx.stroke()
+
+      // SMA 50 (lenta) - Azul
+      if (sma50.length > 0) {
+        ctx.beginPath()
+        ctx.strokeStyle = '#3b82f6'
+        ctx.lineWidth = 2
+
+        visiblePriceData.forEach((_, i) => {
+          if (!isNaN(sma50[i])) {
+            const x = padding + i * xScale
+            const y = height - padding - (sma50[i] - minPrice) * yScale
+
+            if (i === 0 || isNaN(sma50[i - 1])) {
+              ctx.moveTo(x, y)
+            } else {
+              ctx.lineTo(x, y)
+            }
+          }
+        })
+        ctx.stroke()
+      }
+
+      // Legend
+      ctx.font = 'bold 11px sans-serif'
+      ctx.textAlign = 'left'
+      ctx.fillStyle = '#f97316'
+      ctx.fillText('SMA 20', padding + 10, padding + 30)
+      ctx.fillStyle = '#3b82f6'
+      ctx.fillText('SMA 50', padding + 10, padding + 45)
+    }
+
+    // Draw trade markers on price chart
+    if (showTradeMarkers) {
+      completedTrades.forEach((trade) => {
+        const entryIndex = visiblePriceData.findIndex((d) => new Date(d.date) >= new Date(trade.entryDate))
+        const exitIndex = visiblePriceData.findIndex((d) => new Date(d.date) >= new Date(trade.exitDate))
+
+        if (entryIndex >= 0 && entryIndex < visiblePriceData.length) {
+          const x = padding + entryIndex * xScale
+          const candle = visiblePriceData[entryIndex]
+          const y = height - padding - (trade.entryPrice - minPrice) * yScale
+
+          // Entry marker - BUY arrow
+          ctx.fillStyle = '#3b82f6'
+          ctx.strokeStyle = '#1e40af'
+          ctx.lineWidth = 2
+
+          // Triangle pointing up
+          ctx.beginPath()
+          ctx.moveTo(x, y - 5)
+          ctx.lineTo(x - 7, y + 5)
+          ctx.lineTo(x + 7, y + 5)
+          ctx.closePath()
+          ctx.fill()
+          ctx.stroke()
+
+          // Label "BUY"
+          ctx.fillStyle = '#3b82f6'
+          ctx.font = 'bold 10px sans-serif'
+          ctx.textAlign = 'center'
+          ctx.fillText('BUY', x, y + 18)
+        }
+
+        if (exitIndex >= 0 && exitIndex < visiblePriceData.length) {
+          const x = padding + exitIndex * xScale
+          const y = height - padding - (trade.exitPrice - minPrice) * yScale
+
+          // Exit marker - SELL arrow
+          const isWin = trade.pnl >= 0
+          ctx.fillStyle = isWin ? '#10b981' : '#ef4444'
+          ctx.strokeStyle = isWin ? '#059669' : '#dc2626'
+          ctx.lineWidth = 2
+
+          // Triangle pointing down
+          ctx.beginPath()
+          ctx.moveTo(x, y + 5)
+          ctx.lineTo(x - 7, y - 5)
+          ctx.lineTo(x + 7, y - 5)
+          ctx.closePath()
+          ctx.fill()
+          ctx.stroke()
+
+          // Label "SELL"
+          ctx.fillStyle = isWin ? '#10b981' : '#ef4444'
+          ctx.font = 'bold 10px sans-serif'
+          ctx.textAlign = 'center'
+          ctx.fillText('SELL', x, y - 10)
+        }
+      })
+    }
+
+    // Draw axes labels
+    ctx.fillStyle = '#94a3b8'
+    ctx.font = '11px sans-serif'
+    ctx.textAlign = 'right'
+
+    // Y-axis labels (price)
+    for (let i = 0; i <= 5; i++) {
+      const value = minPrice + (priceRange * i) / 5
+      const y = height - padding - (i * (height - 2 * padding)) / 5
+      ctx.fillText(`$${value.toFixed(2)}`, padding - 10, y + 4)
+    }
+
+    // X-axis labels (dates)
+    ctx.textAlign = 'center'
+    for (let i = 0; i <= 5; i++) {
+      const index = Math.floor((visiblePriceData.length - 1) * (i / 5))
+      if (index < visiblePriceData.length) {
+        const date = new Date(visiblePriceData[index].date)
+        const x = padding + index * xScale
+        ctx.fillText(
+          date.toLocaleDateString('es-ES', { month: 'short', day: 'numeric' }),
+          x,
+          height - padding + 20
+        )
+      }
+    }
+
+  }, [priceData, visibleData, currentStep, showTradeMarkers, completedTrades])
 
   // Dibujar gráfico de equity con canvas mejorado
   useEffect(() => {
@@ -597,7 +935,50 @@ export function BacktestReplay({ equityCurve, trades, initialCapital, priceData,
         </CardHeader>
 
       <CardContent className="space-y-6 p-6">
-        {/* Main Equity Chart */}
+        {/* Price Chart (Candlesticks) - Solo si hay priceData */}
+        {priceData && priceData.length > 0 && (
+          <div className="relative">
+            <div className="absolute top-2 left-2 z-10 flex gap-2">
+              <div className="text-xs px-2 py-1 bg-black/70 backdrop-blur-sm rounded border border-green-500/30 text-green-300 flex items-center gap-1">
+                <BarChart3 className="w-3 h-3" />
+                Precio (OHLC)
+              </div>
+            </div>
+
+            <canvas
+              ref={priceCanvasRef}
+              className="w-full rounded-lg bg-gradient-to-br from-slate-950 to-slate-900 border border-green-500/20"
+              style={{ width: '100%', height: '300px' }}
+            />
+
+            {/* Current price indicator */}
+            {priceData && currentStep < priceData.length && (
+              <motion.div
+                key={currentStep}
+                initial={{ scale: 1.1, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                className="absolute top-4 right-4 bg-black/90 backdrop-blur-md rounded-xl p-3 border border-green-500/30 shadow-2xl shadow-green-500/20"
+              >
+                <div className="text-xs text-gray-500 uppercase tracking-wide mb-1">Precio Actual</div>
+                <div className={`text-2xl font-bold ${priceData[currentStep].close >= priceData[0].open ? 'text-green-400' : 'text-red-400'}`}>
+                  ${priceData[currentStep].close.toFixed(2)}
+                </div>
+                <div className="grid grid-cols-2 gap-2 text-xs mt-2">
+                  <div>
+                    <span className="text-gray-500">H:</span>{' '}
+                    <span className="text-green-400">${priceData[currentStep].high.toFixed(2)}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">L:</span>{' '}
+                    <span className="text-red-400">${priceData[currentStep].low.toFixed(2)}</span>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </div>
+        )}
+
+        {/* Equity Chart */}
         <div className="relative">
           <div className="absolute top-2 left-2 z-10 flex gap-2">
             <div className="text-xs px-2 py-1 bg-black/70 backdrop-blur-sm rounded border border-blue-500/30 text-blue-300 flex items-center gap-1">
@@ -712,6 +1093,118 @@ export function BacktestReplay({ equityCurve, trades, initialCapital, priceData,
               </div>
               <div className="text-2xl font-bold text-pink-400">
                 {advancedMetrics.stdDev.toFixed(2)}%
+              </div>
+            </div>
+          </motion.div>
+        )}
+
+        {/* Performance Heatmap - Visual por hora */}
+        {showHeatmap && completedTrades.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-gradient-to-br from-purple-900/20 to-pink-900/20 border border-purple-500/30 rounded-lg p-4"
+          >
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                  <Flame className="w-5 h-5 text-purple-400" />
+                  Performance Heatmap por Hora
+                </h3>
+                <p className="text-xs text-gray-400 mt-1">
+                  Mejor hora: {parseInt(bestHour)}:00 • Peor hora: {parseInt(worstHour)}:00
+                </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-12 gap-1">
+              {Array.from({ length: 24 }, (_, hour) => {
+                const data = hourlyPerformance[hour]
+                const maxProfit = Math.max(...Object.values(hourlyPerformance).map(h => h.profit))
+                const minProfit = Math.min(...Object.values(hourlyPerformance).map(h => h.profit))
+                const range = maxProfit - minProfit || 1
+
+                // Calcular intensidad del color
+                let bgColor = 'bg-slate-800/50'
+                let textColor = 'text-gray-400'
+                let borderColor = 'border-slate-700'
+
+                if (data.trades > 0) {
+                  const intensity = Math.abs((data.profit - minProfit) / range)
+
+                  if (data.profit > 0) {
+                    // Verde para ganancias
+                    if (intensity > 0.7) {
+                      bgColor = 'bg-green-500/40'
+                      textColor = 'text-green-200'
+                      borderColor = 'border-green-400/50'
+                    } else if (intensity > 0.4) {
+                      bgColor = 'bg-green-600/30'
+                      textColor = 'text-green-300'
+                      borderColor = 'border-green-500/40'
+                    } else {
+                      bgColor = 'bg-green-700/20'
+                      textColor = 'text-green-400'
+                      borderColor = 'border-green-600/30'
+                    }
+                  } else if (data.profit < 0) {
+                    // Rojo para pérdidas
+                    if (intensity > 0.7) {
+                      bgColor = 'bg-red-500/40'
+                      textColor = 'text-red-200'
+                      borderColor = 'border-red-400/50'
+                    } else if (intensity > 0.4) {
+                      bgColor = 'bg-red-600/30'
+                      textColor = 'text-red-300'
+                      borderColor = 'border-red-500/40'
+                    } else {
+                      bgColor = 'bg-red-700/20'
+                      textColor = 'text-red-400'
+                      borderColor = 'border-red-600/30'
+                    }
+                  }
+                }
+
+                return (
+                  <motion.div
+                    key={hour}
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    transition={{ delay: hour * 0.02 }}
+                    className={`${bgColor} ${borderColor} border rounded-lg p-2 aspect-square flex flex-col items-center justify-center hover:scale-110 transition-transform cursor-pointer group relative`}
+                    title={`${hour}:00 - ${data.trades} trades - $${data.profit.toFixed(0)}`}
+                  >
+                    <div className={`text-[10px] font-bold ${textColor}`}>
+                      {hour}h
+                    </div>
+                    {data.trades > 0 && (
+                      <>
+                        <div className="text-[8px] text-gray-400">{data.trades}t</div>
+                        <div className={`absolute inset-0 ${bgColor} rounded-lg opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center`}>
+                          <div className="text-[10px] font-bold text-white">
+                            ${data.profit > 0 ? '+' : ''}{data.profit.toFixed(0)}
+                          </div>
+                        </div>
+                      </>
+                    )}
+                  </motion.div>
+                )
+              })}
+            </div>
+
+            {/* Legend */}
+            <div className="flex items-center justify-center gap-4 mt-4 text-xs">
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 bg-green-500/40 border border-green-400/50 rounded"></div>
+                <span className="text-gray-400">Alta ganancia</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 bg-red-500/40 border border-red-400/50 rounded"></div>
+                <span className="text-gray-400">Alta pérdida</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 bg-slate-800/50 border border-slate-700 rounded"></div>
+                <span className="text-gray-400">Sin trades</span>
               </div>
             </div>
           </motion.div>
@@ -893,6 +1386,28 @@ export function BacktestReplay({ equityCurve, trades, initialCapital, priceData,
                 <Flame className="w-3 h-3 mr-1" />
                 Drawdowns
               </Button>
+              {priceData && (
+                <>
+                  <Button
+                    variant={showSMAs ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setShowSMAs(!showSMAs)}
+                    className={showSMAs ? 'bg-orange-600 hover:bg-orange-700' : 'bg-slate-800/50 border-slate-700'}
+                  >
+                    <LineChart className="w-3 h-3 mr-1" />
+                    SMAs
+                  </Button>
+                  <Button
+                    variant={showHeatmap ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setShowHeatmap(!showHeatmap)}
+                    className={showHeatmap ? 'bg-purple-600 hover:bg-purple-700' : 'bg-slate-800/50 border-slate-700'}
+                  >
+                    <Flame className="w-3 h-3 mr-1" />
+                    Heatmap
+                  </Button>
+                </>
+              )}
               {benchmarkData && (
                 <Button
                   variant={showBenchmark ? 'default' : 'outline'}
@@ -904,6 +1419,16 @@ export function BacktestReplay({ equityCurve, trades, initialCapital, priceData,
                   Benchmark
                 </Button>
               )}
+              <Button
+                variant={soundEnabled ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setSoundEnabled(!soundEnabled)}
+                className={soundEnabled ? 'bg-pink-600 hover:bg-pink-700' : 'bg-slate-800/50 border-slate-700'}
+                title="Sound FX en trades"
+              >
+                <Zap className="w-3 h-3 mr-1" />
+                Sound
+              </Button>
             </div>
           </div>
         </div>

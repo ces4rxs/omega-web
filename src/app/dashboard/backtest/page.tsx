@@ -694,6 +694,14 @@ export default function BacktestPage() {
               equityCurve={result.backtest.equityCurve}
               trades={result.backtest.trades}
               initialCapital={formData.initialCapital || 10000}
+              priceData={candlestickData && candlestickData.length > 0 ? candlestickData.map(candle => ({
+                date: new Date((candle.time as number) * 1000).toISOString().split('T')[0],
+                open: candle.open,
+                high: candle.high,
+                low: candle.low,
+                close: candle.close,
+                volume: 0 // Polygon no devuelve volumen en este endpoint, podemos agregarlo después
+              })) : undefined}
             />
           </motion.div>
 
