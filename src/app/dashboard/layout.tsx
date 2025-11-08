@@ -17,6 +17,7 @@ import {
   Sparkles,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { DevTierSwitcher } from "@/components/dev-tier-switcher"
 
 interface NavItem {
   name: string
@@ -247,6 +248,9 @@ export default function DashboardLayout({
       <main className="flex-1 overflow-y-auto lg:pt-0 pt-16">
         {children}
       </main>
+
+      {/* Dev Tier Switcher - Solo visible en development */}
+      <DevTierSwitcher />
     </div>
   )
 }
