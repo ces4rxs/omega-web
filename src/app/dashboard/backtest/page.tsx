@@ -15,6 +15,9 @@ import type { BacktestParams, BacktestResult } from "@/lib/types"
 import { EquityCurve } from "@/components/charts/equity-curve"
 import { DrawdownChart } from "@/components/charts/drawdown-chart"
 import { ReturnsDistribution } from "@/components/charts/returns-distribution"
+import { CandlestickChart } from "@/components/charts/candlestick-chart"
+import { RSIChart } from "@/components/charts/rsi-chart"
+import { MACDChart } from "@/components/charts/macd-chart"
 import { MetricCard } from "@/components/metric-card"
 import { TradeTable } from "@/components/trade-table"
 import { Activity, TrendingUp, TrendingDown, Target, Percent, DollarSign, Play, Download, Sparkles } from "lucide-react"
@@ -464,12 +467,31 @@ export default function BacktestPage() {
             />
           </motion.div>
 
-          {/* Charts Row 1 */}
+          {/* Charts Row 1 - Equity Curve */}
           <motion.div variants={itemVariants}>
             <EquityCurve data={result.backtest.equityCurve} />
           </motion.div>
 
-          {/* Charts Row 2 */}
+          {/* Professional Trading Charts */}
+          <motion.div variants={itemVariants}>
+            <CandlestickChart
+              data={result.backtest.equityCurve}
+              trades={result.backtest.trades}
+              symbol={formData.symbol}
+              parameters={{
+                fastPeriod: strategyParams.fastPeriod,
+                slowPeriod: strategyParams.slowPeriod
+              }}
+            />
+          </motion.div>
+
+          {/* Technical Indicators */}
+          <motion.div variants={itemVariants} className="grid md:grid-cols-2 gap-6">
+            <RSIChart data={result.backtest.equityCurve} period={strategyParams.rsiPeriod} />
+            <MACDChart data={result.backtest.equityCurve} />
+          </motion.div>
+
+          {/* Charts Row 2 - Drawdown & Distribution */}
           <motion.div variants={itemVariants} className="grid md:grid-cols-2 gap-6">
             <DrawdownChart data={result.backtest.equityCurve} />
             <ReturnsDistribution trades={result.backtest.trades} />
