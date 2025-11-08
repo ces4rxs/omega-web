@@ -20,7 +20,17 @@ import {
   DollarSign,
   Zap,
   AlertCircle,
-  CheckCircle2
+  CheckCircle2,
+  Maximize2,
+  Minimize2,
+  Camera,
+  Download,
+  BarChart3,
+  LineChart,
+  Flame,
+  Shield,
+  Gauge,
+  Calendar
 } from "lucide-react"
 import type { Trade } from "@/lib/types"
 
@@ -28,15 +38,23 @@ interface BacktestReplayProps {
   equityCurve: Array<{ date: string; equity: number }>
   trades: Trade[]
   initialCapital: number
+  priceData?: Array<{ date: string; open: number; high: number; low: number; close: number; volume: number }>
+  benchmarkData?: Array<{ date: string; value: number }>
 }
 
-export function BacktestReplay({ equityCurve, trades, initialCapital }: BacktestReplayProps) {
+export function BacktestReplay({ equityCurve, trades, initialCapital, priceData, benchmarkData }: BacktestReplayProps) {
   const [isPlaying, setIsPlaying] = useState(false)
   const [currentStep, setCurrentStep] = useState(0)
   const [speed, setSpeed] = useState(1)
-  const [showTradMarkers, setShowTradeMarkers] = useState(true)
+  const [showTradeMarkers, setShowTradeMarkers] = useState(true)
+  const [showBenchmark, setShowBenchmark] = useState(false)
+  const [showDrawdownZones, setShowDrawdownZones] = useState(true)
+  const [isFullscreen, setIsFullscreen] = useState(false)
+  const [viewMode, setViewMode] = useState<'single' | 'dual'>('dual')
   const intervalRef = useRef<NodeJS.Timeout | null>(null)
-  const canvasRef = useRef<HTMLCanvasElement>(null)
+  const equityCanvasRef = useRef<HTMLCanvasElement>(null)
+  const priceCanvasRef = useRef<HTMLCanvasElement>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
 
   const maxSteps = equityCurve.length
   const visibleData = equityCurve.slice(0, currentStep + 1)
@@ -89,9 +107,86 @@ export function BacktestReplay({ equityCurve, trades, initialCapital }: Backtest
 
   const streak = getStreak()
 
-  // Dibujar gráfico con canvas para mejor performance
+  // Calcular métricas avanzadas
+  const calculateAdvancedMetrics = () => {
+    if (completedTrades.length === 0) return null
+
+    const returns = visibleData.map((point, i) => {
+      if (i === 0) return 0
+      return ((point.equity - visibleData[i - 1].equity) / visibleData[i - 1].equity) * 100
+    }).slice(1)
+
+    const avgReturn = returns.reduce((a, b) => a + b, 0) / returns.length
+    const stdDev = Math.sqrt(returns.reduce((sq, n) => sq + Math.pow(n - avgReturn, 2), 0) / returns.length)
+
+    // Sharpe Ratio (asumiendo 0% risk-free rate, anualizado)
+    const sharpe = stdDev !== 0 ? (avgReturn / stdDev) * Math.sqrt(252) : 0
+
+    // Sortino Ratio (solo volatilidad negativa)
+    const negativeReturns = returns.filter(r => r < 0)
+    const downsideStdDev = negativeReturns.length > 0
+      ? Math.sqrt(negativeReturns.reduce((sq, n) => sq + Math.pow(n, 2), 0) / negativeReturns.length)
+      : 0
+    const sortino = downsideStdDev !== 0 ? (avgReturn / downsideStdDev) * Math.sqrt(252) : 0
+
+    // Profit Factor
+    const grossProfit = completedTrades.filter(t => t.pnl > 0).reduce((sum, t) => sum + t.pnl, 0)
+    const grossLoss = Math.abs(completedTrades.filter(t => t.pnl < 0).reduce((sum, t) => sum + t.pnl, 0))
+    const profitFactor = grossLoss !== 0 ? grossProfit / grossLoss : grossProfit > 0 ? Infinity : 0
+
+    // Expectancy
+    const expectancy = completedTrades.reduce((sum, t) => sum + t.pnl, 0) / completedTrades.length
+
+    // Calmar Ratio
+    const maxDD = calculateDrawdown()
+    const calmar = maxDD !== 0 ? (currentReturn / maxDD) : 0
+
+    return {
+      sharpe,
+      sortino,
+      profitFactor,
+      expectancy,
+      calmar,
+      avgReturn,
+      stdDev
+    }
+  }
+
+  const advancedMetrics = calculateAdvancedMetrics()
+
+  // Detectar zonas de drawdown
+  const getDrawdownZones = () => {
+    const zones: Array<{ start: number; end: number; depth: number }> = []
+    let peak = initialCapital
+    let inDrawdown = false
+    let drawdownStart = 0
+
+    visibleData.forEach((point, i) => {
+      if (point.equity > peak) {
+        if (inDrawdown) {
+          zones.push({ start: drawdownStart, end: i - 1, depth: ((peak - visibleData[i - 1].equity) / peak) * 100 })
+          inDrawdown = false
+        }
+        peak = point.equity
+      } else if (point.equity < peak && !inDrawdown) {
+        inDrawdown = true
+        drawdownStart = i
+      }
+    })
+
+    if (inDrawdown) {
+      const lastEquity = visibleData[visibleData.length - 1].equity
+      zones.push({ start: drawdownStart, end: visibleData.length - 1, depth: ((peak - lastEquity) / peak) * 100 })
+    }
+
+    return zones
+  }
+
+  const drawdownZones = getDrawdownZones()
+
+  // Dibujar gráfico de equity con canvas mejorado
   useEffect(() => {
-    const canvas = canvasRef.current
+    const canvas = equityCanvasRef.current
     if (!canvas || visibleData.length === 0) return
 
     const ctx = canvas.getContext('2d')
@@ -104,10 +199,10 @@ export function BacktestReplay({ equityCurve, trades, initialCapital }: Backtest
 
     const width = rect.width
     const height = rect.height
-    const padding = 40
+    const padding = 50
 
     // Clear canvas
-    ctx.fillStyle = '#0f172a'
+    ctx.fillStyle = '#0a0f1e'
     ctx.fillRect(0, 0, width, height)
 
     // Calculate scale
@@ -118,6 +213,29 @@ export function BacktestReplay({ equityCurve, trades, initialCapital }: Backtest
     const xScale = (width - 2 * padding) / Math.max(1, visibleData.length - 1)
     const yScale = (height - 2 * padding) / range
 
+    // Draw drawdown zones
+    if (showDrawdownZones) {
+      drawdownZones.forEach((zone) => {
+        if (zone.depth > 5) { // Solo mostrar drawdowns > 5%
+          const startX = padding + zone.start * xScale
+          const endX = padding + zone.end * xScale
+
+          const gradient = ctx.createLinearGradient(0, 0, 0, height)
+          gradient.addColorStop(0, 'rgba(239, 68, 68, 0.15)')
+          gradient.addColorStop(1, 'rgba(239, 68, 68, 0.05)')
+
+          ctx.fillStyle = gradient
+          ctx.fillRect(startX, padding, endX - startX, height - 2 * padding)
+
+          // Etiqueta del drawdown
+          ctx.fillStyle = '#ef4444'
+          ctx.font = 'bold 11px sans-serif'
+          ctx.textAlign = 'center'
+          ctx.fillText(`-${zone.depth.toFixed(1)}%`, (startX + endX) / 2, padding + 15)
+        }
+      })
+    }
+
     // Draw grid
     ctx.strokeStyle = '#1e293b'
     ctx.lineWidth = 1
@@ -127,6 +245,40 @@ export function BacktestReplay({ equityCurve, trades, initialCapital }: Backtest
       ctx.moveTo(padding, y)
       ctx.lineTo(width - padding, y)
       ctx.stroke()
+    }
+
+    // Vertical time grid
+    for (let i = 0; i <= 10; i++) {
+      const x = padding + (i * (width - 2 * padding)) / 10
+      ctx.beginPath()
+      ctx.moveTo(x, padding)
+      ctx.lineTo(x, height - padding)
+      ctx.stroke()
+    }
+
+    // Draw benchmark if available
+    if (showBenchmark && benchmarkData && benchmarkData.length > 0) {
+      const visibleBenchmark = benchmarkData.slice(0, currentStep + 1)
+      const benchmarkInitial = benchmarkData[0].value
+
+      ctx.beginPath()
+      ctx.strokeStyle = '#64748b'
+      ctx.lineWidth = 2
+      ctx.setLineDash([5, 5])
+
+      visibleBenchmark.forEach((point, i) => {
+        const x = padding + i * xScale
+        const normalizedValue = (point.value / benchmarkInitial) * initialCapital
+        const y = height - padding - (normalizedValue - minEquity) * yScale
+
+        if (i === 0) {
+          ctx.moveTo(x, y)
+        } else {
+          ctx.lineTo(x, y)
+        }
+      })
+      ctx.stroke()
+      ctx.setLineDash([])
     }
 
     // Draw initial capital line
@@ -140,12 +292,14 @@ export function BacktestReplay({ equityCurve, trades, initialCapital }: Backtest
     ctx.stroke()
     ctx.setLineDash([])
 
-    // Draw equity curve
+    // Draw equity curve with gradient
     ctx.beginPath()
     ctx.strokeStyle = currentReturn >= 0 ? '#10b981' : '#ef4444'
     ctx.lineWidth = 3
     ctx.lineCap = 'round'
     ctx.lineJoin = 'round'
+    ctx.shadowColor = currentReturn >= 0 ? '#10b981' : '#ef4444'
+    ctx.shadowBlur = 10
 
     visibleData.forEach((point, i) => {
       const x = padding + i * xScale
@@ -158,14 +312,17 @@ export function BacktestReplay({ equityCurve, trades, initialCapital }: Backtest
       }
     })
     ctx.stroke()
+    ctx.shadowBlur = 0
 
     // Draw gradient fill
     const gradient = ctx.createLinearGradient(0, padding, 0, height - padding)
     if (currentReturn >= 0) {
-      gradient.addColorStop(0, 'rgba(16, 185, 129, 0.3)')
+      gradient.addColorStop(0, 'rgba(16, 185, 129, 0.4)')
+      gradient.addColorStop(0.5, 'rgba(16, 185, 129, 0.2)')
       gradient.addColorStop(1, 'rgba(16, 185, 129, 0)')
     } else {
-      gradient.addColorStop(0, 'rgba(239, 68, 68, 0.3)')
+      gradient.addColorStop(0, 'rgba(239, 68, 68, 0.4)')
+      gradient.addColorStop(0.5, 'rgba(239, 68, 68, 0.2)')
       gradient.addColorStop(1, 'rgba(239, 68, 68, 0)')
     }
     ctx.fillStyle = gradient
@@ -175,7 +332,7 @@ export function BacktestReplay({ equityCurve, trades, initialCapital }: Backtest
     ctx.fill()
 
     // Draw trade markers
-    if (showTradMarkers) {
+    if (showTradeMarkers) {
       completedTrades.forEach((trade) => {
         const entryIndex = visibleData.findIndex((d) => new Date(d.date) >= new Date(trade.entryDate))
         const exitIndex = visibleData.findIndex((d) => new Date(d.date) >= new Date(trade.exitDate))
@@ -187,11 +344,20 @@ export function BacktestReplay({ equityCurve, trades, initialCapital }: Backtest
           // Entry marker (buy)
           ctx.fillStyle = '#3b82f6'
           ctx.beginPath()
-          ctx.arc(x, y, 6, 0, Math.PI * 2)
+          ctx.arc(x, y, 5, 0, Math.PI * 2)
           ctx.fill()
           ctx.strokeStyle = '#1e40af'
           ctx.lineWidth = 2
           ctx.stroke()
+
+          // Triangle up
+          ctx.fillStyle = '#3b82f6'
+          ctx.beginPath()
+          ctx.moveTo(x, y - 8)
+          ctx.lineTo(x - 5, y - 14)
+          ctx.lineTo(x + 5, y - 14)
+          ctx.closePath()
+          ctx.fill()
         }
 
         if (exitIndex >= 0) {
@@ -201,37 +367,51 @@ export function BacktestReplay({ equityCurve, trades, initialCapital }: Backtest
           // Exit marker (sell)
           ctx.fillStyle = trade.pnl >= 0 ? '#10b981' : '#ef4444'
           ctx.beginPath()
-          ctx.arc(x, y, 6, 0, Math.PI * 2)
+          ctx.arc(x, y, 5, 0, Math.PI * 2)
           ctx.fill()
           ctx.strokeStyle = trade.pnl >= 0 ? '#059669' : '#dc2626'
           ctx.lineWidth = 2
           ctx.stroke()
+
+          // Triangle down
+          ctx.fillStyle = trade.pnl >= 0 ? '#10b981' : '#ef4444'
+          ctx.beginPath()
+          ctx.moveTo(x, y + 8)
+          ctx.lineTo(x - 5, y + 14)
+          ctx.lineTo(x + 5, y + 14)
+          ctx.closePath()
+          ctx.fill()
         }
       })
     }
 
-    // Draw current position indicator
+    // Draw current position indicator with glow
     if (visibleData.length > 0) {
       const lastIndex = visibleData.length - 1
       const x = padding + lastIndex * xScale
       const y = height - padding - (visibleData[lastIndex].equity - minEquity) * yScale
 
+      // Outer glow
+      ctx.fillStyle = currentReturn >= 0 ? 'rgba(16, 185, 129, 0.3)' : 'rgba(239, 68, 68, 0.3)'
+      ctx.beginPath()
+      ctx.arc(x, y, 16, 0, Math.PI * 2)
+      ctx.fill()
+
+      // Inner circle
       ctx.fillStyle = currentReturn >= 0 ? '#10b981' : '#ef4444'
       ctx.beginPath()
       ctx.arc(x, y, 8, 0, Math.PI * 2)
       ctx.fill()
 
-      // Pulse effect
-      ctx.strokeStyle = currentReturn >= 0 ? '#10b981' : '#ef4444'
+      // Border
+      ctx.strokeStyle = '#ffffff'
       ctx.lineWidth = 2
-      ctx.beginPath()
-      ctx.arc(x, y, 12, 0, Math.PI * 2)
       ctx.stroke()
     }
 
     // Draw axes labels
     ctx.fillStyle = '#94a3b8'
-    ctx.font = '12px sans-serif'
+    ctx.font = '11px sans-serif'
     ctx.textAlign = 'right'
 
     // Y-axis labels
@@ -241,7 +421,22 @@ export function BacktestReplay({ equityCurve, trades, initialCapital }: Backtest
       ctx.fillText(`$${value.toLocaleString('en-US', { maximumFractionDigits: 0 })}`, padding - 10, y + 4)
     }
 
-  }, [visibleData, currentReturn, showTradMarkers, completedTrades, initialCapital])
+    // X-axis labels (dates)
+    ctx.textAlign = 'center'
+    for (let i = 0; i <= 5; i++) {
+      const index = Math.floor((visibleData.length - 1) * (i / 5))
+      if (index < visibleData.length) {
+        const date = new Date(visibleData[index].date)
+        const x = padding + index * xScale
+        ctx.fillText(
+          date.toLocaleDateString('es-ES', { month: 'short', day: 'numeric' }),
+          x,
+          height - padding + 20
+        )
+      }
+    }
+
+  }, [visibleData, currentReturn, showTradeMarkers, completedTrades, initialCapital, showDrawdownZones, drawdownZones, showBenchmark, benchmarkData, currentStep])
 
   // Controlar reproducción
   useEffect(() => {
@@ -319,42 +514,114 @@ export function BacktestReplay({ equityCurve, trades, initialCapital }: Backtest
     setCurrentStep(maxSteps - 1)
   }
 
+  const toggleFullscreen = () => {
+    if (!document.fullscreenElement) {
+      containerRef.current?.requestFullscreen()
+      setIsFullscreen(true)
+    } else {
+      document.exitFullscreen()
+      setIsFullscreen(false)
+    }
+  }
+
+  const takeScreenshot = () => {
+    const canvas = equityCanvasRef.current
+    if (!canvas) return
+
+    const link = document.createElement('a')
+    link.download = `backtest-replay-${new Date().toISOString().slice(0, 10)}.png`
+    link.href = canvas.toDataURL()
+    link.click()
+  }
+
   const currentDate = visibleData[visibleData.length - 1]?.date
   const lastTrade = completedTrades[completedTrades.length - 1]
 
   return (
-    <Card className="overflow-hidden border-blue-500/30">
-      <CardHeader className="bg-gradient-to-r from-blue-600/10 to-cyan-600/10">
-        <div className="flex items-center justify-between">
-          <div>
-            <CardTitle className="flex items-center gap-2">
-              <Zap className="w-5 h-5 text-blue-400" />
-              Replay del Backtest
-            </CardTitle>
-            <p className="text-sm text-gray-400 mt-1">
-              {currentDate ? new Date(currentDate).toLocaleDateString('es-ES', {
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric'
-              }) : 'Inicio'}
-            </p>
-          </div>
-          <div className="text-right">
-            <div className="text-sm text-gray-400">Progreso</div>
-            <div className="text-2xl font-bold text-white">
-              {progress.toFixed(1)}%
+    <div ref={containerRef} className={isFullscreen ? 'bg-slate-950 p-6' : ''}>
+      <Card className="overflow-hidden border-blue-500/30 bg-gradient-to-br from-slate-900 to-slate-950">
+        <CardHeader className="bg-gradient-to-r from-blue-600/10 via-cyan-600/10 to-purple-600/10 border-b border-blue-500/20">
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-3">
+                <div className="relative">
+                  <Zap className="w-6 h-6 text-blue-400 animate-pulse" />
+                  <div className="absolute inset-0 blur-lg bg-blue-500/50"></div>
+                </div>
+                <span className="bg-gradient-to-r from-blue-400 via-cyan-400 to-purple-400 bg-clip-text text-transparent font-bold">
+                  Replay Profesional
+                </span>
+                <span className="text-xs px-2 py-1 bg-blue-500/20 border border-blue-400/30 rounded-full text-blue-300">
+                  PRO
+                </span>
+              </CardTitle>
+              <p className="text-sm text-gray-400 mt-1 flex items-center gap-2">
+                <Calendar className="w-4 h-4" />
+                {currentDate ? new Date(currentDate).toLocaleDateString('es-ES', {
+                  year: 'numeric',
+                  month: 'long',
+                  day: 'numeric',
+                  weekday: 'short'
+                }) : 'Inicio del backtest'}
+              </p>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="text-right">
+                <div className="text-xs text-gray-500 uppercase tracking-wide">Progreso</div>
+                <div className="text-3xl font-bold bg-gradient-to-r from-green-400 to-emerald-400 bg-clip-text text-transparent">
+                  {progress.toFixed(1)}%
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={takeScreenshot}
+                  className="bg-slate-800/50 border-slate-700 hover:bg-slate-700 hover:border-blue-500/50"
+                  title="Capturar Screenshot"
+                >
+                  <Camera className="w-4 h-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={toggleFullscreen}
+                  className="bg-slate-800/50 border-slate-700 hover:bg-slate-700 hover:border-blue-500/50"
+                  title={isFullscreen ? "Salir de pantalla completa" : "Pantalla completa"}
+                >
+                  {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+                </Button>
+              </div>
             </div>
           </div>
-        </div>
-      </CardHeader>
+        </CardHeader>
 
       <CardContent className="space-y-6 p-6">
-        {/* Canvas Chart */}
+        {/* Main Equity Chart */}
         <div className="relative">
+          <div className="absolute top-2 left-2 z-10 flex gap-2">
+            <div className="text-xs px-2 py-1 bg-black/70 backdrop-blur-sm rounded border border-blue-500/30 text-blue-300 flex items-center gap-1">
+              <LineChart className="w-3 h-3" />
+              Equity Curve
+            </div>
+            {showDrawdownZones && (
+              <div className="text-xs px-2 py-1 bg-red-500/20 backdrop-blur-sm rounded border border-red-500/30 text-red-300 flex items-center gap-1">
+                <Flame className="w-3 h-3" />
+                Drawdown Zones
+              </div>
+            )}
+            {showBenchmark && benchmarkData && (
+              <div className="text-xs px-2 py-1 bg-gray-500/20 backdrop-blur-sm rounded border border-gray-500/30 text-gray-300 flex items-center gap-1">
+                <BarChart3 className="w-3 h-3" />
+                Benchmark
+              </div>
+            )}
+          </div>
+
           <canvas
-            ref={canvasRef}
-            className="w-full h-80 rounded-lg bg-slate-900"
-            style={{ width: '100%', height: '320px' }}
+            ref={equityCanvasRef}
+            className="w-full rounded-lg bg-gradient-to-br from-slate-950 to-slate-900 border border-blue-500/20"
+            style={{ width: '100%', height: '400px' }}
           />
 
           {/* Floating current value */}
@@ -362,17 +629,93 @@ export function BacktestReplay({ equityCurve, trades, initialCapital }: Backtest
             key={currentEquity}
             initial={{ scale: 1.2, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            className="absolute top-4 right-4 bg-black/80 backdrop-blur-sm rounded-lg p-3 border border-white/10"
+            className="absolute top-4 right-4 bg-black/90 backdrop-blur-md rounded-xl p-4 border border-blue-500/30 shadow-2xl shadow-blue-500/20"
           >
-            <div className="text-xs text-gray-400 mb-1">Equity Actual</div>
-            <div className={`text-2xl font-bold ${currentReturn >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+            <div className="text-xs text-gray-500 uppercase tracking-wide mb-2">Equity Actual</div>
+            <div className={`text-3xl font-bold mb-1 ${currentReturn >= 0 ? 'text-green-400' : 'text-red-400'}`}>
               ${currentEquity.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </div>
-            <div className={`text-sm ${currentReturn >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-              {currentReturn >= 0 ? '+' : ''}{currentReturn.toFixed(2)}%
+            <div className="flex items-center gap-2">
+              {currentReturn >= 0 ? (
+                <TrendingUp className="w-4 h-4 text-green-400" />
+              ) : (
+                <TrendingDown className="w-4 h-4 text-red-400" />
+              )}
+              <span className={`text-lg font-semibold ${currentReturn >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                {currentReturn >= 0 ? '+' : ''}{currentReturn.toFixed(2)}%
+              </span>
             </div>
           </motion.div>
         </div>
+
+        {/* Advanced Metrics Panel */}
+        {advancedMetrics && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3"
+          >
+            <div className="bg-gradient-to-br from-blue-900/30 to-cyan-900/30 border border-blue-500/30 rounded-lg p-3">
+              <div className="flex items-center gap-2 mb-1">
+                <Gauge className="w-3 h-3 text-blue-400" />
+                <span className="text-xs text-gray-400">Sharpe Ratio</span>
+              </div>
+              <div className={`text-2xl font-bold ${advancedMetrics.sharpe > 1 ? 'text-green-400' : advancedMetrics.sharpe > 0 ? 'text-yellow-400' : 'text-red-400'}`}>
+                {advancedMetrics.sharpe.toFixed(2)}
+              </div>
+            </div>
+
+            <div className="bg-gradient-to-br from-purple-900/30 to-pink-900/30 border border-purple-500/30 rounded-lg p-3">
+              <div className="flex items-center gap-2 mb-1">
+                <Shield className="w-3 h-3 text-purple-400" />
+                <span className="text-xs text-gray-400">Sortino</span>
+              </div>
+              <div className={`text-2xl font-bold ${advancedMetrics.sortino > 1 ? 'text-green-400' : advancedMetrics.sortino > 0 ? 'text-yellow-400' : 'text-red-400'}`}>
+                {advancedMetrics.sortino.toFixed(2)}
+              </div>
+            </div>
+
+            <div className="bg-gradient-to-br from-green-900/30 to-emerald-900/30 border border-green-500/30 rounded-lg p-3">
+              <div className="flex items-center gap-2 mb-1">
+                <TrendingUp className="w-3 h-3 text-green-400" />
+                <span className="text-xs text-gray-400">Profit Factor</span>
+              </div>
+              <div className={`text-2xl font-bold ${advancedMetrics.profitFactor === Infinity ? 'text-green-400' : advancedMetrics.profitFactor > 2 ? 'text-green-400' : advancedMetrics.profitFactor > 1 ? 'text-yellow-400' : 'text-red-400'}`}>
+                {advancedMetrics.profitFactor === Infinity ? '∞' : advancedMetrics.profitFactor.toFixed(2)}
+              </div>
+            </div>
+
+            <div className="bg-gradient-to-br from-orange-900/30 to-yellow-900/30 border border-orange-500/30 rounded-lg p-3">
+              <div className="flex items-center gap-2 mb-1">
+                <DollarSign className="w-3 h-3 text-orange-400" />
+                <span className="text-xs text-gray-400">Expectancy</span>
+              </div>
+              <div className={`text-2xl font-bold ${advancedMetrics.expectancy > 0 ? 'text-green-400' : 'text-red-400'}`}>
+                ${advancedMetrics.expectancy.toFixed(0)}
+              </div>
+            </div>
+
+            <div className="bg-gradient-to-br from-cyan-900/30 to-blue-900/30 border border-cyan-500/30 rounded-lg p-3">
+              <div className="flex items-center gap-2 mb-1">
+                <Activity className="w-3 h-3 text-cyan-400" />
+                <span className="text-xs text-gray-400">Calmar</span>
+              </div>
+              <div className={`text-2xl font-bold ${advancedMetrics.calmar > 2 ? 'text-green-400' : advancedMetrics.calmar > 1 ? 'text-yellow-400' : 'text-red-400'}`}>
+                {advancedMetrics.calmar.toFixed(2)}
+              </div>
+            </div>
+
+            <div className="bg-gradient-to-br from-pink-900/30 to-rose-900/30 border border-pink-500/30 rounded-lg p-3">
+              <div className="flex items-center gap-2 mb-1">
+                <BarChart3 className="w-3 h-3 text-pink-400" />
+                <span className="text-xs text-gray-400">Volatilidad</span>
+              </div>
+              <div className="text-2xl font-bold text-pink-400">
+                {advancedMetrics.stdDev.toFixed(2)}%
+              </div>
+            </div>
+          </motion.div>
+        )}
 
         {/* Real-time Metrics Grid */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -512,10 +855,10 @@ export function BacktestReplay({ equityCurve, trades, initialCapital }: Backtest
             </Button>
           </div>
 
-          <div className="flex items-center justify-between gap-4">
+          <div className="space-y-3">
             {/* Speed Control */}
-            <div className="flex items-center gap-3 flex-1">
-              <span className="text-sm text-gray-400 whitespace-nowrap">Velocidad:</span>
+            <div className="flex items-center gap-3">
+              <span className="text-sm text-gray-400 whitespace-nowrap min-w-[80px]">Velocidad:</span>
               <Slider
                 min={0.5}
                 max={5}
@@ -524,20 +867,44 @@ export function BacktestReplay({ equityCurve, trades, initialCapital }: Backtest
                 onValueChange={setSpeed}
                 className="flex-1"
               />
-              <span className="text-sm font-mono font-semibold text-white min-w-[3rem]">
+              <span className="text-sm font-mono font-semibold text-white min-w-[3rem] bg-slate-800/50 px-2 py-1 rounded border border-slate-700">
                 {speed.toFixed(1)}x
               </span>
             </div>
 
-            {/* Show Markers Toggle */}
-            <Button
-              variant={showTradMarkers ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setShowTradeMarkers(!showTradMarkers)}
-              className={showTradMarkers ? 'bg-blue-600 hover:bg-blue-700' : ''}
-            >
-              Marcadores
-            </Button>
+            {/* Feature Toggles */}
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-sm text-gray-400 mr-2">Vista:</span>
+              <Button
+                variant={showTradeMarkers ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setShowTradeMarkers(!showTradeMarkers)}
+                className={showTradeMarkers ? 'bg-blue-600 hover:bg-blue-700' : 'bg-slate-800/50 border-slate-700'}
+              >
+                <Target className="w-3 h-3 mr-1" />
+                Trades
+              </Button>
+              <Button
+                variant={showDrawdownZones ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setShowDrawdownZones(!showDrawdownZones)}
+                className={showDrawdownZones ? 'bg-red-600 hover:bg-red-700' : 'bg-slate-800/50 border-slate-700'}
+              >
+                <Flame className="w-3 h-3 mr-1" />
+                Drawdowns
+              </Button>
+              {benchmarkData && (
+                <Button
+                  variant={showBenchmark ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setShowBenchmark(!showBenchmark)}
+                  className={showBenchmark ? 'bg-gray-600 hover:bg-gray-700' : 'bg-slate-800/50 border-slate-700'}
+                >
+                  <BarChart3 className="w-3 h-3 mr-1" />
+                  Benchmark
+                </Button>
+              )}
+            </div>
           </div>
         </div>
 
@@ -602,12 +969,17 @@ export function BacktestReplay({ equityCurve, trades, initialCapital }: Backtest
         </AnimatePresence>
 
         {/* Keyboard Shortcuts Help */}
-        <div className="bg-gray-800/30 rounded-lg p-3">
+        <div className="bg-gradient-to-r from-slate-800/30 via-blue-800/20 to-slate-800/30 rounded-lg p-3 border border-blue-500/10">
           <div className="text-xs text-gray-400 text-center">
-            <span className="font-semibold">Atajos:</span> Espacio (Play/Pause) • ← → (Navegar) • R (Reiniciar)
+            <span className="font-semibold text-blue-300">⌨️ Atajos de Teclado:</span>{' '}
+            <span className="bg-slate-700/50 px-2 py-0.5 rounded mx-1">Espacio</span> Play/Pause •{' '}
+            <span className="bg-slate-700/50 px-2 py-0.5 rounded mx-1">←</span>
+            <span className="bg-slate-700/50 px-2 py-0.5 rounded mx-1">→</span> Navegar •{' '}
+            <span className="bg-slate-700/50 px-2 py-0.5 rounded mx-1">R</span> Reiniciar
           </div>
         </div>
       </CardContent>
     </Card>
+    </div>
   )
 }
