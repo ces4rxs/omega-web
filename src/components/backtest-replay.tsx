@@ -49,11 +49,20 @@ export function BacktestReplay({ equityCurve, trades, initialCapital, priceData,
   const [showTradeMarkers, setShowTradeMarkers] = useState(true)
   const [showBenchmark, setShowBenchmark] = useState(false)
   const [showDrawdownZones, setShowDrawdownZones] = useState(true)
+  const [showVolume, setShowVolume] = useState(true)
+  const [showSMAs, setShowSMAs] = useState(true)
+  const [showMinimap, setShowMinimap] = useState(true)
+  const [showHeatmap, setShowHeatmap] = useState(true)
+  const [soundEnabled, setSoundEnabled] = useState(false)
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [viewMode, setViewMode] = useState<'single' | 'dual'>('dual')
+  const [lastTradeSound, setLastTradeSound] = useState<'win' | 'loss' | null>(null)
   const intervalRef = useRef<NodeJS.Timeout | null>(null)
   const equityCanvasRef = useRef<HTMLCanvasElement>(null)
   const priceCanvasRef = useRef<HTMLCanvasElement>(null)
+  const volumeCanvasRef = useRef<HTMLCanvasElement>(null)
+  const underwaterCanvasRef = useRef<HTMLCanvasElement>(null)
+  const minimapCanvasRef = useRef<HTMLCanvasElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
 
   const maxSteps = equityCurve.length
@@ -184,6 +193,106 @@ export function BacktestReplay({ equityCurve, trades, initialCapital, priceData,
 
   const drawdownZones = getDrawdownZones()
 
+  // Calcular SMAs (Simple Moving Averages)
+  const calculateSMAs = (period: number) => {
+    if (!priceData || priceData.length < period) return []
+
+    const smas: number[] = []
+    for (let i = 0; i < priceData.length; i++) {
+      if (i < period - 1) {
+        smas.push(NaN)
+      } else {
+        const sum = priceData.slice(i - period + 1, i + 1).reduce((acc, d) => acc + d.close, 0)
+        smas.push(sum / period)
+      }
+    }
+    return smas
+  }
+
+  const sma20 = priceData ? calculateSMAs(20) : []
+  const sma50 = priceData ? calculateSMAs(50) : []
+
+  // Performance Heatmap por hora del día
+  const getPerformanceByHour = () => {
+    const hourlyPerformance: { [hour: number]: { profit: number; trades: number } } = {}
+
+    for (let h = 0; h < 24; h++) {
+      hourlyPerformance[h] = { profit: 0, trades: 0 }
+    }
+
+    completedTrades.forEach(trade => {
+      const hour = new Date(trade.entryDate).getHours()
+      hourlyPerformance[hour].profit += trade.pnl
+      hourlyPerformance[hour].trades += 1
+    })
+
+    return hourlyPerformance
+  }
+
+  const hourlyPerformance = getPerformanceByHour()
+
+  // Calcular Best/Worst hours
+  const bestHour = Object.entries(hourlyPerformance).reduce((best, [hour, data]) => {
+    return data.profit > (hourlyPerformance[parseInt(best)] || { profit: -Infinity }).profit ? hour : best
+  }, '0')
+
+  const worstHour = Object.entries(hourlyPerformance).reduce((worst, [hour, data]) => {
+    return data.profit < (hourlyPerformance[parseInt(worst)] || { profit: Infinity }).profit ? hour : worst
+  }, '0')
+
+  // Underwater Equity (drawdown en tiempo)
+  const getUnderwaterEquity = () => {
+    const underwater: number[] = []
+    let peak = initialCapital
+
+    visibleData.forEach(point => {
+      if (point.equity > peak) peak = point.equity
+      const dd = ((peak - point.equity) / peak) * 100
+      underwater.push(-dd)
+    })
+
+    return underwater
+  }
+
+  const underwaterData = getUnderwaterEquity()
+
+  // Sound effects
+  const playSound = (type: 'win' | 'loss') => {
+    if (!soundEnabled) return
+
+    const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)()
+    const oscillator = audioContext.createOscillator()
+    const gainNode = audioContext.createGain()
+
+    oscillator.connect(gainNode)
+    gainNode.connect(audioContext.destination)
+
+    if (type === 'win') {
+      oscillator.frequency.value = 800
+      oscillator.type = 'sine'
+    } else {
+      oscillator.frequency.value = 200
+      oscillator.type = 'square'
+    }
+
+    gainNode.gain.setValueAtTime(0.1, audioContext.currentTime)
+    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3)
+
+    oscillator.start(audioContext.currentTime)
+    oscillator.stop(audioContext.currentTime + 0.3)
+  }
+
+  // Detectar nuevo trade completado para sound
+  useEffect(() => {
+    if (completedTrades.length > 0 && lastTrade) {
+      const wasWin = lastTrade.pnl >= 0
+      if (lastTradeSound !== (wasWin ? 'win' : 'loss')) {
+        playSound(wasWin ? 'win' : 'loss')
+        setLastTradeSound(wasWin ? 'win' : 'loss')
+      }
+    }
+  }, [completedTrades.length])
+
   // Dibujar gráfico de PRECIO (candlesticks) si hay priceData
   useEffect(() => {
     if (!priceData || priceData.length === 0) return
@@ -271,6 +380,58 @@ export function BacktestReplay({ equityCurve, trades, initialCapital, priceData,
       ctx.lineWidth = 1
       ctx.strokeRect(x - candleWidth / 2, bodyY, candleWidth, bodyHeight)
     })
+
+    // Draw SMAs if enabled
+    if (showSMAs && sma20.length > 0) {
+      // SMA 20 (rápida) - Naranja
+      ctx.beginPath()
+      ctx.strokeStyle = '#f97316'
+      ctx.lineWidth = 2
+      ctx.setLineDash([])
+
+      visiblePriceData.forEach((_, i) => {
+        if (!isNaN(sma20[i])) {
+          const x = padding + i * xScale
+          const y = height - padding - (sma20[i] - minPrice) * yScale
+
+          if (i === 0 || isNaN(sma20[i - 1])) {
+            ctx.moveTo(x, y)
+          } else {
+            ctx.lineTo(x, y)
+          }
+        }
+      })
+      ctx.stroke()
+
+      // SMA 50 (lenta) - Azul
+      if (sma50.length > 0) {
+        ctx.beginPath()
+        ctx.strokeStyle = '#3b82f6'
+        ctx.lineWidth = 2
+
+        visiblePriceData.forEach((_, i) => {
+          if (!isNaN(sma50[i])) {
+            const x = padding + i * xScale
+            const y = height - padding - (sma50[i] - minPrice) * yScale
+
+            if (i === 0 || isNaN(sma50[i - 1])) {
+              ctx.moveTo(x, y)
+            } else {
+              ctx.lineTo(x, y)
+            }
+          }
+        })
+        ctx.stroke()
+      }
+
+      // Legend
+      ctx.font = 'bold 11px sans-serif'
+      ctx.textAlign = 'left'
+      ctx.fillStyle = '#f97316'
+      ctx.fillText('SMA 20', padding + 10, padding + 30)
+      ctx.fillStyle = '#3b82f6'
+      ctx.fillText('SMA 50', padding + 10, padding + 45)
+    }
 
     // Draw trade markers on price chart
     if (showTradeMarkers) {
@@ -1113,6 +1274,28 @@ export function BacktestReplay({ equityCurve, trades, initialCapital, priceData,
                 <Flame className="w-3 h-3 mr-1" />
                 Drawdowns
               </Button>
+              {priceData && (
+                <>
+                  <Button
+                    variant={showSMAs ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setShowSMAs(!showSMAs)}
+                    className={showSMAs ? 'bg-orange-600 hover:bg-orange-700' : 'bg-slate-800/50 border-slate-700'}
+                  >
+                    <LineChart className="w-3 h-3 mr-1" />
+                    SMAs
+                  </Button>
+                  <Button
+                    variant={showHeatmap ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setShowHeatmap(!showHeatmap)}
+                    className={showHeatmap ? 'bg-purple-600 hover:bg-purple-700' : 'bg-slate-800/50 border-slate-700'}
+                  >
+                    <Flame className="w-3 h-3 mr-1" />
+                    Heatmap
+                  </Button>
+                </>
+              )}
               {benchmarkData && (
                 <Button
                   variant={showBenchmark ? 'default' : 'outline'}
@@ -1124,6 +1307,16 @@ export function BacktestReplay({ equityCurve, trades, initialCapital, priceData,
                   Benchmark
                 </Button>
               )}
+              <Button
+                variant={soundEnabled ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setSoundEnabled(!soundEnabled)}
+                className={soundEnabled ? 'bg-pink-600 hover:bg-pink-700' : 'bg-slate-800/50 border-slate-700'}
+                title="Sound FX en trades"
+              >
+                <Zap className="w-3 h-3 mr-1" />
+                Sound
+              </Button>
             </div>
           </div>
         </div>
