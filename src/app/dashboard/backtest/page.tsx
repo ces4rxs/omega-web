@@ -21,11 +21,14 @@ import { MACDChart } from "@/components/charts/macd-chart"
 import { BollingerBandsChart } from "@/components/charts/bollinger-bands-chart"
 import { ATRChart } from "@/components/charts/atr-chart"
 import { StochasticChart } from "@/components/charts/stochastic-chart"
+import { BacktestReplay } from "@/components/backtest-replay"
+import { PerformanceHeatmap, MonthlyPerformanceHeatmap } from "@/components/performance-heatmap"
 import { MetricCard } from "@/components/metric-card"
 import { TradeTable } from "@/components/trade-table"
-import { Activity, TrendingUp, TrendingDown, Target, Percent, DollarSign, Play, Download, Sparkles } from "lucide-react"
+import { Activity, TrendingUp, TrendingDown, Target, Percent, DollarSign, Play, Download, Sparkles, FileText } from "lucide-react"
 import { transformBacktestResponse } from "@/lib/transformBacktest"
 import { polygonService } from "@/lib/polygon"
+import { exportBacktestToPDF } from "@/lib/pdf-export"
 import type { CandlestickData } from "lightweight-charts"
 
 // Mapeo de timeframes del frontend al backend
@@ -448,9 +451,13 @@ export default function BacktestPage() {
           {/* Action Bar */}
           <motion.div variants={itemVariants} className="flex justify-between items-center">
             <h2 className="text-2xl font-bold text-white">Resultados del Backtest</h2>
-            <Button variant="outline" size="sm">
-              <Download className="w-4 h-4 mr-2" />
-              Exportar Reporte
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => exportBacktestToPDF(result, formData.symbol, formData.strategy)}
+            >
+              <FileText className="w-4 h-4 mr-2" />
+              Exportar PDF
             </Button>
           </motion.div>
 
@@ -554,6 +561,22 @@ export default function BacktestPage() {
           <motion.div variants={itemVariants} className="grid md:grid-cols-2 gap-6">
             <DrawdownChart data={result.backtest.equityCurve} />
             <ReturnsDistribution trades={result.backtest.trades} />
+          </motion.div>
+
+          {/* Backtest Replay */}
+          <motion.div variants={itemVariants}>
+            <BacktestReplay
+              equityCurve={result.backtest.equityCurve}
+              trades={result.backtest.trades}
+              initialCapital={formData.initialCapital || 10000}
+            />
+          </motion.div>
+
+          {/* Performance Heatmaps */}
+          <motion.div variants={itemVariants} className="space-y-6">
+            <h3 className="text-lg font-semibold text-white">Análisis de Rendimiento</h3>
+            <PerformanceHeatmap trades={result.backtest.trades} />
+            <MonthlyPerformanceHeatmap trades={result.backtest.trades} />
           </motion.div>
 
           {/* Trade History */}
