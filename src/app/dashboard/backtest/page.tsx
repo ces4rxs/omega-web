@@ -35,6 +35,7 @@ import { polygonService } from "@/lib/polygon"
 import { exportBacktestToPDF } from "@/lib/pdf-export"
 import type { CandlestickData } from "lightweight-charts"
 import { useTier } from "@/hooks/use-tier"
+import { SymbolLogo } from "@/components/symbol-logo"
 
 // Mapeo de timeframes del frontend al backend
 const timeframeMap: Record<string, string> = {
@@ -300,13 +301,18 @@ export default function BacktestPage() {
                 {/* Symbol */}
                 <div className="space-y-2">
                   <Label htmlFor="symbol">Símbolo</Label>
-                  <Input
-                    id="symbol"
-                    value={formData.symbol}
-                    onChange={(e) => setFormData({ ...formData, symbol: e.target.value.toUpperCase() })}
-                    placeholder="AAPL, TSLA, BTC..."
-                    className="uppercase"
-                  />
+                  <div className="flex items-center gap-3">
+                    {formData.symbol && formData.symbol.length >= 1 && (
+                      <SymbolLogo symbol={formData.symbol} size="lg" />
+                    )}
+                    <Input
+                      id="symbol"
+                      value={formData.symbol}
+                      onChange={(e) => setFormData({ ...formData, symbol: e.target.value.toUpperCase() })}
+                      placeholder="AAPL, TSLA, BTC..."
+                      className="uppercase flex-1"
+                    />
+                  </div>
                 </div>
 
                 {/* Timeframe */}
