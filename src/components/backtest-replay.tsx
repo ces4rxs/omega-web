@@ -184,6 +184,183 @@ export function BacktestReplay({ equityCurve, trades, initialCapital, priceData,
 
   const drawdownZones = getDrawdownZones()
 
+  // Dibujar gráfico de PRECIO (candlesticks) si hay priceData
+  useEffect(() => {
+    if (!priceData || priceData.length === 0) return
+
+    const canvas = priceCanvasRef.current
+    if (!canvas || visibleData.length === 0) return
+
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return
+
+    const rect = canvas.getBoundingClientRect()
+    canvas.width = rect.width * window.devicePixelRatio
+    canvas.height = rect.height * window.devicePixelRatio
+    ctx.scale(window.devicePixelRatio, window.devicePixelRatio)
+
+    const width = rect.width
+    const height = rect.height
+    const padding = 50
+
+    // Clear canvas
+    ctx.fillStyle = '#0a0f1e'
+    ctx.fillRect(0, 0, width, height)
+
+    // Obtener datos visibles de precio (sincronizado con equity)
+    const visiblePriceData = priceData.slice(0, currentStep + 1)
+
+    if (visiblePriceData.length === 0) return
+
+    // Calculate scale
+    const minPrice = Math.min(...visiblePriceData.map((d) => d.low))
+    const maxPrice = Math.max(...visiblePriceData.map((d) => d.high))
+    const priceRange = maxPrice - minPrice || 1
+
+    const xScale = (width - 2 * padding) / Math.max(1, visiblePriceData.length - 1)
+    const yScale = (height - 2 * padding) / priceRange
+
+    // Draw grid
+    ctx.strokeStyle = '#1e293b'
+    ctx.lineWidth = 1
+    for (let i = 0; i <= 5; i++) {
+      const y = padding + (i * (height - 2 * padding)) / 5
+      ctx.beginPath()
+      ctx.moveTo(padding, y)
+      ctx.lineTo(width - padding, y)
+      ctx.stroke()
+    }
+
+    // Vertical time grid
+    for (let i = 0; i <= 10; i++) {
+      const x = padding + (i * (width - 2 * padding)) / 10
+      ctx.beginPath()
+      ctx.moveTo(x, padding)
+      ctx.lineTo(x, height - padding)
+      ctx.stroke()
+    }
+
+    // Draw candlesticks
+    const candleWidth = Math.max(2, xScale * 0.6)
+
+    visiblePriceData.forEach((candle, i) => {
+      const x = padding + i * xScale
+      const openY = height - padding - (candle.open - minPrice) * yScale
+      const closeY = height - padding - (candle.close - minPrice) * yScale
+      const highY = height - padding - (candle.high - minPrice) * yScale
+      const lowY = height - padding - (candle.low - minPrice) * yScale
+
+      const isGreen = candle.close >= candle.open
+
+      // Draw wick (high-low line)
+      ctx.strokeStyle = isGreen ? '#10b981' : '#ef4444'
+      ctx.lineWidth = 1
+      ctx.beginPath()
+      ctx.moveTo(x, highY)
+      ctx.lineTo(x, lowY)
+      ctx.stroke()
+
+      // Draw body (open-close)
+      ctx.fillStyle = isGreen ? '#10b981' : '#ef4444'
+      const bodyHeight = Math.abs(openY - closeY) || 1
+      const bodyY = Math.min(openY, closeY)
+      ctx.fillRect(x - candleWidth / 2, bodyY, candleWidth, bodyHeight)
+
+      // Draw border
+      ctx.strokeStyle = isGreen ? '#059669' : '#dc2626'
+      ctx.lineWidth = 1
+      ctx.strokeRect(x - candleWidth / 2, bodyY, candleWidth, bodyHeight)
+    })
+
+    // Draw trade markers on price chart
+    if (showTradeMarkers) {
+      completedTrades.forEach((trade) => {
+        const entryIndex = visiblePriceData.findIndex((d) => new Date(d.date) >= new Date(trade.entryDate))
+        const exitIndex = visiblePriceData.findIndex((d) => new Date(d.date) >= new Date(trade.exitDate))
+
+        if (entryIndex >= 0 && entryIndex < visiblePriceData.length) {
+          const x = padding + entryIndex * xScale
+          const candle = visiblePriceData[entryIndex]
+          const y = height - padding - (trade.entryPrice - minPrice) * yScale
+
+          // Entry marker - BUY arrow
+          ctx.fillStyle = '#3b82f6'
+          ctx.strokeStyle = '#1e40af'
+          ctx.lineWidth = 2
+
+          // Triangle pointing up
+          ctx.beginPath()
+          ctx.moveTo(x, y - 5)
+          ctx.lineTo(x - 7, y + 5)
+          ctx.lineTo(x + 7, y + 5)
+          ctx.closePath()
+          ctx.fill()
+          ctx.stroke()
+
+          // Label "BUY"
+          ctx.fillStyle = '#3b82f6'
+          ctx.font = 'bold 10px sans-serif'
+          ctx.textAlign = 'center'
+          ctx.fillText('BUY', x, y + 18)
+        }
+
+        if (exitIndex >= 0 && exitIndex < visiblePriceData.length) {
+          const x = padding + exitIndex * xScale
+          const y = height - padding - (trade.exitPrice - minPrice) * yScale
+
+          // Exit marker - SELL arrow
+          const isWin = trade.pnl >= 0
+          ctx.fillStyle = isWin ? '#10b981' : '#ef4444'
+          ctx.strokeStyle = isWin ? '#059669' : '#dc2626'
+          ctx.lineWidth = 2
+
+          // Triangle pointing down
+          ctx.beginPath()
+          ctx.moveTo(x, y + 5)
+          ctx.lineTo(x - 7, y - 5)
+          ctx.lineTo(x + 7, y - 5)
+          ctx.closePath()
+          ctx.fill()
+          ctx.stroke()
+
+          // Label "SELL"
+          ctx.fillStyle = isWin ? '#10b981' : '#ef4444'
+          ctx.font = 'bold 10px sans-serif'
+          ctx.textAlign = 'center'
+          ctx.fillText('SELL', x, y - 10)
+        }
+      })
+    }
+
+    // Draw axes labels
+    ctx.fillStyle = '#94a3b8'
+    ctx.font = '11px sans-serif'
+    ctx.textAlign = 'right'
+
+    // Y-axis labels (price)
+    for (let i = 0; i <= 5; i++) {
+      const value = minPrice + (priceRange * i) / 5
+      const y = height - padding - (i * (height - 2 * padding)) / 5
+      ctx.fillText(`$${value.toFixed(2)}`, padding - 10, y + 4)
+    }
+
+    // X-axis labels (dates)
+    ctx.textAlign = 'center'
+    for (let i = 0; i <= 5; i++) {
+      const index = Math.floor((visiblePriceData.length - 1) * (i / 5))
+      if (index < visiblePriceData.length) {
+        const date = new Date(visiblePriceData[index].date)
+        const x = padding + index * xScale
+        ctx.fillText(
+          date.toLocaleDateString('es-ES', { month: 'short', day: 'numeric' }),
+          x,
+          height - padding + 20
+        )
+      }
+    }
+
+  }, [priceData, visibleData, currentStep, showTradeMarkers, completedTrades])
+
   // Dibujar gráfico de equity con canvas mejorado
   useEffect(() => {
     const canvas = equityCanvasRef.current
@@ -597,7 +774,50 @@ export function BacktestReplay({ equityCurve, trades, initialCapital, priceData,
         </CardHeader>
 
       <CardContent className="space-y-6 p-6">
-        {/* Main Equity Chart */}
+        {/* Price Chart (Candlesticks) - Solo si hay priceData */}
+        {priceData && priceData.length > 0 && (
+          <div className="relative">
+            <div className="absolute top-2 left-2 z-10 flex gap-2">
+              <div className="text-xs px-2 py-1 bg-black/70 backdrop-blur-sm rounded border border-green-500/30 text-green-300 flex items-center gap-1">
+                <BarChart3 className="w-3 h-3" />
+                Precio (OHLC)
+              </div>
+            </div>
+
+            <canvas
+              ref={priceCanvasRef}
+              className="w-full rounded-lg bg-gradient-to-br from-slate-950 to-slate-900 border border-green-500/20"
+              style={{ width: '100%', height: '300px' }}
+            />
+
+            {/* Current price indicator */}
+            {priceData && currentStep < priceData.length && (
+              <motion.div
+                key={currentStep}
+                initial={{ scale: 1.1, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                className="absolute top-4 right-4 bg-black/90 backdrop-blur-md rounded-xl p-3 border border-green-500/30 shadow-2xl shadow-green-500/20"
+              >
+                <div className="text-xs text-gray-500 uppercase tracking-wide mb-1">Precio Actual</div>
+                <div className={`text-2xl font-bold ${priceData[currentStep].close >= priceData[0].open ? 'text-green-400' : 'text-red-400'}`}>
+                  ${priceData[currentStep].close.toFixed(2)}
+                </div>
+                <div className="grid grid-cols-2 gap-2 text-xs mt-2">
+                  <div>
+                    <span className="text-gray-500">H:</span>{' '}
+                    <span className="text-green-400">${priceData[currentStep].high.toFixed(2)}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">L:</span>{' '}
+                    <span className="text-red-400">${priceData[currentStep].low.toFixed(2)}</span>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </div>
+        )}
+
+        {/* Equity Chart */}
         <div className="relative">
           <div className="absolute top-2 left-2 z-10 flex gap-2">
             <div className="text-xs px-2 py-1 bg-black/70 backdrop-blur-sm rounded border border-blue-500/30 text-blue-300 flex items-center gap-1">
