@@ -350,8 +350,12 @@ export function CandlestickChart({
     // Use series price conversion
     const y = candlestickSeries.current.priceToCoordinate(point.price)
 
-    if (x === null || y === null) return null
+    if (x === null || y === null) {
+      console.log('Invalid coordinates:', { x, y, point })
+      return null
+    }
 
+    console.log('Pixel coordinates:', { x, y, price: point.price, time: point.time })
     return { x, y }
   }
 
@@ -569,17 +573,38 @@ export function CandlestickChart({
 
           {/* Chart Container with Drawing Handlers */}
           <div
-            ref={chartContainerRef}
-            className="w-full cursor-crosshair relative"
-            onClick={handleChartClick}
-            onMouseMove={handleMouseMove}
+            className="w-full relative"
             style={{ cursor: activeTool === 'cursor' ? 'default' : 'crosshair' }}
           >
-            {/* Drawing Overlay - SVG */}
+            {/* Lightweight Charts Canvas */}
+            <div
+              ref={chartContainerRef}
+              className="w-full"
+              onClick={handleChartClick}
+              onMouseMove={handleMouseMove}
+            />
+
+            {/* Drawing Overlay - SVG (Above chart) */}
             <svg
-              className="absolute top-0 left-0 w-full h-full pointer-events-none"
-              style={{ height: 500 }}
+              className="absolute top-0 left-0 w-full pointer-events-none"
+              style={{ height: 500, zIndex: 1000 }}
             >
+              {/* Debug: Visible test rectangle to confirm SVG renders */}
+              <rect
+                x={10}
+                y={10}
+                width={100}
+                height={30}
+                fill="red"
+                fillOpacity={0.5}
+              />
+              <text x={15} y={30} fill="white" fontSize="12" fontWeight="bold">
+                SVG TEST ({drawings.length})
+              </text>
+
+              {/* Debug: Show drawing count */}
+              {drawings.length > 0 && console.log('Rendering drawings:', drawings)}
+
               {/* Render completed drawings */}
               {drawings.map(drawing => (
                 <g key={drawing.id}>
