@@ -256,7 +256,7 @@ export function CandlestickChart({
           type: 'text',
           points: [point],
           text,
-          color: '#3b82f6'
+          color: '#facc15' // Amarillo brillante
         }
         setDrawings([...drawings, newDrawing])
         console.log('Text drawing created:', newDrawing)
@@ -271,7 +271,7 @@ export function CandlestickChart({
         id: Date.now().toString(),
         type: 'horizontal',
         points: [point],
-        color: '#3b82f6',
+        color: '#22c55e', // Verde brillante
         style: 'dashed'
       }
       setDrawings([...drawings, newDrawing])
@@ -287,7 +287,7 @@ export function CandlestickChart({
         id: Date.now().toString(),
         type: activeTool,
         points: [point],
-        color: '#3b82f6',
+        color: '#facc15', // Amarillo brillante
         style: 'solid'
       }
       setCurrentDrawing(newDrawing)
@@ -596,19 +596,6 @@ export function CandlestickChart({
               className="absolute top-0 left-0 w-full pointer-events-none"
               style={{ height: 500, zIndex: 1000 }}
             >
-              {/* Debug: Visible test rectangle to confirm SVG renders */}
-              <rect
-                x={10}
-                y={10}
-                width={100}
-                height={30}
-                fill="red"
-                fillOpacity={0.5}
-              />
-              <text x={15} y={30} fill="white" fontSize="12" fontWeight="bold">
-                SVG TEST ({drawings.length})
-              </text>
-
               {/* Render completed drawings */}
               {drawings.map(drawing => (
                 <g key={drawing.id}>
@@ -624,7 +611,7 @@ export function CandlestickChart({
                           x2={p2.x}
                           y2={p2.y}
                           stroke={drawing.color}
-                          strokeWidth={2}
+                          strokeWidth={3}
                           strokeDasharray={drawing.style === 'dashed' ? '5,5' : '0'}
                         />
                         {/* Delete button */}
@@ -663,7 +650,7 @@ export function CandlestickChart({
                           x2="100%"
                           y2={p1.y}
                           stroke={drawing.color}
-                          strokeWidth={2}
+                          strokeWidth={3}
                           strokeDasharray="5,5"
                         />
                         <text
@@ -782,9 +769,9 @@ export function CandlestickChart({
                           width={width}
                           height={height}
                           fill={drawing.color}
-                          fillOpacity={0.1}
+                          fillOpacity={0.2}
                           stroke={drawing.color}
-                          strokeWidth={2}
+                          strokeWidth={3}
                         />
                         <circle
                           cx={p2.x}
@@ -933,10 +920,10 @@ export function CandlestickChart({
                         y1={p1.y}
                         x2={p2.x}
                         y2={p2.y}
-                        stroke="#3b82f6"
-                        strokeWidth={2}
+                        stroke="#facc15"
+                        strokeWidth={3}
                         strokeDasharray="5,5"
-                        opacity={0.7}
+                        opacity={0.9}
                       />
                     )
                   }
@@ -953,10 +940,10 @@ export function CandlestickChart({
                         y={y}
                         width={width}
                         height={height}
-                        fill="#3b82f6"
-                        fillOpacity={0.1}
-                        stroke="#3b82f6"
-                        strokeWidth={2}
+                        fill="#facc15"
+                        fillOpacity={0.15}
+                        stroke="#facc15"
+                        strokeWidth={3}
                         strokeDasharray="5,5"
                       />
                     )
@@ -969,10 +956,10 @@ export function CandlestickChart({
                         y1={p1.y}
                         x2={p2.x}
                         y2={p2.y}
-                        stroke="#3b82f6"
-                        strokeWidth={3}
+                        stroke="#facc15"
+                        strokeWidth={4}
                         strokeDasharray="5,5"
-                        opacity={0.7}
+                        opacity={0.9}
                       />
                     )
                   }
@@ -984,10 +971,10 @@ export function CandlestickChart({
                         y1={p1.y}
                         x2={p2.x}
                         y2={p2.y}
-                        stroke="#3b82f6"
-                        strokeWidth={2}
+                        stroke="#facc15"
+                        strokeWidth={3}
                         strokeDasharray="5,5"
-                        opacity={0.7}
+                        opacity={0.9}
                       />
                     )
                   }
