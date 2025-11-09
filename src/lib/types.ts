@@ -61,6 +61,18 @@ export interface PerformanceMetrics {
   avgWin: number
   avgLoss: number
   expectancy: number
+  // Advanced risk metrics
+  sortinoRatio?: number
+  calmarRatio?: number
+  recoveryFactor?: number
+  riskRewardRatio?: number
+  maxAdverseExcursion?: number  // MAE
+  maxFavorableExcursion?: number  // MFE
+  consecutiveWins?: number
+  consecutiveLosses?: number
+  avgTradeDuration?: number  // Average trade duration in days
+  largestWin?: number
+  largestLoss?: number
 }
 
 export interface Trade {

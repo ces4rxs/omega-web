@@ -65,6 +65,16 @@ export function transformBacktestResponse(raw: RawBacktestResponse, symbol: stri
     backtest.period.end
   )
 
+  // Calculate Calmar and Recovery Factor
+  const calmarRatio = backtest.performance.maxDrawdown > 0
+    ? backtest.performance.cagr / backtest.performance.maxDrawdown
+    : 0
+
+  const totalReturn = backtest.performance.totalReturn
+  const recoveryFactor = backtest.performance.maxDrawdown > 0
+    ? totalReturn / backtest.performance.maxDrawdown
+    : 0
+
   // Mapear performance metrics al formato esperado por el frontend
   const performance = {
     totalReturn: backtest.performance.totalReturn,           // Ya es decimal
@@ -74,7 +84,21 @@ export function transformBacktestResponse(raw: RawBacktestResponse, symbol: stri
     winRate: additionalMetrics.winRate,                     // Calculado
     profitFactor: additionalMetrics.profitFactor,           // Calculado
     totalTrades: backtest.performance.trades,               // Número total
-    expectancy: additionalMetrics.expectancy                // Calculado
+    expectancy: additionalMetrics.expectancy,               // Calculado
+    avgWin: additionalMetrics.avgWin,
+    avgLoss: additionalMetrics.avgLoss,
+    // Advanced metrics
+    sortinoRatio: additionalMetrics.sortinoRatio,
+    calmarRatio: calmarRatio,
+    recoveryFactor: recoveryFactor,
+    riskRewardRatio: additionalMetrics.riskRewardRatio,
+    maxAdverseExcursion: additionalMetrics.maxAdverseExcursion,
+    maxFavorableExcursion: additionalMetrics.maxFavorableExcursion,
+    consecutiveWins: additionalMetrics.consecutiveWins,
+    consecutiveLosses: additionalMetrics.consecutiveLosses,
+    avgTradeDuration: additionalMetrics.avgTradeDuration,
+    largestWin: additionalMetrics.largestWin,
+    largestLoss: additionalMetrics.largestLoss
   }
 
   console.log('✅ TRANSFORMED PERFORMANCE:', performance)
@@ -118,14 +142,28 @@ function calculateAdditionalMetrics(trades: Trade[]) {
     return {
       winRate: 0,
       profitFactor: 0,
-      expectancy: 0
+      expectancy: 0,
+      avgWin: 0,
+      avgLoss: 0,
+      sortinoRatio: 0,
+      calmarRatio: 0,
+      recoveryFactor: 0,
+      riskRewardRatio: 0,
+      maxAdverseExcursion: 0,
+      maxFavorableExcursion: 0,
+      consecutiveWins: 0,
+      consecutiveLosses: 0,
+      avgTradeDuration: 0,
+      largestWin: 0,
+      largestLoss: 0
     }
   }
 
   const winningTrades = trades.filter(t => t.pnl > 0)
   const losingTrades = trades.filter(t => t.pnl < 0)
 
-  const winRate = trades.length > 0 ? winningTrades.length / trades.length : 0
+  // Basic metrics
+  const winRate = trades.length > 0 ? (winningTrades.length / trades.length) * 100 : 0
 
   const totalWins = winningTrades.reduce((sum, t) => sum + t.pnl, 0)
   const totalLosses = Math.abs(losingTrades.reduce((sum, t) => sum + t.pnl, 0))
@@ -134,10 +172,87 @@ function calculateAdditionalMetrics(trades: Trade[]) {
   const totalPnL = trades.reduce((sum, t) => sum + t.pnl, 0)
   const expectancy = trades.length > 0 ? totalPnL / trades.length : 0
 
+  // Average win/loss
+  const avgWin = winningTrades.length > 0
+    ? totalWins / winningTrades.length
+    : 0
+
+  const avgLoss = losingTrades.length > 0
+    ? totalLosses / losingTrades.length
+    : 0
+
+  // Risk/Reward Ratio
+  const riskRewardRatio = avgLoss > 0 ? avgWin / avgLoss : 0
+
+  // Largest win/loss
+  const largestWin = winningTrades.length > 0
+    ? Math.max(...winningTrades.map(t => t.pnl))
+    : 0
+
+  const largestLoss = losingTrades.length > 0
+    ? Math.abs(Math.min(...losingTrades.map(t => t.pnl)))
+    : 0
+
+  // Consecutive wins/losses
+  let maxConsecutiveWins = 0
+  let maxConsecutiveLosses = 0
+  let currentWins = 0
+  let currentLosses = 0
+
+  for (const trade of trades) {
+    if (trade.pnl > 0) {
+      currentWins++
+      currentLosses = 0
+      maxConsecutiveWins = Math.max(maxConsecutiveWins, currentWins)
+    } else if (trade.pnl < 0) {
+      currentLosses++
+      currentWins = 0
+      maxConsecutiveLosses = Math.max(maxConsecutiveLosses, currentLosses)
+    }
+  }
+
+  // Average trade duration
+  const avgTradeDuration = trades.length > 0
+    ? trades.reduce((sum, t) => sum + (t.duration || 0), 0) / trades.length
+    : 0
+
+  // MAE/MFE (simplified - using largest loss/win as proxy)
+  const maxAdverseExcursion = largestLoss
+  const maxFavorableExcursion = largestWin
+
+  // Sortino Ratio (simplified - using downside deviation)
+  const downsideReturns = losingTrades.map(t => t.pnl)
+  const downsideDeviation = downsideReturns.length > 0
+    ? Math.sqrt(downsideReturns.reduce((sum, r) => sum + r * r, 0) / downsideReturns.length)
+    : 1
+
+  const sortinoRatio = downsideDeviation > 0 ? expectancy / downsideDeviation : 0
+
+  // Calmar Ratio (CAGR / Max Drawdown) - needs to be calculated in performance
+  // For now, set to 0 and calculate at higher level
+  const calmarRatio = 0
+
+  // Recovery Factor (Net Profit / Max Drawdown)
+  // For now, set to 0 and calculate at higher level
+  const recoveryFactor = 0
+
   return {
     winRate,
     profitFactor,
-    expectancy
+    expectancy,
+    avgWin,
+    avgLoss,
+    sortinoRatio,
+    calmarRatio,
+    recoveryFactor,
+    riskRewardRatio,
+    maxAdverseExcursion,
+    maxFavorableExcursion,
+    consecutiveWins: maxConsecutiveWins,
+    consecutiveLosses: maxConsecutiveLosses,
+    avgTradeDuration,
+    largestWin,
+    largestLoss
   }
 }
 
