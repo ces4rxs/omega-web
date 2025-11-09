@@ -27,6 +27,9 @@ import { PerformanceHeatmap, MonthlyPerformanceHeatmap } from "@/components/perf
 import { MetricCard } from "@/components/metric-card"
 import { TradeTable } from "@/components/trade-table"
 import { RiskAlerts } from "@/components/risk-alerts"
+import { RiskTooltip, RISK_TOOLTIPS } from "@/components/risk-tooltip"
+import { RiskCalculator } from "@/components/risk-calculator"
+import { RiskAIAdvisor } from "@/components/risk-ai-advisor"
 import { AIInsights } from "@/components/ai/ai-insights"
 import { QuantumRisk } from "@/components/ai/quantum-risk"
 import { AIOptimizer } from "@/components/ai/ai-optimizer"
@@ -520,7 +523,10 @@ export default function BacktestPage() {
                       {/* Commission */}
                       <div className="space-y-2">
                         <div className="flex items-center justify-between">
-                          <Label className="text-sm text-gray-300">Comisión por Trade</Label>
+                          <div className="flex items-center">
+                            <Label className="text-sm text-gray-300">Comisión por Trade</Label>
+                            <RiskTooltip {...RISK_TOOLTIPS.commission} />
+                          </div>
                           <button
                             type="button"
                             onClick={() => setRiskManagement({ ...riskManagement, enableCommission: !riskManagement.enableCommission })}
@@ -551,7 +557,10 @@ export default function BacktestPage() {
                       {/* Slippage */}
                       <div className="space-y-2">
                         <div className="flex items-center justify-between">
-                          <Label className="text-sm text-gray-300">Slippage</Label>
+                          <div className="flex items-center">
+                            <Label className="text-sm text-gray-300">Slippage</Label>
+                            <RiskTooltip {...RISK_TOOLTIPS.slippage} />
+                          </div>
                           <button
                             type="button"
                             onClick={() => setRiskManagement({ ...riskManagement, enableSlippage: !riskManagement.enableSlippage })}
@@ -581,7 +590,10 @@ export default function BacktestPage() {
                       {/* Stop Loss */}
                       <div className="space-y-2">
                         <div className="flex items-center justify-between">
-                          <Label className="text-sm text-gray-300">Stop Loss</Label>
+                          <div className="flex items-center">
+                            <Label className="text-sm text-gray-300">Stop Loss</Label>
+                            <RiskTooltip {...RISK_TOOLTIPS.stopLoss} />
+                          </div>
                           <button
                             type="button"
                             onClick={() => setRiskManagement({ ...riskManagement, enableStopLoss: !riskManagement.enableStopLoss })}
@@ -611,7 +623,10 @@ export default function BacktestPage() {
                       {/* Take Profit */}
                       <div className="space-y-2">
                         <div className="flex items-center justify-between">
-                          <Label className="text-sm text-gray-300">Take Profit</Label>
+                          <div className="flex items-center">
+                            <Label className="text-sm text-gray-300">Take Profit</Label>
+                            <RiskTooltip {...RISK_TOOLTIPS.takeProfit} />
+                          </div>
                           <button
                             type="button"
                             onClick={() => setRiskManagement({ ...riskManagement, enableTakeProfit: !riskManagement.enableTakeProfit })}
@@ -694,7 +709,10 @@ export default function BacktestPage() {
                           {/* Trailing Stop */}
                           <div className="space-y-2">
                             <div className="flex items-center justify-between">
-                              <Label className="text-sm text-gray-300">Trailing Stop</Label>
+                              <div className="flex items-center">
+                                <Label className="text-sm text-gray-300">Trailing Stop</Label>
+                                <RiskTooltip {...RISK_TOOLTIPS.trailingStop} />
+                              </div>
                               <button
                                 type="button"
                                 onClick={() => setRiskManagement({ ...riskManagement, enableTrailingStop: !riskManagement.enableTrailingStop })}
@@ -724,7 +742,10 @@ export default function BacktestPage() {
                           {/* Daily Loss Limit */}
                           <div className="space-y-2">
                             <div className="flex items-center justify-between">
-                              <Label className="text-sm text-gray-300">Daily Loss Limit</Label>
+                              <div className="flex items-center">
+                                <Label className="text-sm text-gray-300">Daily Loss Limit</Label>
+                                <RiskTooltip {...RISK_TOOLTIPS.dailyLossLimit} />
+                              </div>
                               <button
                                 type="button"
                                 onClick={() => setRiskManagement({ ...riskManagement, enableDailyLossLimit: !riskManagement.enableDailyLossLimit })}
@@ -754,7 +775,10 @@ export default function BacktestPage() {
                           {/* Max Drawdown Limit */}
                           <div className="space-y-2">
                             <div className="flex items-center justify-between">
-                              <Label className="text-sm text-gray-300">Max Drawdown Limit</Label>
+                              <div className="flex items-center">
+                                <Label className="text-sm text-gray-300">Max Drawdown Limit</Label>
+                                <RiskTooltip {...RISK_TOOLTIPS.maxDrawdownLimit} />
+                              </div>
                               <button
                                 type="button"
                                 onClick={() => setRiskManagement({ ...riskManagement, enableMaxDrawdownLimit: !riskManagement.enableMaxDrawdownLimit })}
@@ -784,7 +808,10 @@ export default function BacktestPage() {
                           {/* Risk Per Trade */}
                           <div className="space-y-2">
                             <div className="flex items-center justify-between">
-                              <Label className="text-sm text-gray-300">Risk Per Trade</Label>
+                              <div className="flex items-center">
+                                <Label className="text-sm text-gray-300">Risk Per Trade</Label>
+                                <RiskTooltip {...RISK_TOOLTIPS.riskPerTrade} />
+                              </div>
                               <button
                                 type="button"
                                 onClick={() => setRiskManagement({ ...riskManagement, enableRiskPerTrade: !riskManagement.enableRiskPerTrade })}
@@ -814,7 +841,10 @@ export default function BacktestPage() {
                           {/* Volatility-Based Sizing */}
                           <div className="space-y-2 md:col-span-2">
                             <div className="flex items-center justify-between">
-                              <Label className="text-sm text-gray-300">Volatility-Based Sizing (ATR)</Label>
+                              <div className="flex items-center">
+                                <Label className="text-sm text-gray-300">Volatility-Based Sizing (ATR)</Label>
+                                <RiskTooltip {...RISK_TOOLTIPS.volatilitySizing} />
+                              </div>
                               <button
                                 type="button"
                                 onClick={() => setRiskManagement({ ...riskManagement, enableVolatilitySizing: !riskManagement.enableVolatilitySizing })}
@@ -856,20 +886,20 @@ export default function BacktestPage() {
                       </div>
                     </div>
 
-                    {/* Summary */}
-                    <div className="mt-4 p-3 bg-orange-900/20 border border-orange-500/30 rounded-lg">
-                      <p className="text-xs text-orange-300 font-semibold mb-1">💡 Impacto estimado:</p>
-                      <p className="text-xs text-gray-400">
-                        {riskManagement.enableCommission && `Comisiones: ~$${(riskManagement.commission * 100).toFixed(0)} por 100 trades. `}
-                        {riskManagement.enableSlippage && `Slippage: ${riskManagement.slippage}% por entrada/salida. `}
-                        {riskManagement.enableStopLoss && `Stop Loss protegerá tu capital a -${riskManagement.stopLoss}%. `}
-                        {riskManagement.enableTakeProfit && `Take Profit cerrará en +${riskManagement.takeProfit}%. `}
-                        {riskManagement.enableTrailingStop && `Trailing Stop seguirá el precio a ${riskManagement.trailingStopDistance}%. `}
-                        {riskManagement.enableDailyLossLimit && `Límite diario: -${riskManagement.dailyLossLimit}%. `}
-                        {riskManagement.enableMaxDrawdownLimit && `Límite drawdown: ${riskManagement.maxDrawdownLimit}%.`}
-                      </p>
-                    </div>
+                    {/* Risk Calculator - Dynamic Impact */}
+                    <RiskCalculator
+                      capital={formData.initialCapital || 10000}
+                      riskManagement={riskManagement}
+                    />
                   </motion.div>
+                )}
+
+                {/* AI Risk Advisor - Professional & Enterprise Only */}
+                {showRiskManagement && (
+                  <RiskAIAdvisor
+                    riskManagement={riskManagement}
+                    capital={formData.initialCapital || 10000}
+                  />
                 )}
               </div>
 
