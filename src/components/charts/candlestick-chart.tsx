@@ -238,8 +238,10 @@ export function CandlestickChart({
 
     const point: DrawingPoint = { time: time as number, price }
 
+    console.log('Drawing click:', { activeTool, point, isDrawing })
+
+    // Text tool - single click with prompt
     if (activeTool === 'text') {
-      // For text, create immediately with prompt
       const text = window.prompt('Ingresa el texto:')
       if (text) {
         const newDrawing: Drawing = {
@@ -250,11 +252,28 @@ export function CandlestickChart({
           color: '#3b82f6'
         }
         setDrawings([...drawings, newDrawing])
+        console.log('Text drawing created:', newDrawing)
       }
       setActiveTool('cursor')
       return
     }
 
+    // Horizontal line - single click (full width)
+    if (activeTool === 'horizontal' && !isDrawing) {
+      const newDrawing: Drawing = {
+        id: Date.now().toString(),
+        type: 'horizontal',
+        points: [point],
+        color: '#3b82f6',
+        style: 'dashed'
+      }
+      setDrawings([...drawings, newDrawing])
+      console.log('Horizontal line created:', newDrawing)
+      setActiveTool('cursor')
+      return
+    }
+
+    // Two-point drawings (trendline, fibonacci, rectangle, arrow)
     if (!isDrawing) {
       // Start new drawing
       const newDrawing: Drawing = {
@@ -266,6 +285,7 @@ export function CandlestickChart({
       }
       setCurrentDrawing(newDrawing)
       setIsDrawing(true)
+      console.log('Started drawing:', newDrawing)
     } else {
       // Complete drawing
       if (currentDrawing) {
@@ -274,6 +294,7 @@ export function CandlestickChart({
           points: [...currentDrawing.points, point]
         }
         setDrawings([...drawings, completedDrawing])
+        console.log('Completed drawing:', completedDrawing)
         setCurrentDrawing(null)
         setIsDrawing(false)
         setActiveTool('cursor')
@@ -329,8 +350,12 @@ export function CandlestickChart({
     // Use series price conversion
     const y = candlestickSeries.current.priceToCoordinate(point.price)
 
-    if (x === null || y === null) return null
+    if (x === null || y === null) {
+      console.log('Invalid coordinates:', { x, y, point })
+      return null
+    }
 
+    console.log('Pixel coordinates:', { x, y, price: point.price, time: point.time })
     return { x, y }
   }
 
@@ -548,17 +573,38 @@ export function CandlestickChart({
 
           {/* Chart Container with Drawing Handlers */}
           <div
-            ref={chartContainerRef}
-            className="w-full cursor-crosshair relative"
-            onClick={handleChartClick}
-            onMouseMove={handleMouseMove}
+            className="w-full relative"
             style={{ cursor: activeTool === 'cursor' ? 'default' : 'crosshair' }}
           >
-            {/* Drawing Overlay - SVG */}
+            {/* Lightweight Charts Canvas */}
+            <div
+              ref={chartContainerRef}
+              className="w-full"
+              onClick={handleChartClick}
+              onMouseMove={handleMouseMove}
+            />
+
+            {/* Drawing Overlay - SVG (Above chart) */}
             <svg
-              className="absolute top-0 left-0 w-full h-full pointer-events-none"
-              style={{ height: 500 }}
+              className="absolute top-0 left-0 w-full pointer-events-none"
+              style={{ height: 500, zIndex: 1000 }}
             >
+              {/* Debug: Visible test rectangle to confirm SVG renders */}
+              <rect
+                x={10}
+                y={10}
+                width={100}
+                height={30}
+                fill="red"
+                fillOpacity={0.5}
+              />
+              <text x={15} y={30} fill="white" fontSize="12" fontWeight="bold">
+                SVG TEST ({drawings.length})
+              </text>
+
+              {/* Debug: Show drawing count */}
+              {drawings.length > 0 && console.log('Rendering drawings:', drawings)}
+
               {/* Render completed drawings */}
               {drawings.map(drawing => (
                 <g key={drawing.id}>
