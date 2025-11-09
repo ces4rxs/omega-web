@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useRef } from "react"
-import { createChart, ColorType, IChartApi, ISeriesApi } from "lightweight-charts"
+import { createChart, ColorType, IChartApi, ISeriesApi, AreaSeries } from "lightweight-charts"
 
 interface UnderwaterChartProps {
   data: Array<{ time: number; drawdown: number }>
@@ -40,7 +40,7 @@ export function UnderwaterChart({ data }: UnderwaterChartProps) {
     chartRef.current = chart
 
     // Add underwater area series
-    const series = chart.addAreaSeries({
+    const series = chart.addSeries(AreaSeries, {
       topColor: 'rgba(239, 68, 68, 0.4)',
       bottomColor: 'rgba(239, 68, 68, 0.0)',
       lineColor: 'rgba(239, 68, 68, 0.8)',
