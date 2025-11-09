@@ -15,6 +15,7 @@ import type { BacktestParams, BacktestResult } from "@/lib/types"
 import { EquityCurve } from "@/components/charts/equity-curve"
 import { DrawdownChart } from "@/components/charts/drawdown-chart"
 import { ReturnsDistribution } from "@/components/charts/returns-distribution"
+import { UnderwaterChart } from "@/components/charts/underwater-chart"
 import { CandlestickChart } from "@/components/charts/candlestick-chart"
 import { RSIChart } from "@/components/charts/rsi-chart"
 import { MACDChart } from "@/components/charts/macd-chart"
@@ -25,6 +26,7 @@ import { BacktestReplay } from "@/components/backtest-replay"
 import { PerformanceHeatmap, MonthlyPerformanceHeatmap } from "@/components/performance-heatmap"
 import { MetricCard } from "@/components/metric-card"
 import { TradeTable } from "@/components/trade-table"
+import { RiskAlerts } from "@/components/risk-alerts"
 import { AIInsights } from "@/components/ai/ai-insights"
 import { QuantumRisk } from "@/components/ai/quantum-risk"
 import { AIOptimizer } from "@/components/ai/ai-optimizer"
@@ -91,7 +93,19 @@ export default function BacktestPage() {
     takeProfit: 5.0,
     enablePositionSizing: false,
     positionSize: 100,
-    maxPositions: 1
+    maxPositions: 1,
+    // Advanced risk controls
+    enableTrailingStop: false,
+    trailingStopDistance: 1.5,
+    enableDailyLossLimit: false,
+    dailyLossLimit: 5.0,
+    enableMaxDrawdownLimit: false,
+    maxDrawdownLimit: 15.0,
+    enableRiskPerTrade: false,
+    riskPerTrade: 2.0,
+    enableVolatilitySizing: false,
+    atrPeriod: 14,
+    atrMultiplier: 2.0
   })
 
   // Date preset helper function
@@ -668,6 +682,178 @@ export default function BacktestPage() {
                           </div>
                         )}
                       </div>
+
+                      {/* Advanced Risk Controls */}
+                      <div className="md:col-span-2 mt-4 p-4 bg-gradient-to-br from-purple-900/10 to-blue-900/10 rounded-lg border border-purple-500/20">
+                        <h5 className="text-sm font-semibold text-purple-300 mb-3 flex items-center gap-2">
+                          <Sparkles className="w-4 h-4" />
+                          Controles Avanzados
+                        </h5>
+
+                        <div className="grid md:grid-cols-2 gap-4">
+                          {/* Trailing Stop */}
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between">
+                              <Label className="text-sm text-gray-300">Trailing Stop</Label>
+                              <button
+                                type="button"
+                                onClick={() => setRiskManagement({ ...riskManagement, enableTrailingStop: !riskManagement.enableTrailingStop })}
+                                className={`px-2 py-1 rounded text-xs font-semibold transition-all ${
+                                  riskManagement.enableTrailingStop
+                                    ? 'bg-green-500/20 text-green-400'
+                                    : 'bg-gray-500/20 text-gray-400'
+                                }`}
+                              >
+                                {riskManagement.enableTrailingStop ? 'ON' : 'OFF'}
+                              </button>
+                            </div>
+                            {riskManagement.enableTrailingStop && (
+                              <div className="flex items-center gap-2">
+                                <Input
+                                  type="number"
+                                  step="0.1"
+                                  value={riskManagement.trailingStopDistance}
+                                  onChange={(e) => setRiskManagement({ ...riskManagement, trailingStopDistance: Number(e.target.value) })}
+                                  className="flex-1"
+                                />
+                                <span className="text-xs text-gray-500">%</span>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Daily Loss Limit */}
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between">
+                              <Label className="text-sm text-gray-300">Daily Loss Limit</Label>
+                              <button
+                                type="button"
+                                onClick={() => setRiskManagement({ ...riskManagement, enableDailyLossLimit: !riskManagement.enableDailyLossLimit })}
+                                className={`px-2 py-1 rounded text-xs font-semibold transition-all ${
+                                  riskManagement.enableDailyLossLimit
+                                    ? 'bg-green-500/20 text-green-400'
+                                    : 'bg-gray-500/20 text-gray-400'
+                                }`}
+                              >
+                                {riskManagement.enableDailyLossLimit ? 'ON' : 'OFF'}
+                              </button>
+                            </div>
+                            {riskManagement.enableDailyLossLimit && (
+                              <div className="flex items-center gap-2">
+                                <Input
+                                  type="number"
+                                  step="0.5"
+                                  value={riskManagement.dailyLossLimit}
+                                  onChange={(e) => setRiskManagement({ ...riskManagement, dailyLossLimit: Number(e.target.value) })}
+                                  className="flex-1"
+                                />
+                                <span className="text-xs text-gray-500">%</span>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Max Drawdown Limit */}
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between">
+                              <Label className="text-sm text-gray-300">Max Drawdown Limit</Label>
+                              <button
+                                type="button"
+                                onClick={() => setRiskManagement({ ...riskManagement, enableMaxDrawdownLimit: !riskManagement.enableMaxDrawdownLimit })}
+                                className={`px-2 py-1 rounded text-xs font-semibold transition-all ${
+                                  riskManagement.enableMaxDrawdownLimit
+                                    ? 'bg-green-500/20 text-green-400'
+                                    : 'bg-gray-500/20 text-gray-400'
+                                }`}
+                              >
+                                {riskManagement.enableMaxDrawdownLimit ? 'ON' : 'OFF'}
+                              </button>
+                            </div>
+                            {riskManagement.enableMaxDrawdownLimit && (
+                              <div className="flex items-center gap-2">
+                                <Input
+                                  type="number"
+                                  step="1"
+                                  value={riskManagement.maxDrawdownLimit}
+                                  onChange={(e) => setRiskManagement({ ...riskManagement, maxDrawdownLimit: Number(e.target.value) })}
+                                  className="flex-1"
+                                />
+                                <span className="text-xs text-gray-500">%</span>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Risk Per Trade */}
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between">
+                              <Label className="text-sm text-gray-300">Risk Per Trade</Label>
+                              <button
+                                type="button"
+                                onClick={() => setRiskManagement({ ...riskManagement, enableRiskPerTrade: !riskManagement.enableRiskPerTrade })}
+                                className={`px-2 py-1 rounded text-xs font-semibold transition-all ${
+                                  riskManagement.enableRiskPerTrade
+                                    ? 'bg-green-500/20 text-green-400'
+                                    : 'bg-gray-500/20 text-gray-400'
+                                }`}
+                              >
+                                {riskManagement.enableRiskPerTrade ? 'ON' : 'OFF'}
+                              </button>
+                            </div>
+                            {riskManagement.enableRiskPerTrade && (
+                              <div className="flex items-center gap-2">
+                                <Input
+                                  type="number"
+                                  step="0.5"
+                                  value={riskManagement.riskPerTrade}
+                                  onChange={(e) => setRiskManagement({ ...riskManagement, riskPerTrade: Number(e.target.value) })}
+                                  className="flex-1"
+                                />
+                                <span className="text-xs text-gray-500">% capital</span>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Volatility-Based Sizing */}
+                          <div className="space-y-2 md:col-span-2">
+                            <div className="flex items-center justify-between">
+                              <Label className="text-sm text-gray-300">Volatility-Based Sizing (ATR)</Label>
+                              <button
+                                type="button"
+                                onClick={() => setRiskManagement({ ...riskManagement, enableVolatilitySizing: !riskManagement.enableVolatilitySizing })}
+                                className={`px-2 py-1 rounded text-xs font-semibold transition-all ${
+                                  riskManagement.enableVolatilitySizing
+                                    ? 'bg-green-500/20 text-green-400'
+                                    : 'bg-gray-500/20 text-gray-400'
+                                }`}
+                              >
+                                {riskManagement.enableVolatilitySizing ? 'ON' : 'OFF'}
+                              </button>
+                            </div>
+                            {riskManagement.enableVolatilitySizing && (
+                              <div className="grid grid-cols-2 gap-3">
+                                <div className="flex items-center gap-2">
+                                  <Label className="text-xs text-gray-400">ATR Period:</Label>
+                                  <Input
+                                    type="number"
+                                    min={1}
+                                    value={riskManagement.atrPeriod}
+                                    onChange={(e) => setRiskManagement({ ...riskManagement, atrPeriod: Number(e.target.value) })}
+                                    className="w-20"
+                                  />
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <Label className="text-xs text-gray-400">Multiplier:</Label>
+                                  <Input
+                                    type="number"
+                                    step="0.1"
+                                    value={riskManagement.atrMultiplier}
+                                    onChange={(e) => setRiskManagement({ ...riskManagement, atrMultiplier: Number(e.target.value) })}
+                                    className="w-20"
+                                  />
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
                     </div>
 
                     {/* Summary */}
@@ -677,7 +863,10 @@ export default function BacktestPage() {
                         {riskManagement.enableCommission && `Comisiones: ~$${(riskManagement.commission * 100).toFixed(0)} por 100 trades. `}
                         {riskManagement.enableSlippage && `Slippage: ${riskManagement.slippage}% por entrada/salida. `}
                         {riskManagement.enableStopLoss && `Stop Loss protegerá tu capital a -${riskManagement.stopLoss}%. `}
-                        {riskManagement.enableTakeProfit && `Take Profit cerrará en +${riskManagement.takeProfit}%.`}
+                        {riskManagement.enableTakeProfit && `Take Profit cerrará en +${riskManagement.takeProfit}%. `}
+                        {riskManagement.enableTrailingStop && `Trailing Stop seguirá el precio a ${riskManagement.trailingStopDistance}%. `}
+                        {riskManagement.enableDailyLossLimit && `Límite diario: -${riskManagement.dailyLossLimit}%. `}
+                        {riskManagement.enableMaxDrawdownLimit && `Límite drawdown: ${riskManagement.maxDrawdownLimit}%.`}
                       </p>
                     </div>
                   </motion.div>
@@ -934,6 +1123,101 @@ export default function BacktestPage() {
             />
           </motion.div>
 
+          {/* Advanced Risk Metrics */}
+          {(result.backtest.performance.sortinoRatio !== undefined || result.backtest.performance.riskRewardRatio !== undefined) && (
+            <motion.div variants={itemVariants} className="mt-6">
+              <div className="flex items-center gap-2 mb-4">
+                <Shield className="w-5 h-5 text-orange-400" />
+                <h3 className="text-lg font-semibold text-white">Métricas Avanzadas de Riesgo</h3>
+              </div>
+              <div className="grid md:grid-cols-3 lg:grid-cols-5 gap-4">
+                {result.backtest.performance.sortinoRatio !== undefined && (
+                  <MetricCard
+                    title="Sortino Ratio"
+                    value={result.backtest.performance.sortinoRatio}
+                    icon={<Target className="w-4 h-4" />}
+                  />
+                )}
+                {result.backtest.performance.calmarRatio !== undefined && (
+                  <MetricCard
+                    title="Calmar Ratio"
+                    value={result.backtest.performance.calmarRatio}
+                    icon={<TrendingUp className="w-4 h-4" />}
+                  />
+                )}
+                {result.backtest.performance.recoveryFactor !== undefined && (
+                  <MetricCard
+                    title="Recovery Factor"
+                    value={result.backtest.performance.recoveryFactor}
+                    icon={<Activity className="w-4 h-4" />}
+                  />
+                )}
+                {result.backtest.performance.riskRewardRatio !== undefined && (
+                  <MetricCard
+                    title="Risk/Reward"
+                    value={result.backtest.performance.riskRewardRatio}
+                    icon={<Target className="w-4 h-4" />}
+                  />
+                )}
+                {result.backtest.performance.avgWin !== undefined && (
+                  <MetricCard
+                    title="Avg Win"
+                    value={result.backtest.performance.avgWin}
+                    formatAsCurrency
+                    trend="up"
+                    icon={<TrendingUp className="w-4 h-4" />}
+                  />
+                )}
+                {result.backtest.performance.avgLoss !== undefined && (
+                  <MetricCard
+                    title="Avg Loss"
+                    value={result.backtest.performance.avgLoss}
+                    formatAsCurrency
+                    trend="down"
+                    icon={<TrendingDown className="w-4 h-4" />}
+                  />
+                )}
+                {result.backtest.performance.largestWin !== undefined && (
+                  <MetricCard
+                    title="Largest Win"
+                    value={result.backtest.performance.largestWin}
+                    formatAsCurrency
+                    trend="up"
+                    icon={<TrendingUp className="w-4 h-4" />}
+                  />
+                )}
+                {result.backtest.performance.largestLoss !== undefined && (
+                  <MetricCard
+                    title="Largest Loss"
+                    value={result.backtest.performance.largestLoss}
+                    formatAsCurrency
+                    trend="down"
+                    icon={<TrendingDown className="w-4 h-4" />}
+                  />
+                )}
+                {result.backtest.performance.consecutiveWins !== undefined && (
+                  <MetricCard
+                    title="Consecutive Wins"
+                    value={result.backtest.performance.consecutiveWins}
+                    icon={<Activity className="w-4 h-4" />}
+                  />
+                )}
+                {result.backtest.performance.consecutiveLosses !== undefined && (
+                  <MetricCard
+                    title="Consecutive Losses"
+                    value={result.backtest.performance.consecutiveLosses}
+                    icon={<Activity className="w-4 h-4" />}
+                  />
+                )}
+              </div>
+            </motion.div>
+          )}
+
+          {/* Risk Alerts */}
+          <motion.div variants={itemVariants} className="mt-6">
+            <RiskAlerts metrics={result.backtest.performance} />
+          </motion.div>
+
           {/* AI Analysis Section - PROFESSIONAL & ENTERPRISE */}
           {canUseAI && (
             <motion.div variants={itemVariants} className="space-y-6">
@@ -1018,6 +1302,38 @@ export default function BacktestPage() {
           <motion.div variants={itemVariants} className="grid md:grid-cols-2 gap-6">
             <DrawdownChart data={result.backtest.equityCurve} />
             <ReturnsDistribution trades={result.backtest.trades} />
+          </motion.div>
+
+          {/* Underwater Chart - Shows time underwater (below peak) */}
+          <motion.div variants={itemVariants}>
+            <Card className="border-red-500/30">
+              <CardHeader>
+                <CardTitle>Underwater Chart</CardTitle>
+                <CardDescription>
+                  Tiempo bajo el pico de equity (drawdown en el tiempo)
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <UnderwaterChart data={
+                  result.backtest.equityCurve.map((point, index) => {
+                    // Calculate running peak
+                    const runningPeak = result.backtest.equityCurve
+                      .slice(0, index + 1)
+                      .reduce((max, p) => Math.max(max, p.equity), 0)
+
+                    // Calculate drawdown from peak
+                    const drawdown = runningPeak > 0
+                      ? (point.equity - runningPeak) / runningPeak
+                      : 0
+
+                    return {
+                      time: new Date(point.date).getTime(),
+                      drawdown: drawdown
+                    }
+                  })
+                } />
+              </CardContent>
+            </Card>
           </motion.div>
 
           {/* Backtest Replay */}
