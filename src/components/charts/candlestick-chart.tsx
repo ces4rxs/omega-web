@@ -82,6 +82,13 @@ export function CandlestickChart({
   const [currentDrawing, setCurrentDrawing] = useState<Drawing | null>(null)
   const [isDrawing, setIsDrawing] = useState(false)
 
+  // Debug: Log drawings when they change
+  useEffect(() => {
+    if (drawings.length > 0) {
+      console.log('Drawings updated:', drawings)
+    }
+  }, [drawings])
+
   // Cargar datos OHLC de Polygon
   useEffect(() => {
     const loadOHLCData = async () => {
@@ -601,9 +608,6 @@ export function CandlestickChart({
               <text x={15} y={30} fill="white" fontSize="12" fontWeight="bold">
                 SVG TEST ({drawings.length})
               </text>
-
-              {/* Debug: Show drawing count */}
-              {drawings.length > 0 && console.log('Rendering drawings:', drawings)}
 
               {/* Render completed drawings */}
               {drawings.map(drawing => (
