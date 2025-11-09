@@ -238,8 +238,10 @@ export function CandlestickChart({
 
     const point: DrawingPoint = { time: time as number, price }
 
+    console.log('Drawing click:', { activeTool, point, isDrawing })
+
+    // Text tool - single click with prompt
     if (activeTool === 'text') {
-      // For text, create immediately with prompt
       const text = window.prompt('Ingresa el texto:')
       if (text) {
         const newDrawing: Drawing = {
@@ -250,11 +252,28 @@ export function CandlestickChart({
           color: '#3b82f6'
         }
         setDrawings([...drawings, newDrawing])
+        console.log('Text drawing created:', newDrawing)
       }
       setActiveTool('cursor')
       return
     }
 
+    // Horizontal line - single click (full width)
+    if (activeTool === 'horizontal' && !isDrawing) {
+      const newDrawing: Drawing = {
+        id: Date.now().toString(),
+        type: 'horizontal',
+        points: [point],
+        color: '#3b82f6',
+        style: 'dashed'
+      }
+      setDrawings([...drawings, newDrawing])
+      console.log('Horizontal line created:', newDrawing)
+      setActiveTool('cursor')
+      return
+    }
+
+    // Two-point drawings (trendline, fibonacci, rectangle, arrow)
     if (!isDrawing) {
       // Start new drawing
       const newDrawing: Drawing = {
@@ -266,6 +285,7 @@ export function CandlestickChart({
       }
       setCurrentDrawing(newDrawing)
       setIsDrawing(true)
+      console.log('Started drawing:', newDrawing)
     } else {
       // Complete drawing
       if (currentDrawing) {
@@ -274,6 +294,7 @@ export function CandlestickChart({
           points: [...currentDrawing.points, point]
         }
         setDrawings([...drawings, completedDrawing])
+        console.log('Completed drawing:', completedDrawing)
         setCurrentDrawing(null)
         setIsDrawing(false)
         setActiveTool('cursor')
