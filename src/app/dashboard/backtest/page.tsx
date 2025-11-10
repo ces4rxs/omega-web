@@ -229,6 +229,8 @@ export default function BacktestPage() {
 
       // Build risk management parameters
       const riskManagementParams: any = {}
+
+      // Basic risk management
       if (riskManagement.enableCommission) {
         riskManagementParams.commission = riskManagement.commission
       }
@@ -244,6 +246,27 @@ export default function BacktestPage() {
       if (riskManagement.enablePositionSizing) {
         riskManagementParams.positionSize = riskManagement.positionSize
         riskManagementParams.maxPositions = riskManagement.maxPositions
+      }
+
+      // Advanced risk controls
+      if (riskManagement.enableTrailingStop) {
+        riskManagementParams.trailingStop = riskManagement.trailingStopDistance
+      }
+      if (riskManagement.enableDailyLossLimit) {
+        riskManagementParams.dailyLossLimit = riskManagement.dailyLossLimit
+      }
+      if (riskManagement.enableMaxDrawdownLimit) {
+        riskManagementParams.maxDrawdownLimit = riskManagement.maxDrawdownLimit
+      }
+      if (riskManagement.enableRiskPerTrade) {
+        riskManagementParams.riskPerTrade = riskManagement.riskPerTrade
+      }
+      if (riskManagement.enableVolatilitySizing) {
+        riskManagementParams.volatilitySizing = {
+          enabled: true,
+          atrPeriod: riskManagement.atrPeriod,
+          atrMultiplier: riskManagement.atrMultiplier
+        }
       }
 
       const rawBacktestData = await api.post<any>('/api/backtest', {
