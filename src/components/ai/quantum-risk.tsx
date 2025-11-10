@@ -67,8 +67,13 @@ export function QuantumRisk({ backtestId, performanceMetrics }: QuantumRiskProps
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          backtestId,
-          metrics: performanceMetrics,
+          strategyId: backtestId,
+          metrics: {
+            sharpe: performanceMetrics.sharpeRatio,
+            mdd: performanceMetrics.maxDrawdown,
+            cagr: 0, // TODO: Pass CAGR from parent
+            tradesCount: performanceMetrics.totalTrades,
+          },
         }),
       })
 
@@ -76,8 +81,31 @@ export function QuantumRisk({ backtestId, performanceMetrics }: QuantumRiskProps
         throw new Error('Error al analizar riesgo cuántico')
       }
 
-      const data = await response.json()
-      setRiskData(data)
+      const result = await response.json()
+
+      // Transform backend response to frontend format
+      if (result.ok && result.riskAnalysis) {
+        const analysis = result.riskAnalysis
+
+        const transformedData: QuantumRiskResponse = {
+          riskIndex: analysis.riskIndex || 50,
+          riskLevel: analysis.tier || 'MODERATE',
+          factors: {
+            volatility: analysis.factors?.volatility || 0.5,
+            tailRisk: analysis.factors?.tailRisk || 0.5,
+            liquidityStress: analysis.factors?.liquidityStress || 0.5,
+            overfitPenalty: analysis.factors?.overfitPenalty || 0.5,
+          },
+          recommendations: analysis.recommendations || [],
+          quantumMetrics: {
+            entropyScore: analysis.quantumMetrics?.entropyScore || 0.5,
+            coherenceIndex: analysis.quantumMetrics?.coherenceIndex || 0.5,
+            stabilityRating: analysis.quantumMetrics?.stabilityRating || 0.5,
+          },
+        }
+
+        setRiskData(transformedData)
+      }
     } catch (err) {
       console.error('Error analyzing quantum risk:', err)
       setError(err instanceof Error ? err.message : 'Error desconocido')

@@ -67,9 +67,17 @@ export function AIInsights({ backtestId, strategyName, performanceMetrics }: AII
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          backtestId,
-          strategyName,
-          metrics: performanceMetrics,
+          metrics: {
+            sharpe: performanceMetrics.sharpeRatio,
+            mdd: performanceMetrics.maxDrawdown,
+            cagr: 0, // TODO: Add CAGR to performanceMetrics
+            tradesCount: performanceMetrics.totalTrades,
+            winRate: performanceMetrics.winRate,
+            profitFactor: 1, // TODO: Add profitFactor to performanceMetrics
+            avgWin: 0, // TODO: Add avgWin to performanceMetrics
+            avgLoss: 0, // TODO: Add avgLoss to performanceMetrics
+          },
+          riskProfile: 'moderate', // Default risk profile
         }),
       })
 
@@ -77,13 +85,54 @@ export function AIInsights({ backtestId, strategyName, performanceMetrics }: AII
         throw new Error('Error al generar insights de IA')
       }
 
-      const data = await response.json()
-      setInsights(data)
+      const result = await response.json()
+
+      // Transform backend response to frontend format
+      if (result.ok && result.insights) {
+        const cognitiveState = result.insights
+
+        // Map XAI response to frontend format
+        const transformedInsights: AIInsightsResponse = {
+          grade: calculateGrade(cognitiveState.overallHealth),
+          score: calculateScore(cognitiveState.overallHealth),
+          insights: cognitiveState.explanation.keyFactors.map((factor: any) => ({
+            type: factor.impact === 'positive' ? 'success' :
+                  factor.impact === 'negative' ? 'warning' : 'info',
+            title: factor.factor,
+            message: factor.description,
+            confidence: Math.round(factor.weight * 100),
+          })),
+          recommendations: cognitiveState.explanation.recommendations,
+          hybridAdvice: cognitiveState.explanation.reasoning[0] || '',
+          neuralAdvice: cognitiveState.explanation.summary,
+        }
+
+        setInsights(transformedInsights)
+      }
     } catch (err) {
       console.error('Error generating AI insights:', err)
       setError(err instanceof Error ? err.message : 'Error desconocido')
     } finally {
       setLoading(false)
+    }
+  }
+
+  // Helper functions to map health to grade/score
+  const calculateGrade = (health: string): AIInsightsResponse['grade'] => {
+    switch (health) {
+      case 'excellent': return 'A+'
+      case 'good': return 'B+'
+      case 'warning': return 'C+'
+      default: return 'D'
+    }
+  }
+
+  const calculateScore = (health: string): number => {
+    switch (health) {
+      case 'excellent': return 95
+      case 'good': return 75
+      case 'warning': return 55
+      default: return 35
     }
   }
 
