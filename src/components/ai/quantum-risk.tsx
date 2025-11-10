@@ -63,17 +63,21 @@ export function QuantumRisk({ backtestId, performanceMetrics }: QuantumRiskProps
     setError(null)
 
     try {
-      const response = await fetch('/api/ai/quantum-risk', {
+      // Call master-analysis endpoint (OMEGA v6.1 - extracts layer4_quantumRisk)
+      const response = await fetch('/api/ai/master-analysis', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          strategyId: backtestId,
+          symbol: 'AAPL', // TODO: Get from parent
+          strategy: 'Strategy', // TODO: Get from parent
           metrics: {
             sharpe: performanceMetrics.sharpeRatio,
-            mdd: performanceMetrics.maxDrawdown,
-            cagr: 0, // TODO: Pass CAGR from parent
-            tradesCount: performanceMetrics.totalTrades,
+            cagr: 0,
+            maxDrawdown: performanceMetrics.maxDrawdown,
+            winRate: 0.5,
+            trades: performanceMetrics.totalTrades,
           },
+          riskProfile: 'moderate',
         }),
       })
 
@@ -83,24 +87,26 @@ export function QuantumRisk({ backtestId, performanceMetrics }: QuantumRiskProps
 
       const result = await response.json()
 
-      // Transform backend response to frontend format
-      if (result.ok && result.riskAnalysis) {
-        const analysis = result.riskAnalysis
+      // Extract layer4_quantumRisk + layer4_varCvar from master-analysis
+      if (result.ok && result.masterAnalysis) {
+        const analysis = result.masterAnalysis
+        const quantumLayer = analysis.layer4_quantumRisk
+        const varCvarLayer = analysis.layer4_varCvar
 
         const transformedData: QuantumRiskResponse = {
-          riskIndex: analysis.riskIndex || 50,
-          riskLevel: analysis.tier || 'MODERATE',
+          riskIndex: quantumLayer?.riskScore || 50,
+          riskLevel: quantumLayer?.riskTier || 'MODERATE',
           factors: {
-            volatility: analysis.factors?.volatility || 0.5,
-            tailRisk: analysis.factors?.tailRisk || 0.5,
-            liquidityStress: analysis.factors?.liquidityStress || 0.5,
-            overfitPenalty: analysis.factors?.overfitPenalty || 0.5,
+            volatility: varCvarLayer?.var95 ? varCvarLayer.var95 / 10 : 0.5,
+            tailRisk: varCvarLayer?.cvar99 ? varCvarLayer.cvar99 / 10 : 0.5,
+            liquidityStress: 0.5,
+            overfitPenalty: analysis.layer8_walkForward?.overfit === 'high' ? 0.8 : 0.3,
           },
-          recommendations: analysis.recommendations || [],
+          recommendations: analysis.finalRecommendation?.warnings || [],
           quantumMetrics: {
-            entropyScore: analysis.quantumMetrics?.entropyScore || 0.5,
-            coherenceIndex: analysis.quantumMetrics?.coherenceIndex || 0.5,
-            stabilityRating: analysis.quantumMetrics?.stabilityRating || 0.5,
+            entropyScore: analysis.layer6_monteCarlo?.focusFactor || 0.5,
+            coherenceIndex: analysis.layer8_walkForward?.confidence || 0.5,
+            stabilityRating: (100 - (analysis.layer8_walkForward?.degradation || 15)) / 100,
           },
         }
 

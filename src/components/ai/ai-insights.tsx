@@ -63,21 +63,21 @@ export function AIInsights({ backtestId, strategyName, performanceMetrics }: AII
     setError(null)
 
     try {
-      const response = await fetch('/api/ai/insights', {
+      // Call master-analysis endpoint (OMEGA v6.1 - 10 layers)
+      const response = await fetch('/api/ai/master-analysis', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          symbol: 'AAPL', // TODO: Get from parent
+          strategy: strategyName,
           metrics: {
             sharpe: performanceMetrics.sharpeRatio,
-            mdd: performanceMetrics.maxDrawdown,
             cagr: 0, // TODO: Add CAGR to performanceMetrics
-            tradesCount: performanceMetrics.totalTrades,
+            maxDrawdown: performanceMetrics.maxDrawdown,
             winRate: performanceMetrics.winRate,
-            profitFactor: 1, // TODO: Add profitFactor to performanceMetrics
-            avgWin: 0, // TODO: Add avgWin to performanceMetrics
-            avgLoss: 0, // TODO: Add avgLoss to performanceMetrics
+            trades: performanceMetrics.totalTrades,
           },
-          riskProfile: 'moderate', // Default risk profile
+          riskProfile: 'moderate',
         }),
       })
 
@@ -87,24 +87,43 @@ export function AIInsights({ backtestId, strategyName, performanceMetrics }: AII
 
       const result = await response.json()
 
-      // Transform backend response to frontend format
-      if (result.ok && result.insights) {
-        const cognitiveState = result.insights
+      // Transform OMEGA v6.1 master-analysis response
+      if (result.ok && result.masterAnalysis) {
+        const analysis = result.masterAnalysis
 
-        // Map XAI response to frontend format
+        // Extract insights from 10-layer analysis
+        const keyInsights: AIInsight[] = []
+
+        // From executive summary
+        if (analysis.executiveSummary?.keyInsights) {
+          analysis.executiveSummary.keyInsights.forEach((insight: string, idx: number) => {
+            keyInsights.push({
+              type: insight.includes('✅') ? 'success' :
+                    insight.includes('⚠️') ? 'warning' :
+                    insight.includes('❌') ? 'error' : 'info',
+              title: `Insight ${idx + 1}`,
+              message: insight.replace(/[✅⚠️❌]/g, '').trim(),
+              confidence: analysis.executiveSummary.confidence || 75,
+            })
+          })
+        }
+
+        // From layer recommendations
+        const recommendations: string[] = []
+        if (analysis.finalRecommendation?.actionPlan) {
+          recommendations.push(...analysis.finalRecommendation.actionPlan)
+        }
+
+        // Transform to frontend format
         const transformedInsights: AIInsightsResponse = {
-          grade: calculateGrade(cognitiveState.overallHealth),
-          score: calculateScore(cognitiveState.overallHealth),
-          insights: cognitiveState.explanation.keyFactors.map((factor: any) => ({
-            type: factor.impact === 'positive' ? 'success' :
-                  factor.impact === 'negative' ? 'warning' : 'info',
-            title: factor.factor,
-            message: factor.description,
-            confidence: Math.round(factor.weight * 100),
-          })),
-          recommendations: cognitiveState.explanation.recommendations,
-          hybridAdvice: cognitiveState.explanation.reasoning[0] || '',
-          neuralAdvice: cognitiveState.explanation.summary,
+          grade: analysis.executiveSummary?.grade || 'B',
+          score: analysis.executiveSummary?.overallScore || 75,
+          insights: keyInsights,
+          recommendations,
+          hybridAdvice: analysis.layer7_hybridAdvisor?.advice || analysis.executiveSummary?.oneLineSummary || '',
+          neuralAdvice: analysis.layer2_neuralAdvisor?.projectedSharpe
+            ? `Proyección ML: Sharpe ${analysis.layer2_neuralAdvisor.projectedSharpe.toFixed(2)}, MDD ${(analysis.layer2_neuralAdvisor.projectedMDD * 100).toFixed(1)}%`
+            : analysis.executiveSummary?.verdict || '',
         }
 
         setInsights(transformedInsights)
