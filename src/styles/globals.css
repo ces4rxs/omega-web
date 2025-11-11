@@ -2,105 +2,50 @@
 @tailwind components;
 @tailwind utilities;
 
-html, body {
-  height: 100%;
-  background-color: #000;
-  color: #fff;
-  font-family: 'Inter', sans-serif;
-}
-@keyframes float {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-8px); }
+:root {
+  color-scheme: dark;
 }
 
-.animate-float {
-  animation: float 6s ease-in-out infinite;
+body {
+  background-color: #020617;
+  color: #f8fafc;
 }
 
-/* Transiciones suaves para toda la página */
+.bg-dark-bg {
+  background-color: #020617;
+}
+
+.bg-dark-bg-secondary {
+  background-color: #0b1220;
+}
+
+.text-dark-text {
+  color: #f8fafc;
+}
+
+.text-dark-text-secondary {
+  color: #94a3b8;
+}
+
+.border-dark-border {
+  border-color: rgba(148, 163, 184, 0.3);
+}
+
 * {
-  scroll-behavior: smooth;
-  transition: background 0.3s ease, color 0.3s ease;
-}
-@keyframes float {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-8px); }
+  scrollbar-width: thin;
+  scrollbar-color: rgba(56, 189, 248, 0.4) transparent;
 }
 
-.animate-float {
-  animation: float 6s ease-in-out infinite;
-}
-/* ========================== */
-/* 🌌 Animación de halo cuántico */
-/* ========================== */
-@keyframes gradient-rotation {
-  0% {
-    filter: hue-rotate(0deg);
-  }
-  100% {
-    filter: hue-rotate(360deg);
-  }
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
 }
 
-.animate-gradient-spin {
-  animation: gradient-rotation 8s linear infinite;
-  will-change: filter;
+*::-webkit-scrollbar-track {
+  background: transparent;
 }
 
-/* ========================== */
-/* 🎯 Toast animations */
-/* ========================== */
-@keyframes slide-in-right {
-  from {
-    transform: translateX(100%);
-    opacity: 0;
-  }
-  to {
-    transform: translateX(0);
-    opacity: 1;
-  }
+*::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, rgba(56, 189, 248, 0.6), rgba(251, 191, 36, 0.6));
+  border-radius: 9999px;
 }
-
-.animate-slide-in-right {
-  animation: slide-in-right 0.3s ease-out;
-}
-
-/* ========================== */
-/* 🎨 Loading Skeleton animations */
-/* ========================== */
-@keyframes skeleton-pulse {
-  0%, 100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.5;
-  }
-}
-
-.animate-skeleton-pulse {
-  animation: skeleton-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-}
-
-/* ========================== */
-/* ✨ Shimmer effect */
-/* ========================== */
-@keyframes shimmer {
-  0% {
-    background-position: -1000px 0;
-  }
-  100% {
-    background-position: 1000px 0;
-  }
-}
-
-.animate-shimmer {
-  animation: shimmer 2s infinite;
-  background: linear-gradient(
-    to right,
-    transparent 0%,
-    rgba(255, 255, 255, 0.1) 50%,
-    transparent 100%
-  );
-  background-size: 1000px 100%;
-}
-

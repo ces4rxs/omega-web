@@ -1,20 +1,41 @@
-import "@/styles/globals.css";
-import { ReactNode } from "react";
-import { Providers } from "@/components/providers";
+import type { Metadata } from "next"
+import type { ReactNode } from "react"
+import { Inter } from "next/font/google"
+import "@/styles/globals.css"
+import { Sidebar } from "@/components/Sidebar"
+import { AuthProvider } from "@/context/AuthContext"
+import { cn } from "@/lib/utils"
 
-export const metadata = {
-  title: "Omega Quantum - Backtesting con IA",
-  description: "Plataforma profesional de backtesting e inteligencia financiera cuántica",
-};
+const inter = Inter({ subsets: ["latin"] })
 
-export default function RootLayout({ children }: { children: ReactNode }) {
+export const metadata: Metadata = {
+  title: "Omega Quantum Web",
+  description:
+    "Omega Quantum Web dashboard for institutional-grade quantitative intelligence.",
+}
+
+export default function RootLayout({
+  children,
+}: Readonly<{
+  children: ReactNode
+}>) {
   return (
-    <html lang="es">
-      <body className="min-h-screen bg-black text-white">
-        <Providers>
-          {children}
-        </Providers>
+    <html lang="en" className="dark">
+      <body
+        className={cn(
+          inter.className,
+          "bg-dark-bg text-dark-text min-h-screen antialiased",
+        )}
+      >
+        <AuthProvider>
+          <div className="flex min-h-screen bg-dark-bg">
+            <Sidebar />
+            <main className="flex-1 overflow-y-auto bg-dark-bg-secondary px-6 py-8">
+              {children}
+            </main>
+          </div>
+        </AuthProvider>
       </body>
     </html>
-  );
+  )
 }
