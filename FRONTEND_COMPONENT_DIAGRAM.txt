@@ -1,0 +1,258 @@
+╔═══════════════════════════════════════════════════════════════════════════════╗
+║                 OMEGA FRONTEND ARCHITECTURE DIAGRAM                           ║
+╚═══════════════════════════════════════════════════════════════════════════════╝
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                         ROOT LAYOUT & PROVIDERS                              │
+│  ┌──────────────────────────────────────────────────────────────────────┐   │
+│  │ /src/app/layout.tsx (Root)                                           │   │
+│  │  └─ <Providers>                                                      │   │
+│  │      ├─ AuthContext                                                  │   │
+│  │      ├─ ThemeContext                                                 │   │
+│  │      ├─ React Query Client                                           │   │
+│  │      └─ Toast Provider                                               │   │
+│  └──────────────────────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                         PAGE HIERARCHY & ROUTING                             │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│  PUBLIC PAGES (No Auth)                                                     │
+│  ├─ / (Landing)                                                            │
+│  ├─ /login                                                                 │
+│  ├─ /register                                                              │
+│  ├─ /forgot-password                                                       │
+│  ├─ /pricing                                                               │
+│  └─ /analysis                                                              │
+│                                                                              │
+│  PROTECTED PAGES (Auth Required)                                            │
+│  ├─ /dashboard (Layout with Sidebar)                                       │
+│  │   ├─ Dashboard Home [FREE]                                              │
+│  │   ├─ Backtest Page [FREE] ⭐ MAIN PAGE                                  │
+│  │   │   └─ Comprehensive backtesting UI                                   │
+│  │   ├─ History [FREE]                                                     │
+│  │   ├─ Watchlist [FREE]                                                   │
+│  │   ├─ Settings [FREE]                                                    │
+│  │   │                                                                      │
+│  │   ├─ Strategies [PRO]                                                   │
+│  │   ├─ Optimizer [PRO]                                                    │
+│  │   ├─ Analysis [PRO]                                                     │
+│  │   │   ├─ /monte-carlo                                                   │
+│  │   │   ├─ /walk-forward                                                  │
+│  │   │   ├─ /risk-metrics                                                  │
+│  │   │   └─ /correlation                                                   │
+│  │   ├─ AI Copilot [ENTERPRISE]                                            │
+│  │   └─ Auto-Loop [ENTERPRISE]                                             │
+│                                                                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                      BACKTEST PAGE COMPONENT TREE                            │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│  BacktestPage (page.tsx)                                                    │
+│  │                                                                           │
+│  ├─ Header Section                                                          │
+│  │                                                                           │
+│  ├─ PredictiveScore [ENTERPRISE ONLY]                                       │
+│  │  └─ Pre-backtest prediction engine                                       │
+│  │                                                                           │
+│  ├─ Configuration Card                                                      │
+│  │  ├─ Strategy Selection (Select component)                                │
+│  │  ├─ Symbol Input + Logo (SymbolLogo)                                     │
+│  │  ├─ Timeframe Select                                                     │
+│  │  ├─ Date Range Picker                                                    │
+│  │  ├─ Capital Input                                                        │
+│  │  │                                                                        │
+│  │  ├─ Risk Management Section (Collapsible)                                │
+│  │  │  ├─ Commission Slider                                                 │
+│  │  │  ├─ Slippage Slider                                                   │
+│  │  │  ├─ Stop Loss Control                                                 │
+│  │  │  ├─ Take Profit Control                                               │
+│  │  │  ├─ Position Sizing Slider                                            │
+│  │  │  ├─ Advanced Controls                                                 │
+│  │  │  │  ├─ Trailing Stop                                                  │
+│  │  │  │  ├─ Daily Loss Limit                                               │
+│  │  │  │  ├─ Max Drawdown Limit                                             │
+│  │  │  │  ├─ Risk Per Trade                                                 │
+│  │  │  │  └─ Volatility Sizing (ATR)                                        │
+│  │  │  └─ RiskCalculator (Dynamic impact)                                   │
+│  │  │                                                                        │
+│  │  ├─ Strategy Parameters (Dynamic)                                        │
+│  │  │  └─ Sliders for strategy-specific params                              │
+│  │  │                                                                        │
+│  │  └─ Submit Button                                                        │
+│  │                                                                           │
+│  ├─ AIOptimizer [PROFESSIONAL ONLY]                                         │
+│  │  └─ Parameter optimization suggestions                                   │
+│  │                                                                           │
+│  ├─ RESULTS SECTION (Shown after backtest)                                  │
+│  │  │                                                                        │
+│  │  ├─ Export Button (PDF)                                                  │
+│  │  │                                                                        │
+│  │  ├─ Performance Metrics Grid (8 columns)                                 │
+│  │  │  ├─ MetricCard: Total Return                                          │
+│  │  │  ├─ MetricCard: CAGR                                                  │
+│  │  │  ├─ MetricCard: Sharpe Ratio                                          │
+│  │  │  ├─ MetricCard: Max Drawdown                                          │
+│  │  │  ├─ MetricCard: Win Rate                                              │
+│  │  │  ├─ MetricCard: Profit Factor                                         │
+│  │  │  ├─ MetricCard: Total Trades                                          │
+│  │  │  └─ MetricCard: Expectancy                                            │
+│  │  │                                                                        │
+│  │  ├─ Advanced Risk Metrics Section [if available]                         │
+│  │  │  ├─ Sortino Ratio                                                     │
+│  │  │  ├─ Calmar Ratio                                                      │
+│  │  │  ├─ Recovery Factor                                                   │
+│  │  │  └─ Risk/Reward Ratio                                                 │
+│  │  │                                                                        │
+│  │  ├─ RiskAlerts                                                           │
+│  │  │  └─ Critical/Warning/Success alerts based on metrics                  │
+│  │  │                                                                        │
+│  │  ├─ AI Analysis Section [PROFESSIONAL/ENTERPRISE]                        │
+│  │  │  ├─ AIInsights (10-layer analysis with A+ to F grading)               │
+│  │  │  └─ QuantumRisk (0-100 risk assessment)                               │
+│  │  │                                                                        │
+│  │  ├─ PRIMARY CHARTS                                                       │
+│  │  │  └─ EquityCurve (Recharts - Area chart)                               │
+│  │  │                                                                        │
+│  │  ├─ PROFESSIONAL TRADING CHARTS                                          │
+│  │  │  └─ CandlestickChart (lightweight-charts with trade overlays)         │
+│  │  │                                                                        │
+│  │  ├─ TECHNICAL INDICATORS (2 column grid)                                 │
+│  │  │  ├─ RSIChart                                                          │
+│  │  │  └─ MACDChart                                                         │
+│  │  │                                                                        │
+│  │  ├─ ADVANCED INDICATORS [if OHLC data loaded]                            │
+│  │  │  ├─ BollingerBandsChart                                               │
+│  │  │  └─ 2-column grid:                                                    │
+│  │  │     ├─ ATRChart                                                       │
+│  │  │     └─ StochasticChart                                                │
+│  │  │                                                                        │
+│  │  ├─ DRAWDOWN & DISTRIBUTION CHARTS (2 column)                            │
+│  │  │  ├─ DrawdownChart                                                     │
+│  │  │  └─ ReturnsDistribution                                               │
+│  │  │                                                                        │
+│  │  ├─ UnderwaterChart                                                      │
+│  │  │  └─ Shows time below equity peak                                      │
+│  │  │                                                                        │
+│  │  ├─ BacktestReplay                                                       │
+│  │  │  └─ Animated trade-by-trade replay                                    │
+│  │  │                                                                        │
+│  │  ├─ Performance Heatmaps                                                 │
+│  │  │  ├─ PerformanceHeatmap (Daily returns)                                │
+│  │  │  └─ MonthlyPerformanceHeatmap                                         │
+│  │  │                                                                        │
+│  │  └─ TradeTable                                                           │
+│  │     └─ Last 20 trades (entry, exit, P&L)                                 │
+│  │                                                                           │
+│  └─ Loading State (CardSkeleton + ChartSkeleton)                            │
+│                                                                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                        UI COMPONENTS LIBRARY                                │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│  /components/ui/ (Shadcn Primitives + Radix)                                │
+│  ├─ button.tsx         (Multiple variants)                                  │
+│  ├─ card.tsx           (Card + CardHeader + CardContent)                    │
+│  ├─ input.tsx          (Text input)                                         │
+│  ├─ label.tsx          (Form label)                                         │
+│  ├─ select.tsx         (Dropdown)                                           │
+│  ├─ slider.tsx         (Range slider)                                       │
+│  ├─ table.tsx          (Data table)                                         │
+│  ├─ tabs.tsx           (Tab navigation)                                     │
+│  ├─ tooltip.tsx        (Radix-based tooltip)                                │
+│  ├─ skeleton.tsx       (Loading placeholder)                                │
+│  └─ toast.tsx          (Notifications)                                      │
+│                                                                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                      CHARTING COMPONENTS ARCHITECTURE                       │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│  PRIMARY CHARTING LIBRARY: Recharts (70% of charts)                         │
+│  ├─ EquityCurve         → Area + Area (equity + drawdown)                   │
+│  ├─ DrawdownChart       → Area chart (red gradient)                         │
+│  ├─ ReturnsDistribution → Bar chart (win/loss distribution)                 │
+│  ├─ RSIChart            → Line chart (0-100 RSI oscillator)                 │
+│  └─ MACDChart           → Line chart (MACD + Signal)                        │
+│                                                                              │
+│  PROFESSIONAL CHARTING: Lightweight-charts (20% of charts)                  │
+│  └─ CandlestickChart    → Candlestick + Trade overlays                      │
+│                                                                              │
+│  ADVANCED INDICATORS: TradingView/Custom                                    │
+│  ├─ BollingerBandsChart → Bands visualization                               │
+│  ├─ ATRChart            → Average True Range                                │
+│  ├─ StochasticChart     → %K %D oscillator                                  │
+│  └─ UnderwaterChart     → Custom (time in drawdown)                         │
+│                                                                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                         FEATURE COMPONENTS                                  │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│  AI-Powered Components:                                                     │
+│  ├─ AIInsights         → Grade A+ to F, multi-layer analysis                │
+│  ├─ QuantumRisk        → Risk score 0-100                                   │
+│  ├─ AIOptimizer        → Parameter optimization                             │
+│  └─ PredictiveScore    → Pre-backtest prediction                            │
+│                                                                              │
+│  Risk Management:                                                           │
+│  ├─ RiskAlerts         → Alert severity (critical/warning/success)          │
+│  ├─ RiskCalculator     → Dynamic impact calculator                          │
+│  ├─ RiskAIAdvisor      → AI recommendations                                 │
+│  └─ RiskTooltip        → Metric explanations                                │
+│                                                                              │
+│  Trading Analysis:                                                          │
+│  ├─ MetricCard         → KPI display (20+ metric types)                     │
+│  ├─ TradeTable         → Detailed trade history                             │
+│  ├─ PerformanceHeatmap → Daily/monthly returns heatmap                      │
+│  ├─ BacktestReplay     → Animated trade replay                              │
+│  └─ StrategyComparison → Side-by-side comparison                            │
+│                                                                              │
+│  Utility:                                                                   │
+│  ├─ SymbolLogo         → Stock ticker logos                                 │
+│  ├─ ProFeature         → Feature gating wrapper                             │
+│  ├─ DevTierSwitcher    → Dev-only tier selector                             │
+│  ├─ ThemeToggle        → Dark/light mode                                    │
+│  └─ Providers          → Context setup                                      │
+│                                                                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                          DATA FLOW & STATE MANAGEMENT                       │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│  User Input                                                                 │
+│       ↓                                                                     │
+│  Form Validation (Zod)                                                      │
+│       ↓                                                                     │
+│  Submit → handleSubmit()                                                    │
+│       ↓                                                                     │
+│  API Call (Axios to /api/backtest)                                          │
+│       ↓                                                                     │
+│  transformBacktest() → Transform response format                            │
+│       ↓                                                                     │
+│  setResult() → Update state                                                 │
+│       ↓                                                                     │
+│  useEffect() → Load candlestick data (Polygon.io)                           │
+│       ↓                                                                     │
+│  AI Calls (optional) → /api/ai/master-analysis                              │
+│       ↓                                                                     │
+│  Render Results → Display all charts & metrics                              │
+│                                                                              │
+│  Context-Based State:                                                       │
+│  ├─ AuthContext    → user, token, logout()                                  │
+│  └─ ThemeContext   → darkMode toggle                                        │
+│                                                                              │
+│  Hook-Based State:                                                          │
+│  ├─ use-tier       → currentTier, canUseAI, isProfessional, etc             │
+│  └─ useAIEvents    → AI event handling                                      │
+│                                                                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+
