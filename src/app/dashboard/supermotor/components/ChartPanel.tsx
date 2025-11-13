@@ -13,10 +13,11 @@ import {
   LineSeries,
   AreaSeries,
   BarSeries,
+  IPriceLine,
 } from 'lightweight-charts';
 import { X, Maximize2 } from 'lucide-react';
 import { useUIStore } from '../state/ui';
-import type { ChartType } from '../state/ui';
+import type { ChartType, VolumeProfileSettings } from '../state/ui';
 
 interface CandleData {
   time: number;
@@ -116,6 +117,122 @@ function calculateRenko(data: CandleData[], brickSize?: number): CandleData[] {
   return renkoBricks;
 }
 
+// Volume Profile calculation
+interface VolumeProfileRow {
+  price: number;
+  volume: number;
+}
+
+interface VolumeProfileResult {
+  rows: VolumeProfileRow[];
+  poc: number; // Point of Control (price with highest volume)
+  vah: number; // Value Area High
+  val: number; // Value Area Low
+  maxVolume: number;
+}
+
+function calculateVolumeProfile(
+  data: CandleData[],
+  settings: VolumeProfileSettings
+): VolumeProfileResult | null {
+  if (data.length === 0) return null;
+
+  // Use only the last N bars based on period setting
+  const analysisData = data.slice(-settings.period);
+  if (analysisData.length === 0) return null;
+
+  // Find price range
+  const prices = analysisData.flatMap((c) => [c.high, c.low]);
+  const minPrice = Math.min(...prices);
+  const maxPrice = Math.max(...prices);
+
+  // Calculate row size (price increment per row)
+  let rowSize = settings.rowSize;
+  if (rowSize === 0) {
+    // Auto-calculate: aim for ~50 rows
+    const priceRange = maxPrice - minPrice;
+    rowSize = priceRange / 50;
+  }
+
+  // Create price levels (rows)
+  const volumeMap = new Map<number, number>();
+  const numRows = Math.ceil((maxPrice - minPrice) / rowSize);
+
+  // Initialize all rows
+  for (let i = 0; i <= numRows; i++) {
+    const priceLevel = minPrice + i * rowSize;
+    volumeMap.set(priceLevel, 0);
+  }
+
+  // Distribute volume across price levels
+  for (const candle of analysisData) {
+    // Find which price levels this candle covers
+    const startLevel = Math.floor((candle.low - minPrice) / rowSize);
+    const endLevel = Math.ceil((candle.high - minPrice) / rowSize);
+
+    const numLevels = Math.max(1, endLevel - startLevel);
+    const volumePerLevel = candle.volume / numLevels;
+
+    for (let level = startLevel; level <= endLevel; level++) {
+      const priceLevel = minPrice + level * rowSize;
+      const currentVol = volumeMap.get(priceLevel) || 0;
+      volumeMap.set(priceLevel, currentVol + volumePerLevel);
+    }
+  }
+
+  // Convert to array and sort by price
+  const rows: VolumeProfileRow[] = Array.from(volumeMap.entries())
+    .map(([price, volume]) => ({ price, volume }))
+    .sort((a, b) => a.price - b.price);
+
+  if (rows.length === 0) return null;
+
+  // Find POC (Point of Control) - price with highest volume
+  const maxVolume = Math.max(...rows.map((r) => r.volume));
+  const pocRow = rows.find((r) => r.volume === maxVolume);
+  const poc = pocRow?.price || minPrice;
+
+  // Calculate Value Area (VAH/VAL)
+  // Value Area contains X% of total volume (default 70%)
+  const totalVolume = rows.reduce((sum, r) => sum + r.volume, 0);
+  const targetVolume = totalVolume * (settings.valueAreaPercentage / 100);
+
+  // Start from POC and expand up/down until we reach target volume
+  const pocIndex = rows.findIndex((r) => r.price === poc);
+  let accumulatedVolume = rows[pocIndex].volume;
+  let upperIndex = pocIndex;
+  let lowerIndex = pocIndex;
+
+  while (accumulatedVolume < targetVolume) {
+    const upperVol = upperIndex < rows.length - 1 ? rows[upperIndex + 1].volume : 0;
+    const lowerVol = lowerIndex > 0 ? rows[lowerIndex - 1].volume : 0;
+
+    if (upperVol >= lowerVol && upperIndex < rows.length - 1) {
+      upperIndex++;
+      accumulatedVolume += upperVol;
+    } else if (lowerIndex > 0) {
+      lowerIndex--;
+      accumulatedVolume += lowerVol;
+    } else if (upperIndex < rows.length - 1) {
+      upperIndex++;
+      accumulatedVolume += upperVol;
+    } else {
+      break;
+    }
+  }
+
+  const vah = rows[upperIndex].price;
+  const val = rows[lowerIndex].price;
+
+  return {
+    rows,
+    poc,
+    vah,
+    val,
+    maxVolume,
+  };
+}
+
 export default function ChartPanel({
   id,
   symbol,
@@ -128,8 +245,12 @@ export default function ChartPanel({
   const chartRef = useRef<IChartApi | null>(null);
   const mainSeriesRef = useRef<ISeriesApi<any> | null>(null);
   const volumeSeriesRef = useRef<ISeriesApi<'Histogram'> | null>(null);
+  const pocLineRef = useRef<IPriceLine | null>(null);
+  const vahLineRef = useRef<IPriceLine | null>(null);
+  const valLineRef = useRef<IPriceLine | null>(null);
 
   const chartType = useUIStore((state) => state.chartType);
+  const volumeProfile = useUIStore((state) => state.volumeProfile);
 
   // Initialize chart
   useEffect(() => {
@@ -361,6 +482,75 @@ export default function ChartPanel({
       console.error('Error updating chart:', error);
     }
   }, [data, chartType]);
+
+  // Volume Profile rendering
+  useEffect(() => {
+    if (!chartRef.current || !mainSeriesRef.current || !data.length) return;
+
+    // Remove existing volume profile lines
+    if (pocLineRef.current) {
+      mainSeriesRef.current.removePriceLine(pocLineRef.current);
+      pocLineRef.current = null;
+    }
+    if (vahLineRef.current) {
+      mainSeriesRef.current.removePriceLine(vahLineRef.current);
+      vahLineRef.current = null;
+    }
+    if (valLineRef.current) {
+      mainSeriesRef.current.removePriceLine(valLineRef.current);
+      valLineRef.current = null;
+    }
+
+    // If volume profile is disabled, stop here
+    if (!volumeProfile.enabled) return;
+
+    try {
+      // Calculate volume profile
+      const vpResult = calculateVolumeProfile(data, volumeProfile);
+      if (!vpResult) return;
+
+      const { poc, vah, val } = vpResult;
+
+      // Draw POC line (Point of Control)
+      if (volumeProfile.showPOC) {
+        const pocLine = mainSeriesRef.current.createPriceLine({
+          price: poc,
+          color: volumeProfile.pocColor,
+          lineWidth: 2,
+          lineStyle: 0, // Solid
+          axisLabelVisible: true,
+          title: 'POC',
+        });
+        pocLineRef.current = pocLine;
+      }
+
+      // Draw VAH line (Value Area High)
+      if (volumeProfile.showValueArea) {
+        const vahLine = mainSeriesRef.current.createPriceLine({
+          price: vah,
+          color: volumeProfile.valueAreaColor,
+          lineWidth: 1,
+          lineStyle: 2, // Dashed
+          axisLabelVisible: true,
+          title: 'VAH',
+        });
+        vahLineRef.current = vahLine;
+
+        // Draw VAL line (Value Area Low)
+        const valLine = mainSeriesRef.current.createPriceLine({
+          price: val,
+          color: volumeProfile.valueAreaColor,
+          lineWidth: 1,
+          lineStyle: 2, // Dashed
+          axisLabelVisible: true,
+          title: 'VAL',
+        });
+        valLineRef.current = valLine;
+      }
+    } catch (error) {
+      console.error('Error rendering volume profile:', error);
+    }
+  }, [data, volumeProfile, mainSeriesRef.current]);
 
   return (
     <div className="relative w-full h-full bg-[#131722] border border-[#2a2e39] rounded-lg overflow-hidden">

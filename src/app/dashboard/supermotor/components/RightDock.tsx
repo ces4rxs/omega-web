@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useUIStore } from '../state/ui';
-import { ChevronLeft, ChevronRight, TrendingUp, Activity, BarChart3, Search, Settings } from 'lucide-react';
+import { ChevronLeft, ChevronRight, TrendingUp, Activity, BarChart3, Search, Settings, Layers } from 'lucide-react';
 
 type Tab = 'indicators' | 'watchlist' | 'alerts';
 
@@ -50,11 +50,12 @@ const CATEGORIES = {
 };
 
 export default function RightDock() {
-  const { rightDockOpen, toggleRightDock } = useUIStore();
+  const { rightDockOpen, toggleRightDock, volumeProfile, updateVolumeProfile } = useUIStore();
   const [activeTab, setActiveTab] = useState<Tab>('indicators');
   const [searchQuery, setSearchQuery] = useState('');
   const [activeIndicators, setActiveIndicators] = useState<Set<string>>(new Set(['volume']));
   const [settingsOpen, setSettingsOpen] = useState<string | null>(null);
+  const [vpSettingsOpen, setVpSettingsOpen] = useState(false);
 
   if (!rightDockOpen) {
     return (
@@ -151,6 +152,110 @@ export default function RightDock() {
             {/* Active Count */}
             <div className="text-xs text-gray-400">
               {activeIndicators.size} indicator{activeIndicators.size !== 1 ? 's' : ''} active
+            </div>
+
+            {/* Volume Profile - Special Section */}
+            <div className="border border-[#2962ff]/30 rounded-lg p-3 bg-[#131722]/50">
+              <div className="flex items-center gap-2 mb-3">
+                <Layers className="w-5 h-5 text-[#2962ff]" />
+                <h4 className="text-sm font-semibold text-white">Volume Profile</h4>
+                <span className="ml-auto text-xs text-[#2962ff] bg-[#2962ff]/10 px-2 py-0.5 rounded">PRO</span>
+              </div>
+
+              <div className="flex items-center justify-between mb-3">
+                <label className="flex items-center gap-2 flex-1 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={volumeProfile.enabled}
+                    onChange={(e) => updateVolumeProfile({ enabled: e.target.checked })}
+                    className="w-4 h-4 rounded border-gray-600 text-[#2962ff] focus:ring-[#2962ff]"
+                  />
+                  <span className="text-sm text-white">Enable Volume Profile</span>
+                </label>
+                {volumeProfile.enabled && (
+                  <button
+                    onClick={() => setVpSettingsOpen(!vpSettingsOpen)}
+                    className="p-1 hover:bg-[#2a2e39] rounded transition-colors"
+                  >
+                    <Settings className="w-4 h-4 text-gray-400" />
+                  </button>
+                )}
+              </div>
+
+              {/* Volume Profile Settings */}
+              {volumeProfile.enabled && vpSettingsOpen && (
+                <div className="space-y-3 pt-3 border-t border-[#2a2e39]">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs text-gray-400">Period (bars)</label>
+                    <input
+                      type="number"
+                      value={volumeProfile.period}
+                      onChange={(e) => updateVolumeProfile({ period: parseInt(e.target.value) || 100 })}
+                      className="w-20 px-2 py-1 bg-[#2a2e39] border border-[#363a45] rounded text-sm text-white focus:outline-none focus:border-[#2962ff]"
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs text-gray-400">Value Area %</label>
+                    <input
+                      type="number"
+                      value={volumeProfile.valueAreaPercentage}
+                      onChange={(e) => updateVolumeProfile({ valueAreaPercentage: parseInt(e.target.value) || 70 })}
+                      min="50"
+                      max="90"
+                      className="w-20 px-2 py-1 bg-[#2a2e39] border border-[#363a45] rounded text-sm text-white focus:outline-none focus:border-[#2962ff]"
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs text-gray-400">Opacity</label>
+                    <input
+                      type="range"
+                      value={volumeProfile.opacity * 100}
+                      onChange={(e) => updateVolumeProfile({ opacity: parseInt(e.target.value) / 100 })}
+                      min="10"
+                      max="100"
+                      className="w-32"
+                    />
+                    <span className="text-xs text-white w-8">{Math.round(volumeProfile.opacity * 100)}%</span>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={volumeProfile.showPOC}
+                        onChange={(e) => updateVolumeProfile({ showPOC: e.target.checked })}
+                        className="w-3 h-3 rounded border-gray-600 text-[#ff6d00] focus:ring-[#ff6d00]"
+                      />
+                      <span className="text-xs text-gray-300">Show POC (Point of Control)</span>
+                    </label>
+
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={volumeProfile.showValueArea}
+                        onChange={(e) => updateVolumeProfile({ showValueArea: e.target.checked })}
+                        className="w-3 h-3 rounded border-gray-600 text-[#00c853] focus:ring-[#00c853]"
+                      />
+                      <span className="text-xs text-gray-300">Show VAH/VAL (Value Area)</span>
+                    </label>
+                  </div>
+
+                  <div className="pt-2 border-t border-[#2a2e39]">
+                    <div className="text-xs text-gray-500 space-y-1">
+                      <div className="flex items-center gap-2">
+                        <div className="w-3 h-3 rounded" style={{ backgroundColor: volumeProfile.pocColor }}></div>
+                        <span>POC - Highest volume price</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="w-3 h-3 rounded" style={{ backgroundColor: volumeProfile.valueAreaColor }}></div>
+                        <span>VAH/VAL - {volumeProfile.valueAreaPercentage}% volume range</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Indicators by Category */}
