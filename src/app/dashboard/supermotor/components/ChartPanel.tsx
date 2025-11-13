@@ -6,11 +6,16 @@ import {
   IChartApi,
   ISeriesApi,
   CandlestickData,
+  LineData,
   Time,
   CandlestickSeries,
   HistogramSeries,
+  LineSeries,
+  AreaSeries,
+  BarSeries,
 } from 'lightweight-charts';
 import { X, Maximize2 } from 'lucide-react';
+import { useUIStore } from '../state/ui';
 
 interface CandleData {
   time: number;
