@@ -6,6 +6,7 @@ import Topbar from './components/Topbar';
 import LeftTools from './components/LeftTools';
 import ChartGrid from './components/ChartGrid';
 import BottomDock from './components/BottomDock';
+import RightDock from './components/RightDock';
 
 export default function TVPlusPage() {
   const { layout, currentSymbol, currentTimeframe, panels, addPanel } = useUIStore();
@@ -88,6 +89,9 @@ export default function TVPlusPage() {
         <div className="flex-1 relative overflow-hidden">
           <ChartGrid />
         </div>
+
+        {/* Right Dock */}
+        <RightDock />
       </div>
 
       {/* Bottom Dock */}
