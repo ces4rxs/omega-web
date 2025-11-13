@@ -67,6 +67,55 @@ function calculateHeikinAshi(data: CandleData[]): CandleData[] {
   return haData;
 }
 
+// Calculate Renko bricks
+function calculateRenko(data: CandleData[], brickSize?: number): CandleData[] {
+  if (data.length === 0) return [];
+
+  // Auto-calculate brick size if not provided (0.5% of average price)
+  if (!brickSize) {
+    const avgPrice = data.reduce((sum, c) => sum + c.close, 0) / data.length;
+    brickSize = avgPrice * 0.005; // 0.5% of average price
+  }
+
+  const renkoBricks: CandleData[] = [];
+  let currentPrice = data[0].close;
+  let currentOpen = data[0].close;
+  let currentTime = data[0].time;
+
+  for (let i = 1; i < data.length; i++) {
+    const candle = data[i];
+    const priceDiff = candle.close - currentOpen;
+
+    // Calculate how many bricks we need
+    const numBricks = Math.floor(Math.abs(priceDiff) / brickSize);
+
+    if (numBricks > 0) {
+      const direction = priceDiff > 0 ? 1 : -1;
+
+      // Create bricks
+      for (let j = 0; j < numBricks; j++) {
+        const brickOpen = currentOpen;
+        const brickClose = currentOpen + direction * brickSize;
+
+        renkoBricks.push({
+          time: candle.time,
+          open: brickOpen,
+          high: direction > 0 ? brickClose : brickOpen,
+          low: direction > 0 ? brickOpen : brickClose,
+          close: brickClose,
+          volume: candle.volume / numBricks, // Distribute volume
+        });
+
+        currentOpen = brickClose;
+      }
+
+      currentTime = candle.time;
+    }
+  }
+
+  return renkoBricks;
+}
+
 export default function ChartPanel({
   id,
   symbol,
@@ -172,15 +221,18 @@ export default function ChartPanel({
     try {
       let processedData = data;
 
-      // Apply Heikin Ashi transformation if needed
+      // Apply transformations if needed
       if (chartType === 'heikinAshi') {
         processedData = calculateHeikinAshi(data);
+      } else if (chartType === 'renko') {
+        processedData = calculateRenko(data);
       }
 
       // Create appropriate series based on chart type
       switch (chartType) {
         case 'candlestick':
-        case 'heikinAshi': {
+        case 'heikinAshi':
+        case 'renko': {
           const series = chartRef.current.addSeries(CandlestickSeries, {
             upColor: '#26a69a',
             downColor: '#ef5350',

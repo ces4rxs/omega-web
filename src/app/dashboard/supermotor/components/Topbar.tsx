@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useUIStore } from '../state/ui';
 import type { ChartType } from '../state/ui';
-import { Search, Play, Layout, Sun, Moon, ChevronDown, CandlestickChart, BarChart3, LineChart, AreaChart } from 'lucide-react';
+import { Search, Play, Layout, Sun, Moon, ChevronDown, CandlestickChart, BarChart3, LineChart, AreaChart, Box } from 'lucide-react';
 
 const POPULAR_SYMBOLS = [
   'BTCUSDT',
@@ -31,6 +31,7 @@ const CHART_TYPES: Array<{ value: ChartType; label: string; icon: React.ElementT
   { value: 'line', label: 'Line', icon: LineChart },
   { value: 'area', label: 'Area', icon: AreaChart },
   { value: 'heikinAshi', label: 'Heikin Ashi', icon: CandlestickChart },
+  { value: 'renko', label: 'Renko', icon: Box },
 ];
 
 export default function Topbar() {
