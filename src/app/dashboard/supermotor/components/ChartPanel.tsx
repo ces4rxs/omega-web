@@ -16,6 +16,7 @@ import {
 } from 'lightweight-charts';
 import { X, Maximize2 } from 'lucide-react';
 import { useUIStore } from '../state/ui';
+import type { ChartType } from '../state/ui';
 
 interface CandleData {
   time: number;
@@ -35,6 +36,37 @@ interface ChartPanelProps {
   onRemove?: () => void;
 }
 
+// Calculate Heikin Ashi candles
+function calculateHeikinAshi(data: CandleData[]): CandleData[] {
+  if (data.length === 0) return [];
+
+  const haData: CandleData[] = [];
+  let prevHaClose = (data[0].open + data[0].close) / 2;
+
+  for (let i = 0; i < data.length; i++) {
+    const candle = data[i];
+
+    // Heikin Ashi formulas
+    const haClose = (candle.open + candle.high + candle.low + candle.close) / 4;
+    const haOpen = i === 0 ? (candle.open + candle.close) / 2 : (haData[i - 1].open + haData[i - 1].close) / 2;
+    const haHigh = Math.max(candle.high, haOpen, haClose);
+    const haLow = Math.min(candle.low, haOpen, haClose);
+
+    haData.push({
+      time: candle.time,
+      open: haOpen,
+      high: haHigh,
+      low: haLow,
+      close: haClose,
+      volume: candle.volume,
+    });
+
+    prevHaClose = haClose;
+  }
+
+  return haData;
+}
+
 export default function ChartPanel({
   id,
   symbol,
@@ -45,13 +77,15 @@ export default function ChartPanel({
 }: ChartPanelProps) {
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
-  const candleSeriesRef = useRef<ISeriesApi<'Candlestick'> | null>(null);
+  const mainSeriesRef = useRef<ISeriesApi<any> | null>(null);
   const volumeSeriesRef = useRef<ISeriesApi<'Histogram'> | null>(null);
 
+  const chartType = useUIStore((state) => state.chartType);
+
+  // Initialize chart
   useEffect(() => {
     if (!chartContainerRef.current) return;
 
-    // Create chart
     const chart = createChart(chartContainerRef.current, {
       width: chartContainerRef.current.clientWidth,
       height: chartContainerRef.current.clientHeight,
@@ -98,28 +132,7 @@ export default function ChartPanel({
       },
     });
 
-    // Create candlestick series
-    const candleSeries = chart.addSeries(CandlestickSeries, {
-      upColor: '#26a69a',
-      downColor: '#ef5350',
-      borderUpColor: '#26a69a',
-      borderDownColor: '#ef5350',
-      wickUpColor: '#26a69a',
-      wickDownColor: '#ef5350',
-    });
-
-    // Create volume series
-    const volumeSeries = chart.addSeries(HistogramSeries, {
-      color: '#26a69a',
-      priceFormat: {
-        type: 'volume',
-      },
-      priceScaleId: '',
-    });
-
     chartRef.current = chart;
-    candleSeriesRef.current = candleSeries;
-    volumeSeriesRef.current = volumeSeries;
 
     // Handle resize
     const handleResize = () => {
@@ -142,35 +155,160 @@ export default function ChartPanel({
     };
   }, []);
 
-  // Update data
+  // Update chart series based on type
   useEffect(() => {
-    if (!candleSeriesRef.current || !volumeSeriesRef.current || !data.length) return;
+    if (!chartRef.current || !data.length) return;
+
+    // Remove existing series
+    if (mainSeriesRef.current) {
+      chartRef.current.removeSeries(mainSeriesRef.current);
+      mainSeriesRef.current = null;
+    }
+    if (volumeSeriesRef.current) {
+      chartRef.current.removeSeries(volumeSeriesRef.current);
+      volumeSeriesRef.current = null;
+    }
 
     try {
-      const candleData: CandlestickData<Time>[] = data.map((candle) => ({
-        time: candle.time as Time,
-        open: candle.open,
-        high: candle.high,
-        low: candle.low,
-        close: candle.close,
-      }));
+      let processedData = data;
 
-      const volumeData = data.map((candle) => ({
+      // Apply Heikin Ashi transformation if needed
+      if (chartType === 'heikinAshi') {
+        processedData = calculateHeikinAshi(data);
+      }
+
+      // Create appropriate series based on chart type
+      switch (chartType) {
+        case 'candlestick':
+        case 'heikinAshi': {
+          const series = chartRef.current.addSeries(CandlestickSeries, {
+            upColor: '#26a69a',
+            downColor: '#ef5350',
+            borderUpColor: '#26a69a',
+            borderDownColor: '#ef5350',
+            wickUpColor: '#26a69a',
+            wickDownColor: '#ef5350',
+          });
+
+          const candleData: CandlestickData<Time>[] = processedData.map((candle) => ({
+            time: candle.time as Time,
+            open: candle.open,
+            high: candle.high,
+            low: candle.low,
+            close: candle.close,
+          }));
+
+          series.setData(candleData);
+          mainSeriesRef.current = series;
+          break;
+        }
+
+        case 'hollow': {
+          const series = chartRef.current.addSeries(CandlestickSeries, {
+            upColor: 'rgba(38, 166, 154, 0)',
+            downColor: '#ef5350',
+            borderUpColor: '#26a69a',
+            borderDownColor: '#ef5350',
+            wickUpColor: '#26a69a',
+            wickDownColor: '#ef5350',
+            borderVisible: true,
+          });
+
+          const candleData: CandlestickData<Time>[] = processedData.map((candle) => ({
+            time: candle.time as Time,
+            open: candle.open,
+            high: candle.high,
+            low: candle.low,
+            close: candle.close,
+          }));
+
+          series.setData(candleData);
+          mainSeriesRef.current = series;
+          break;
+        }
+
+        case 'bar': {
+          const series = chartRef.current.addSeries(BarSeries, {
+            upColor: '#26a69a',
+            downColor: '#ef5350',
+            openVisible: true,
+            thinBars: false,
+          });
+
+          const barData: CandlestickData<Time>[] = processedData.map((candle) => ({
+            time: candle.time as Time,
+            open: candle.open,
+            high: candle.high,
+            low: candle.low,
+            close: candle.close,
+          }));
+
+          series.setData(barData);
+          mainSeriesRef.current = series;
+          break;
+        }
+
+        case 'line': {
+          const series = chartRef.current.addSeries(LineSeries, {
+            color: '#2962ff',
+            lineWidth: 2,
+            crosshairMarkerVisible: true,
+            crosshairMarkerRadius: 4,
+          });
+
+          const lineData: LineData<Time>[] = processedData.map((candle) => ({
+            time: candle.time as Time,
+            value: candle.close,
+          }));
+
+          series.setData(lineData);
+          mainSeriesRef.current = series;
+          break;
+        }
+
+        case 'area': {
+          const series = chartRef.current.addSeries(AreaSeries, {
+            topColor: 'rgba(41, 98, 255, 0.4)',
+            bottomColor: 'rgba(41, 98, 255, 0.0)',
+            lineColor: '#2962ff',
+            lineWidth: 2,
+          });
+
+          const areaData: LineData<Time>[] = processedData.map((candle) => ({
+            time: candle.time as Time,
+            value: candle.close,
+          }));
+
+          series.setData(areaData);
+          mainSeriesRef.current = series;
+          break;
+        }
+      }
+
+      // Add volume histogram
+      const volumeSeries = chartRef.current.addSeries(HistogramSeries, {
+        color: '#26a69a',
+        priceFormat: {
+          type: 'volume',
+        },
+        priceScaleId: '',
+      });
+
+      const volumeData = processedData.map((candle) => ({
         time: candle.time as Time,
         value: candle.volume,
         color: candle.close >= candle.open ? 'rgba(38, 166, 154, 0.5)' : 'rgba(239, 83, 80, 0.5)',
       }));
 
-      candleSeriesRef.current.setData(candleData);
-      volumeSeriesRef.current.setData(volumeData);
+      volumeSeries.setData(volumeData);
+      volumeSeriesRef.current = volumeSeries;
 
-      if (chartRef.current) {
-        chartRef.current.timeScale().fitContent();
-      }
+      // Fit content
+      chartRef.current.timeScale().fitContent();
     } catch (error) {
-      console.error('Error updating chart data:', error);
+      console.error('Error updating chart:', error);
     }
-  }, [data]);
+  }, [data, chartType]);
 
   return (
     <div className="relative w-full h-full bg-[#131722] border border-[#2a2e39] rounded-lg overflow-hidden">
