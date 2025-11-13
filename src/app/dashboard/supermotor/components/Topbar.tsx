@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import { useUIStore } from '../state/ui';
-import { Search, Play, Layout, Sun, Moon, ChevronDown } from 'lucide-react';
+import type { ChartType } from '../state/ui';
+import { Search, Play, Layout, Sun, Moon, ChevronDown, CandlestickChart, BarChart3, LineChart, AreaChart } from 'lucide-react';
 
 const POPULAR_SYMBOLS = [
   'BTCUSDT',
@@ -23,22 +24,34 @@ const LAYOUTS = [
   { value: '2x2' as const, label: '2×2' },
 ];
 
+const CHART_TYPES: Array<{ value: ChartType; label: string; icon: React.ElementType }> = [
+  { value: 'candlestick', label: 'Candlestick', icon: CandlestickChart },
+  { value: 'hollow', label: 'Hollow Candles', icon: CandlestickChart },
+  { value: 'bar', label: 'Bars (OHLC)', icon: BarChart3 },
+  { value: 'line', label: 'Line', icon: LineChart },
+  { value: 'area', label: 'Area', icon: AreaChart },
+  { value: 'heikinAshi', label: 'Heikin Ashi', icon: CandlestickChart },
+];
+
 export default function Topbar() {
   const {
     currentSymbol,
     currentTimeframe,
     layout,
     theme,
+    chartType,
     backtestRunning,
     setCurrentSymbol,
     setCurrentTimeframe,
     setLayout,
     setTheme,
+    setChartType,
     startBacktest,
   } = useUIStore();
 
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [chartTypeOpen, setChartTypeOpen] = useState(false);
 
   const handleSymbolSelect = (symbol: string) => {
     setCurrentSymbol(symbol);
@@ -136,6 +149,53 @@ export default function Topbar() {
             {l.label}
           </button>
         ))}
+      </div>
+
+      <div className="w-px h-6 bg-[#2a2e39]" />
+
+      {/* Chart Type Selector */}
+      <div className="relative">
+        <button
+          onClick={() => setChartTypeOpen(!chartTypeOpen)}
+          className="flex items-center gap-2 px-3 py-1.5 bg-[#131722] hover:bg-[#2a2e39] rounded text-white transition-colors"
+        >
+          {(() => {
+            const current = CHART_TYPES.find((ct) => ct.value === chartType);
+            const Icon = current?.icon || CandlestickChart;
+            return (
+              <>
+                <Icon className="w-4 h-4" />
+                <span className="text-sm">{current?.label || 'Candlestick'}</span>
+                <ChevronDown className="w-4 h-4" />
+              </>
+            );
+          })()}
+        </button>
+
+        {chartTypeOpen && (
+          <div className="absolute top-full mt-1 left-0 w-48 bg-[#131722] border border-[#2a2e39] rounded-lg shadow-xl z-50">
+            {CHART_TYPES.map((ct) => {
+              const Icon = ct.icon;
+              return (
+                <button
+                  key={ct.value}
+                  onClick={() => {
+                    setChartType(ct.value);
+                    setChartTypeOpen(false);
+                  }}
+                  className={`w-full px-4 py-2 text-left flex items-center gap-3 transition-colors ${
+                    chartType === ct.value
+                      ? 'bg-[#2962ff] text-white'
+                      : 'text-gray-300 hover:bg-[#2a2e39]'
+                  }`}
+                >
+                  <Icon className="w-4 h-4" />
+                  <span className="text-sm">{ct.label}</span>
+                </button>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       <div className="flex-1" />

@@ -4,6 +4,7 @@ import { persist } from 'zustand/middleware';
 export type LayoutType = '1x1' | '2x1' | '2x2';
 export type ToolType = 'cursor' | 'crosshair' | 'line' | 'fibo' | 'rectangle' | 'text' | 'eraser';
 export type Theme = 'dark' | 'light';
+export type ChartType = 'candlestick' | 'hollow' | 'bar' | 'line' | 'area' | 'heikinAshi';
 
 interface Panel {
   id: string;
@@ -32,6 +33,7 @@ interface UIState {
   // Current selection
   currentSymbol: string;
   currentTimeframe: string;
+  chartType: ChartType;
 
   // Backtest state
   backtestRunning: boolean;
@@ -47,6 +49,7 @@ interface UIState {
   setTheme: (theme: Theme) => void;
   setCurrentSymbol: (symbol: string) => void;
   setCurrentTimeframe: (timeframe: string) => void;
+  setChartType: (chartType: ChartType) => void;
   startBacktest: (runId: string) => void;
   updateBacktestProgress: (progress: number) => void;
   stopBacktest: () => void;
@@ -76,6 +79,7 @@ export const useUIStore = create<UIState>()(
       theme: 'dark',
       currentSymbol: 'BTCUSDT',
       currentTimeframe: '1h',
+      chartType: 'candlestick',
       backtestRunning: false,
       backtestProgress: 0,
       backtestRunId: null,
@@ -97,6 +101,8 @@ export const useUIStore = create<UIState>()(
 
       setCurrentTimeframe: (timeframe) => set({ currentTimeframe: timeframe }),
 
+      setChartType: (chartType) => set({ chartType }),
+
       startBacktest: (runId) => set({ backtestRunning: true, backtestRunId: runId, backtestProgress: 0 }),
 
       updateBacktestProgress: (progress) => set({ backtestProgress: progress }),
@@ -117,6 +123,7 @@ export const useUIStore = create<UIState>()(
       partialize: (state) => ({
         layout: state.layout,
         theme: state.theme,
+        chartType: state.chartType,
         rightDockOpen: state.rightDockOpen,
         bottomDockOpen: state.bottomDockOpen,
       }),
