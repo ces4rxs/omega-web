@@ -6,6 +6,19 @@ export type ToolType = 'cursor' | 'crosshair' | 'line' | 'fibo' | 'rectangle' | 
 export type Theme = 'dark' | 'light';
 export type ChartType = 'candlestick' | 'hollow' | 'bar' | 'line' | 'area' | 'heikinAshi' | 'renko';
 
+export interface VolumeProfileSettings {
+  enabled: boolean;
+  period: number; // Number of bars to analyze
+  valueAreaPercentage: number; // Default 70% for VAH/VAL
+  showPOC: boolean;
+  showValueArea: boolean;
+  rowSize: number; // Price increment per row (auto if 0)
+  profileColor: string;
+  pocColor: string;
+  valueAreaColor: string;
+  opacity: number;
+}
+
 interface Panel {
   id: string;
   symbol: string;
@@ -35,6 +48,9 @@ interface UIState {
   currentTimeframe: string;
   chartType: ChartType;
 
+  // Volume Profile
+  volumeProfile: VolumeProfileSettings;
+
   // Backtest state
   backtestRunning: boolean;
   backtestProgress: number;
@@ -50,6 +66,7 @@ interface UIState {
   setCurrentSymbol: (symbol: string) => void;
   setCurrentTimeframe: (timeframe: string) => void;
   setChartType: (chartType: ChartType) => void;
+  updateVolumeProfile: (updates: Partial<VolumeProfileSettings>) => void;
   startBacktest: (runId: string) => void;
   updateBacktestProgress: (progress: number) => void;
   stopBacktest: () => void;
@@ -80,6 +97,18 @@ export const useUIStore = create<UIState>()(
       currentSymbol: 'BTCUSDT',
       currentTimeframe: '1h',
       chartType: 'candlestick',
+      volumeProfile: {
+        enabled: false,
+        period: 100,
+        valueAreaPercentage: 70,
+        showPOC: true,
+        showValueArea: true,
+        rowSize: 0, // Auto-calculate
+        profileColor: '#2962ff',
+        pocColor: '#ff6d00',
+        valueAreaColor: '#00c853',
+        opacity: 0.6,
+      },
       backtestRunning: false,
       backtestProgress: 0,
       backtestRunId: null,
@@ -103,6 +132,11 @@ export const useUIStore = create<UIState>()(
 
       setChartType: (chartType) => set({ chartType }),
 
+      updateVolumeProfile: (updates) =>
+        set((state) => ({
+          volumeProfile: { ...state.volumeProfile, ...updates },
+        })),
+
       startBacktest: (runId) => set({ backtestRunning: true, backtestRunId: runId, backtestProgress: 0 }),
 
       updateBacktestProgress: (progress) => set({ backtestProgress: progress }),
@@ -124,6 +158,7 @@ export const useUIStore = create<UIState>()(
         layout: state.layout,
         theme: state.theme,
         chartType: state.chartType,
+        volumeProfile: state.volumeProfile,
         rightDockOpen: state.rightDockOpen,
         bottomDockOpen: state.bottomDockOpen,
       }),
