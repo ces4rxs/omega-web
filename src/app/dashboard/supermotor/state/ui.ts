@@ -4,7 +4,7 @@ import { persist } from 'zustand/middleware';
 export type LayoutType = '1x1' | '2x1' | '2x2';
 export type ToolType = 'cursor' | 'crosshair' | 'line' | 'fibo' | 'rectangle' | 'text' | 'eraser';
 export type Theme = 'dark' | 'light';
-export type ChartType = 'candlestick' | 'hollow' | 'bar' | 'line' | 'area' | 'heikinAshi';
+export type ChartType = 'candlestick' | 'hollow' | 'bar' | 'line' | 'area' | 'heikinAshi' | 'renko';
 
 interface Panel {
   id: string;
