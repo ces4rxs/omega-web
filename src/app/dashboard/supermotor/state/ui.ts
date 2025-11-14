@@ -1,5 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import type { BacktestResults } from '../types/backtest';
+import { generateMockBacktestResults } from '../types/backtest';
 
 export type LayoutType = '1x1' | '2x1' | '2x2';
 export type ToolType = 'cursor' | 'crosshair' | 'line' | 'fibo' | 'rectangle' | 'text' | 'eraser';
@@ -70,6 +72,8 @@ interface UIState {
   backtestRunning: boolean;
   backtestProgress: number;
   backtestRunId: string | null;
+  backtestResults: BacktestResults | null;
+  selectedTradeId: number | null;
 
   // Actions
   setLayout: (layout: LayoutType) => void;
@@ -89,6 +93,8 @@ interface UIState {
   startBacktest: (runId: string) => void;
   updateBacktestProgress: (progress: number) => void;
   stopBacktest: () => void;
+  completeBacktest: (results: BacktestResults) => void;
+  selectTrade: (tradeId: number | null) => void;
   addPanel: (panel: Panel) => void;
   removePanel: (id: string) => void;
   updatePanel: (id: string, updates: Partial<Panel>) => void;
@@ -200,6 +206,8 @@ export const useUIStore = create<UIState>()(
       backtestRunning: false,
       backtestProgress: 0,
       backtestRunId: null,
+      backtestResults: null,
+      selectedTradeId: null,
 
       // Actions
       setLayout: (layout) => set({ layout }),
@@ -270,11 +278,46 @@ export const useUIStore = create<UIState>()(
         }));
       },
 
-      startBacktest: (runId) => set({ backtestRunning: true, backtestRunId: runId, backtestProgress: 0 }),
+      startBacktest: (runId) => {
+        const state = get();
+        set({ backtestRunning: true, backtestRunId: runId, backtestProgress: 0, backtestResults: null });
+
+        // Simulate backtest execution
+        const simulateProgress = () => {
+          const currentProgress = get().backtestProgress;
+          if (currentProgress < 100) {
+            set({ backtestProgress: Math.min(100, currentProgress + 10) });
+            setTimeout(simulateProgress, 300);
+          } else {
+            // Generate mock results
+            const results = generateMockBacktestResults(state.currentSymbol, state.currentTimeframe);
+            set({
+              backtestRunning: false,
+              backtestResults: results,
+              backtestProgress: 100,
+            });
+          }
+        };
+        setTimeout(simulateProgress, 300);
+      },
 
       updateBacktestProgress: (progress) => set({ backtestProgress: progress }),
 
-      stopBacktest: () => set({ backtestRunning: false, backtestProgress: 0, backtestRunId: null }),
+      stopBacktest: () => set({
+        backtestRunning: false,
+        backtestProgress: 0,
+        backtestRunId: null,
+        backtestResults: null,
+        selectedTradeId: null,
+      }),
+
+      completeBacktest: (results) => set({
+        backtestRunning: false,
+        backtestResults: results,
+        backtestProgress: 100,
+      }),
+
+      selectTrade: (tradeId) => set({ selectedTradeId: tradeId }),
 
       addPanel: (panel) => set((state) => ({ panels: [...state.panels, panel] })),
 
