@@ -15,6 +15,8 @@ import {
   Menu,
   X,
   Sparkles,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { DevTierSwitcher } from "@/components/dev-tier-switcher"
@@ -45,6 +47,7 @@ export default function DashboardLayout({
   const [user, setUser] = useState<any>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -63,6 +66,13 @@ export default function DashboardLayout({
           console.error('Error parsing user:', e)
         }
       }
+
+      // Load sidebar collapsed state
+      const sidebarCollapsed = localStorage.getItem('sidebarCollapsed')
+      if (sidebarCollapsed === 'true') {
+        setIsSidebarCollapsed(true)
+      }
+
       setIsLoading(false)
     }
   }, [router])
@@ -90,33 +100,52 @@ export default function DashboardLayout({
     }
   }
 
+  const toggleSidebar = () => {
+    const newState = !isSidebarCollapsed
+    setIsSidebarCollapsed(newState)
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('sidebarCollapsed', String(newState))
+    }
+  }
+
   const isPro = user?.subscription?.planId === 'professional'
 
-  const SidebarContent = () => (
+  const SidebarContent = ({ collapsed = false }: { collapsed?: boolean }) => (
     <>
       <div>
         {/* Logo */}
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mb-8 text-center"
-        >
-          <div className="flex items-center justify-center gap-2 mb-2">
+        {!collapsed && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-8 text-center"
+          >
+            <div className="flex items-center justify-center gap-2 mb-2">
+              <Sparkles className="w-6 h-6 text-blue-400" />
+              <h1 className="text-xl font-bold tracking-widest">
+                BACKTESTER <span className="text-blue-400">PRO</span>
+              </h1>
+            </div>
+            {isPro && (
+              <motion.span
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                className="inline-block mt-2 px-3 py-1 text-xs font-semibold bg-gradient-to-r from-yellow-500 to-orange-500 rounded-full shadow-lg"
+              >
+                ⭐ PRO
+              </motion.span>
+            )}
+          </motion.div>
+        )}
+        {collapsed && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="mb-6 flex justify-center"
+          >
             <Sparkles className="w-6 h-6 text-blue-400" />
-            <h1 className="text-xl font-bold tracking-widest">
-              BACKTESTER <span className="text-blue-400">PRO</span>
-            </h1>
-          </div>
-          {isPro && (
-            <motion.span
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              className="inline-block mt-2 px-3 py-1 text-xs font-semibold bg-gradient-to-r from-yellow-500 to-orange-500 rounded-full shadow-lg"
-            >
-              ⭐ PRO
-            </motion.span>
-          )}
-        </motion.div>
+          </motion.div>
+        )}
 
         {/* Navigation */}
         <nav className="space-y-1.5">
@@ -129,7 +158,8 @@ export default function DashboardLayout({
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: index * 0.05 }}
                 onClick={() => router.push(item.href)}
-                className={`flex items-center justify-between w-full px-3 py-2.5 rounded-lg transition-all group relative overflow-hidden ${
+                title={collapsed ? item.name : undefined}
+                className={`flex items-center ${collapsed ? 'justify-center' : 'justify-between'} w-full ${collapsed ? 'px-2' : 'px-3'} py-2.5 rounded-lg transition-all group relative overflow-hidden ${
                   isActive
                     ? "bg-gradient-to-r from-blue-600/20 to-cyan-600/20 text-blue-400 border border-blue-500/30 shadow-lg shadow-blue-500/10"
                     : "hover:bg-white/5 hover:translate-x-1"
@@ -142,15 +172,17 @@ export default function DashboardLayout({
                     transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
                   />
                 )}
-                <div className="flex items-center gap-3 relative z-10">
+                <div className={`flex items-center ${collapsed ? '' : 'gap-3'} relative z-10`}>
                   <div className={isActive ? "text-blue-400" : "text-gray-400 group-hover:text-white transition"}>
                     {item.icon}
                   </div>
-                  <span className={`font-medium ${isActive ? "text-white" : "text-gray-300"}`}>
-                    {item.name}
-                  </span>
+                  {!collapsed && (
+                    <span className={`font-medium ${isActive ? "text-white" : "text-gray-300"}`}>
+                      {item.name}
+                    </span>
+                  )}
                 </div>
-                {item.badge && !isPro && (
+                {!collapsed && item.badge && !isPro && (
                   <span className="text-xs px-2 py-0.5 bg-yellow-500/20 text-yellow-400 rounded-full font-semibold relative z-10">
                     {item.badge}
                   </span>
@@ -165,32 +197,45 @@ export default function DashboardLayout({
       <div className="space-y-2">
         <button
           onClick={() => router.push('/dashboard/settings')}
-          className={`flex items-center gap-3 w-full px-3 py-2.5 rounded-lg transition-all ${
+          title={collapsed ? "Settings" : undefined}
+          className={`flex items-center ${collapsed ? 'justify-center px-2' : 'gap-3 px-3'} w-full py-2.5 rounded-lg transition-all ${
             pathname === '/dashboard/settings'
               ? "bg-blue-600/20 text-blue-400 border border-blue-500/30"
               : "hover:bg-white/5 text-gray-300 hover:text-white"
           }`}
         >
           <Settings size={18} />
-          <span className="font-medium">Settings</span>
+          {!collapsed && <span className="font-medium">Settings</span>}
         </button>
 
         <Button
           onClick={handleLogout}
+          title={collapsed ? "Cerrar Sesión" : undefined}
           variant="outline"
-          className="w-full justify-start hover:bg-red-500/10 hover:border-red-500/30 hover:text-red-400 transition-all"
+          className={`w-full ${collapsed ? 'justify-center px-2' : 'justify-start'} hover:bg-red-500/10 hover:border-red-500/30 hover:text-red-400 transition-all`}
         >
-          <LogOut size={18} className="mr-2" />
-          Cerrar Sesión
+          <LogOut size={18} className={collapsed ? '' : 'mr-2'} />
+          {!collapsed && 'Cerrar Sesión'}
         </Button>
 
         {/* User info */}
-        <div className="pt-4 border-t border-white/10">
-          <div className="px-3 py-2 rounded-lg bg-white/5">
-            <p className="text-xs text-gray-500 mb-1">Usuario</p>
-            <p className="text-sm text-white font-medium truncate">{user?.email}</p>
+        {!collapsed && (
+          <div className="pt-4 border-t border-white/10">
+            <div className="px-3 py-2 rounded-lg bg-white/5">
+              <p className="text-xs text-gray-500 mb-1">Usuario</p>
+              <p className="text-sm text-white font-medium truncate">{user?.email}</p>
+            </div>
           </div>
-        </div>
+        )}
+
+        {/* Toggle button */}
+        <button
+          onClick={toggleSidebar}
+          className="w-full py-2 flex items-center justify-center text-gray-400 hover:text-white hover:bg-white/5 rounded-lg transition-all mt-2"
+          title={collapsed ? "Expandir sidebar" : "Colapsar sidebar"}
+        >
+          {collapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
+        </button>
       </div>
     </>
   )
@@ -198,8 +243,8 @@ export default function DashboardLayout({
   return (
     <div className="flex min-h-screen bg-gradient-to-br from-black via-zinc-950 to-zinc-900 text-white">
       {/* Desktop Sidebar */}
-      <aside className="hidden lg:flex w-72 border-r border-white/10 bg-black/30 backdrop-blur-xl flex-col justify-between p-6">
-        <SidebarContent />
+      <aside className={`hidden lg:flex ${isSidebarCollapsed ? 'w-16' : 'w-72'} border-r border-white/10 bg-black/30 backdrop-blur-xl flex-col justify-between ${isSidebarCollapsed ? 'p-2' : 'p-6'} transition-all duration-300`}>
+        <SidebarContent collapsed={isSidebarCollapsed} />
       </aside>
 
       {/* Mobile Header */}
