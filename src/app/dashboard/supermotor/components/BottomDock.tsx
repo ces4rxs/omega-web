@@ -153,6 +153,7 @@ function EquityCurveTab({ results, selectedTradeId }: EquityCurveTabProps) {
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
   const lineSeriesRef = useRef<any>(null);
+  const buyHoldLineSeriesRef = useRef<any>(null);
   const markerLineRef = useRef<IPriceLine | null>(null);
 
   useEffect(() => {
@@ -183,11 +184,23 @@ function EquityCurveTab({ results, selectedTradeId }: EquityCurveTabProps) {
       },
     });
 
+    // Strategy equity line (solid blue)
     const lineSeries = chart.addSeries(LineSeries, {
       color: '#2962ff',
       lineWidth: 2,
       crosshairMarkerVisible: true,
       crosshairMarkerRadius: 4,
+      title: 'Strategy',
+    });
+
+    // Buy & Hold equity line (dashed orange/gray)
+    const buyHoldLineSeries = chart.addSeries(LineSeries, {
+      color: '#ff9800',
+      lineWidth: 2,
+      lineStyle: 2, // Dashed
+      crosshairMarkerVisible: true,
+      crosshairMarkerRadius: 4,
+      title: 'Buy & Hold',
     });
 
     // Convert equity data
@@ -196,11 +209,18 @@ function EquityCurveTab({ results, selectedTradeId }: EquityCurveTabProps) {
       value: point.value,
     }));
 
+    const buyHoldData: LineData<Time>[] = results.buyAndHoldEquity.map((point: any) => ({
+      time: Math.floor(point.time / 1000) as Time,
+      value: point.value,
+    }));
+
     lineSeries.setData(lineData);
+    buyHoldLineSeries.setData(buyHoldData);
     chart.timeScale().fitContent();
 
     chartRef.current = chart;
     lineSeriesRef.current = lineSeries;
+    buyHoldLineSeriesRef.current = buyHoldLineSeries;
 
     // Handle resize
     const handleResize = () => {
@@ -256,10 +276,35 @@ function EquityCurveTab({ results, selectedTradeId }: EquityCurveTabProps) {
     markerLineRef.current = markerLine;
   }, [selectedTradeId, results]);
 
+  const buyHoldFinalCapital = results.buyAndHoldEquity[results.buyAndHoldEquity.length - 1].value;
+  const strategyReturn = results.metrics.totalReturn;
+  const buyHoldReturn = results.metrics.buyAndHoldReturn;
+  const alpha = results.metrics.alpha;
+
   return (
     <div className="w-full h-full p-4">
-      <div className="text-sm text-gray-400 mb-2">
-        Capital Evolution • Initial: ${results.initialCapital.toFixed(2)} → Final: ${results.finalCapital.toFixed(2)}
+      <div className="text-sm mb-2 flex items-center gap-6">
+        <div className="text-gray-400">
+          Capital Evolution • Initial: ${results.initialCapital.toFixed(2)}
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-[#2962ff] font-semibold">Strategy:</span>
+          <span className={strategyReturn > 0 ? 'text-[#26a69a]' : 'text-[#ef5350]'}>
+            ${results.finalCapital.toFixed(2)} ({strategyReturn > 0 ? '+' : ''}{strategyReturn.toFixed(2)}%)
+          </span>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-[#ff9800] font-semibold">Buy & Hold:</span>
+          <span className={buyHoldReturn > 0 ? 'text-[#26a69a]' : 'text-[#ef5350]'}>
+            ${buyHoldFinalCapital.toFixed(2)} ({buyHoldReturn > 0 ? '+' : ''}{buyHoldReturn.toFixed(2)}%)
+          </span>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-white font-semibold">Alpha:</span>
+          <span className={alpha > 0 ? 'text-[#26a69a] font-bold' : 'text-[#ef5350] font-bold'}>
+            {alpha > 0 ? '+' : ''}{alpha.toFixed(2)}%
+          </span>
+        </div>
       </div>
       <div ref={chartContainerRef} className="w-full h-full" />
     </div>
@@ -359,6 +404,39 @@ function MetricsTab({ results, router }: MetricsTabProps) {
 
   return (
     <div className="w-full h-full overflow-auto p-6">
+      {/* Buy & Hold Comparison Section - Highlighted */}
+      <div className="mb-6 bg-gradient-to-r from-[#2962ff]/10 to-[#ff9800]/10 border border-[#2962ff]/30 rounded-lg p-4">
+        <h3 className="text-sm font-semibold text-gray-400 mb-3">📊 Strategy vs Market Comparison</h3>
+        <div className="grid grid-cols-3 gap-4">
+          <div className="bg-[#131722]/50 rounded-lg p-4">
+            <div className="text-xs text-gray-400 mb-1">Buy & Hold Return</div>
+            <div className={`text-2xl font-bold ${metrics.buyAndHoldReturn > 0 ? 'text-[#26a69a]' : 'text-[#ef5350]'}`}>
+              {metrics.buyAndHoldReturn > 0 ? '+' : ''}{metrics.buyAndHoldReturn.toFixed(2)}%
+            </div>
+            <div className="text-xs text-gray-500 mt-1">Market baseline</div>
+          </div>
+          <div className="bg-[#131722]/50 rounded-lg p-4 border-2 border-[#2962ff]/50">
+            <div className="text-xs text-gray-400 mb-1">Alpha (α)</div>
+            <div className={`text-2xl font-bold ${metrics.alpha > 0 ? 'text-[#26a69a]' : 'text-[#ef5350]'}`}>
+              {metrics.alpha > 0 ? '+' : ''}{metrics.alpha.toFixed(2)}%
+            </div>
+            <div className="text-xs text-gray-500 mt-1">
+              {metrics.alpha > 0 ? '✅ Beating the market' : '❌ Underperforming market'}
+            </div>
+          </div>
+          <div className="bg-[#131722]/50 rounded-lg p-4">
+            <div className="text-xs text-gray-400 mb-1">Beta (β)</div>
+            <div className={`text-2xl font-bold ${metrics.beta < 1.5 ? 'text-[#26a69a]' : 'text-[#ff9800]'}`}>
+              {metrics.beta.toFixed(2)}
+            </div>
+            <div className="text-xs text-gray-500 mt-1">
+              {metrics.beta < 1 ? 'Lower risk' : metrics.beta < 1.5 ? 'Moderate risk' : 'Higher risk'}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Standard Metrics Grid */}
       <div className="grid grid-cols-3 gap-4 mb-6">
         <MetricCard label="Total Return" value={`${metrics.totalReturn.toFixed(2)}%`} positive={metrics.totalReturn > 0} />
         <MetricCard label="Sharpe Ratio" value={metrics.sharpeRatio.toFixed(2)} positive={metrics.sharpeRatio > 1} />

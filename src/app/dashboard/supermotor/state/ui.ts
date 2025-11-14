@@ -61,6 +61,9 @@ interface UIState {
   currentTimeframe: string;
   chartType: ChartType;
 
+  // Active indicators
+  activeIndicators: string[];
+
   // Volume Profile
   volumeProfile: VolumeProfileSettings;
 
@@ -85,8 +88,9 @@ interface UIState {
   setCurrentSymbol: (symbol: string) => void;
   setCurrentTimeframe: (timeframe: string) => void;
   setChartType: (chartType: ChartType) => void;
+  toggleIndicator: (indicator: string) => void;
   updateVolumeProfile: (updates: Partial<VolumeProfileSettings>) => void;
-  saveCurrentLayout: (name: string, activeIndicators: string[]) => void;
+  saveCurrentLayout: (name: string) => void;
   loadLayout: (id: string) => void;
   deleteLayout: (id: string) => void;
   renameLayout: (id: string, newName: string) => void;
@@ -189,6 +193,7 @@ export const useUIStore = create<UIState>()(
       currentSymbol: 'BTCUSDT',
       currentTimeframe: '1h',
       chartType: 'candlestick',
+      activeIndicators: [],
       volumeProfile: {
         enabled: false,
         period: 100,
@@ -228,19 +233,26 @@ export const useUIStore = create<UIState>()(
 
       setChartType: (chartType) => set({ chartType }),
 
+      toggleIndicator: (indicator) =>
+        set((state) => ({
+          activeIndicators: state.activeIndicators.includes(indicator)
+            ? state.activeIndicators.filter((i) => i !== indicator)
+            : [...state.activeIndicators, indicator],
+        })),
+
       updateVolumeProfile: (updates) =>
         set((state) => ({
           volumeProfile: { ...state.volumeProfile, ...updates },
         })),
 
-      saveCurrentLayout: (name, activeIndicators) => {
+      saveCurrentLayout: (name) => {
         const state = get();
         const newLayout: SavedLayout = {
           id: `layout-${Date.now()}`,
           name,
           chartType: state.chartType,
           volumeProfile: { ...state.volumeProfile },
-          activeIndicators,
+          activeIndicators: state.activeIndicators,
           gridLayout: state.layout,
           createdAt: Date.now(),
         };
@@ -257,6 +269,7 @@ export const useUIStore = create<UIState>()(
           set({
             chartType: layout.chartType,
             volumeProfile: { ...layout.volumeProfile },
+            activeIndicators: layout.activeIndicators,
             layout: layout.gridLayout,
             currentLayoutId: id,
           });
