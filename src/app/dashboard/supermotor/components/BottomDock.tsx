@@ -20,6 +20,7 @@ import {
   Time,
   LineData,
   LineSeries,
+  IPriceLine,
 } from 'lightweight-charts';
 
 type Tab = 'equity' | 'trades' | 'metrics';
@@ -152,6 +153,7 @@ function EquityCurveTab({ results, selectedTradeId }: EquityCurveTabProps) {
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
   const lineSeriesRef = useRef<any>(null);
+  const markerLineRef = useRef<IPriceLine | null>(null);
 
   useEffect(() => {
     if (!chartContainerRef.current) return;
@@ -223,13 +225,15 @@ function EquityCurveTab({ results, selectedTradeId }: EquityCurveTabProps) {
 
   // Highlight selected trade on equity curve
   useEffect(() => {
-    if (!lineSeriesRef.current || !selectedTradeId) {
-      // Clear markers
-      if (lineSeriesRef.current) {
-        lineSeriesRef.current.setMarkers([]);
-      }
-      return;
+    if (!lineSeriesRef.current) return;
+
+    // Remove existing marker line
+    if (markerLineRef.current) {
+      lineSeriesRef.current.removePriceLine(markerLineRef.current);
+      markerLineRef.current = null;
     }
+
+    if (!selectedTradeId) return;
 
     // Find the equity point for this trade
     const equityPoint = results.equityCurve.find((p: any) => p.trade === selectedTradeId);
@@ -239,16 +243,17 @@ function EquityCurveTab({ results, selectedTradeId }: EquityCurveTabProps) {
     const trade = results.trades.find((t: any) => t.id === selectedTradeId);
     if (!trade) return;
 
-    // Add marker
-    const marker = {
-      time: Math.floor(equityPoint.time / 1000) as Time,
-      position: 'inBar' as const,
-      color: trade.pnl > 0 ? '#26a69a' : '#ef5350',
-      shape: 'circle' as const,
-      text: `Trade #${trade.id} (${trade.pnl > 0 ? '+' : ''}${trade.pnlPercent.toFixed(2)}%)`,
-    };
-
-    lineSeriesRef.current.setMarkers([marker]);
+    // Add marker as a horizontal price line at the equity value
+    const markerColor = trade.pnl > 0 ? '#26a69a' : '#ef5350';
+    const markerLine = lineSeriesRef.current.createPriceLine({
+      price: equityPoint.value,
+      color: markerColor,
+      lineWidth: 2,
+      lineStyle: 0,
+      axisLabelVisible: true,
+      title: `Trade #${trade.id} (${trade.pnl > 0 ? '+' : ''}${trade.pnlPercent.toFixed(2)}%)`,
+    });
+    markerLineRef.current = markerLine;
   }, [selectedTradeId, results]);
 
   return (
