@@ -17,6 +17,7 @@ import {
   Sparkles,
   ChevronLeft,
   ChevronRight,
+  Newspaper,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { DevTierSwitcher } from "@/components/dev-tier-switcher"
@@ -31,6 +32,7 @@ interface NavItem {
 const navItems: NavItem[] = [
   { name: "Dashboard", href: "/dashboard", icon: <Home size={18} /> },
   { name: "Backtest", href: "/dashboard/backtest", icon: <Activity size={18} /> },
+  { name: "News", href: "/dashboard/news", icon: <Newspaper size={18} /> },
   { name: "Optimizer", href: "/dashboard/optimizer", icon: <TrendingUp size={18} />, badge: "PRO" },
   { name: "Strategies", href: "/dashboard/strategies", icon: <BookOpen size={18} />, badge: "PRO" },
   { name: "Analysis", href: "/dashboard/analysis/monte-carlo", icon: <LineChart size={18} />, badge: "PRO" },
