@@ -167,7 +167,7 @@ export async function fetchAnalyzedNews(limit: number = 10): Promise<NewsItem[]>
         keywords: analysis.keywords || [],
         timestamp: Date.now() - i * 600000, // Stagger timestamps
         source: mock.source,
-        isUrgent: analysis.impact && analysis.impact > 0.7,
+        isUrgent: !!(analysis.impact && analysis.impact > 0.7),
       });
     }
   }
