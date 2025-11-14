@@ -27,6 +27,17 @@ interface Panel {
   visible: boolean;
 }
 
+export interface SavedLayout {
+  id: string;
+  name: string;
+  chartType: ChartType;
+  volumeProfile: VolumeProfileSettings;
+  activeIndicators: string[];
+  gridLayout: LayoutType;
+  createdAt: number;
+  isTemplate?: boolean; // For predefined templates
+}
+
 interface UIState {
   // Layout
   layout: LayoutType;
@@ -51,6 +62,10 @@ interface UIState {
   // Volume Profile
   volumeProfile: VolumeProfileSettings;
 
+  // Saved Layouts
+  savedLayouts: SavedLayout[];
+  currentLayoutId: string | null;
+
   // Backtest state
   backtestRunning: boolean;
   backtestProgress: number;
@@ -67,6 +82,10 @@ interface UIState {
   setCurrentTimeframe: (timeframe: string) => void;
   setChartType: (chartType: ChartType) => void;
   updateVolumeProfile: (updates: Partial<VolumeProfileSettings>) => void;
+  saveCurrentLayout: (name: string, activeIndicators: string[]) => void;
+  loadLayout: (id: string) => void;
+  deleteLayout: (id: string) => void;
+  renameLayout: (id: string, newName: string) => void;
   startBacktest: (runId: string) => void;
   updateBacktestProgress: (progress: number) => void;
   stopBacktest: () => void;
@@ -75,9 +94,76 @@ interface UIState {
   updatePanel: (id: string, updates: Partial<Panel>) => void;
 }
 
+// Predefined templates
+const DEFAULT_TEMPLATES: SavedLayout[] = [
+  {
+    id: 'template-day-trading',
+    name: 'Day Trading',
+    chartType: 'candlestick',
+    volumeProfile: {
+      enabled: true,
+      period: 50,
+      valueAreaPercentage: 70,
+      showPOC: true,
+      showValueArea: true,
+      rowSize: 0,
+      profileColor: '#2962ff',
+      pocColor: '#ff6d00',
+      valueAreaColor: '#00c853',
+      opacity: 0.6,
+    },
+    activeIndicators: ['rsi', 'volume'],
+    gridLayout: '1x1',
+    createdAt: Date.now(),
+    isTemplate: true,
+  },
+  {
+    id: 'template-swing-trading',
+    name: 'Swing Trading',
+    chartType: 'heikinAshi',
+    volumeProfile: {
+      enabled: false,
+      period: 100,
+      valueAreaPercentage: 70,
+      showPOC: true,
+      showValueArea: true,
+      rowSize: 0,
+      profileColor: '#2962ff',
+      pocColor: '#ff6d00',
+      valueAreaColor: '#00c853',
+      opacity: 0.6,
+    },
+    activeIndicators: ['ema', 'macd', 'bollingerBands'],
+    gridLayout: '1x1',
+    createdAt: Date.now(),
+    isTemplate: true,
+  },
+  {
+    id: 'template-volume-analysis',
+    name: 'Volume Analysis',
+    chartType: 'candlestick',
+    volumeProfile: {
+      enabled: true,
+      period: 100,
+      valueAreaPercentage: 70,
+      showPOC: true,
+      showValueArea: true,
+      rowSize: 0,
+      profileColor: '#2962ff',
+      pocColor: '#ff6d00',
+      valueAreaColor: '#00c853',
+      opacity: 0.7,
+    },
+    activeIndicators: ['volume', 'obv', 'vwap'],
+    gridLayout: '1x1',
+    createdAt: Date.now(),
+    isTemplate: true,
+  },
+];
+
 export const useUIStore = create<UIState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       // Initial state
       layout: '1x1',
       panels: [
@@ -109,6 +195,8 @@ export const useUIStore = create<UIState>()(
         valueAreaColor: '#00c853',
         opacity: 0.6,
       },
+      savedLayouts: DEFAULT_TEMPLATES,
+      currentLayoutId: null,
       backtestRunning: false,
       backtestProgress: 0,
       backtestRunId: null,
@@ -137,6 +225,51 @@ export const useUIStore = create<UIState>()(
           volumeProfile: { ...state.volumeProfile, ...updates },
         })),
 
+      saveCurrentLayout: (name, activeIndicators) => {
+        const state = get();
+        const newLayout: SavedLayout = {
+          id: `layout-${Date.now()}`,
+          name,
+          chartType: state.chartType,
+          volumeProfile: { ...state.volumeProfile },
+          activeIndicators,
+          gridLayout: state.layout,
+          createdAt: Date.now(),
+        };
+        set((state) => ({
+          savedLayouts: [...state.savedLayouts, newLayout],
+          currentLayoutId: newLayout.id,
+        }));
+      },
+
+      loadLayout: (id) => {
+        const state = get();
+        const layout = state.savedLayouts.find((l) => l.id === id);
+        if (layout) {
+          set({
+            chartType: layout.chartType,
+            volumeProfile: { ...layout.volumeProfile },
+            layout: layout.gridLayout,
+            currentLayoutId: id,
+          });
+        }
+      },
+
+      deleteLayout: (id) => {
+        set((state) => ({
+          savedLayouts: state.savedLayouts.filter((l) => l.id !== id && !l.isTemplate),
+          currentLayoutId: state.currentLayoutId === id ? null : state.currentLayoutId,
+        }));
+      },
+
+      renameLayout: (id, newName) => {
+        set((state) => ({
+          savedLayouts: state.savedLayouts.map((l) =>
+            l.id === id && !l.isTemplate ? { ...l, name: newName } : l
+          ),
+        }));
+      },
+
       startBacktest: (runId) => set({ backtestRunning: true, backtestRunId: runId, backtestProgress: 0 }),
 
       updateBacktestProgress: (progress) => set({ backtestProgress: progress }),
@@ -159,6 +292,8 @@ export const useUIStore = create<UIState>()(
         theme: state.theme,
         chartType: state.chartType,
         volumeProfile: state.volumeProfile,
+        savedLayouts: state.savedLayouts,
+        currentLayoutId: state.currentLayoutId,
         rightDockOpen: state.rightDockOpen,
         bottomDockOpen: state.bottomDockOpen,
       }),

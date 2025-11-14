@@ -3,7 +3,8 @@
 import { useState } from 'react';
 import { useUIStore } from '../state/ui';
 import type { ChartType } from '../state/ui';
-import { Search, Play, Layout, Sun, Moon, ChevronDown, CandlestickChart, BarChart3, LineChart, AreaChart, Box } from 'lucide-react';
+import { Search, Play, Layout, Sun, Moon, ChevronDown, CandlestickChart, BarChart3, LineChart, AreaChart, Box, Layers } from 'lucide-react';
+import LayoutsModal from './LayoutsModal';
 
 const POPULAR_SYMBOLS = [
   'BTCUSDT',
@@ -53,6 +54,7 @@ export default function Topbar() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [chartTypeOpen, setChartTypeOpen] = useState(false);
+  const [layoutsModalOpen, setLayoutsModalOpen] = useState(false);
 
   const handleSymbolSelect = (symbol: string) => {
     setCurrentSymbol(symbol);
@@ -201,6 +203,15 @@ export default function Topbar() {
 
       <div className="flex-1" />
 
+      {/* Layouts Button */}
+      <button
+        onClick={() => setLayoutsModalOpen(true)}
+        className="flex items-center gap-2 px-4 py-2 bg-[#131722] hover:bg-[#2a2e39] rounded text-white transition-colors"
+      >
+        <Layers className="w-4 h-4" />
+        <span className="text-sm font-medium">Layouts</span>
+      </button>
+
       {/* Backtest Button */}
       <button
         onClick={handleBacktest}
@@ -226,6 +237,13 @@ export default function Topbar() {
           <Moon className="w-5 h-5 text-gray-400" />
         )}
       </button>
+
+      {/* Layouts Modal */}
+      <LayoutsModal
+        isOpen={layoutsModalOpen}
+        onClose={() => setLayoutsModalOpen(false)}
+        activeIndicators={[]} // TODO: Pass actual active indicators from RightDock
+      />
     </div>
   );
 }
