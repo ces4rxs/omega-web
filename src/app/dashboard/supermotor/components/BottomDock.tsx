@@ -118,7 +118,7 @@ export default function BottomDock() {
 
           {/* Content */}
           <div className="flex-1 overflow-hidden">
-            {activeTab === 'equity' && <EquityCurveTab results={backtestResults} />}
+            {activeTab === 'equity' && <EquityCurveTab results={backtestResults} selectedTradeId={selectedTradeId} />}
             {activeTab === 'trades' && (
               <TradeHistoryTab
                 results={backtestResults}
@@ -145,11 +145,13 @@ export default function BottomDock() {
 // Equity Curve Tab Component
 interface EquityCurveTabProps {
   results: any;
+  selectedTradeId: number | null;
 }
 
-function EquityCurveTab({ results }: EquityCurveTabProps) {
+function EquityCurveTab({ results, selectedTradeId }: EquityCurveTabProps) {
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
+  const lineSeriesRef = useRef<any>(null);
 
   useEffect(() => {
     if (!chartContainerRef.current) return;
@@ -196,6 +198,7 @@ function EquityCurveTab({ results }: EquityCurveTabProps) {
     chart.timeScale().fitContent();
 
     chartRef.current = chart;
+    lineSeriesRef.current = lineSeries;
 
     // Handle resize
     const handleResize = () => {
@@ -217,6 +220,36 @@ function EquityCurveTab({ results }: EquityCurveTabProps) {
       }
     };
   }, [results]);
+
+  // Highlight selected trade on equity curve
+  useEffect(() => {
+    if (!lineSeriesRef.current || !selectedTradeId) {
+      // Clear markers
+      if (lineSeriesRef.current) {
+        lineSeriesRef.current.setMarkers([]);
+      }
+      return;
+    }
+
+    // Find the equity point for this trade
+    const equityPoint = results.equityCurve.find((p: any) => p.trade === selectedTradeId);
+    if (!equityPoint) return;
+
+    // Find the trade to get P&L info
+    const trade = results.trades.find((t: any) => t.id === selectedTradeId);
+    if (!trade) return;
+
+    // Add marker
+    const marker = {
+      time: Math.floor(equityPoint.time / 1000) as Time,
+      position: 'inBar' as const,
+      color: trade.pnl > 0 ? '#26a69a' : '#ef5350',
+      shape: 'circle' as const,
+      text: `Trade #${trade.id} (${trade.pnl > 0 ? '+' : ''}${trade.pnlPercent.toFixed(2)}%)`,
+    };
+
+    lineSeriesRef.current.setMarkers([marker]);
+  }, [selectedTradeId, results]);
 
   return (
     <div className="w-full h-full p-4">
