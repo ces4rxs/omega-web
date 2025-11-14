@@ -32,6 +32,10 @@ export interface BacktestMetrics {
   avgLoss: number;
   largestWin: number;
   largestLoss: number;
+  // Buy & Hold comparison
+  buyAndHoldReturn: number; // percentage
+  alpha: number; // Strategy Return - Buy & Hold Return
+  beta: number; // Volatility ratio (strategy vs market)
 }
 
 export interface BacktestResults {
@@ -45,6 +49,7 @@ export interface BacktestResults {
   metrics: BacktestMetrics;
   trades: Trade[];
   equityCurve: EquityPoint[];
+  buyAndHoldEquity: EquityPoint[]; // Buy & Hold comparison line
 }
 
 // Mock data generator
@@ -171,6 +176,47 @@ export function generateMockBacktestResults(
   );
   const sharpeRatio = avgReturn / stdDev;
 
+  // Calculate Buy & Hold comparison
+  const firstPrice = trades[0].entryPrice;
+  const lastPrice = trades[trades.length - 1].exitPrice;
+  const buyAndHoldReturn = ((lastPrice - firstPrice) / firstPrice) * 100;
+
+  // Generate Buy & Hold equity curve (linear growth from first to last)
+  const buyAndHoldEquity: EquityPoint[] = [];
+  const buyAndHoldQuantity = initialCapital / firstPrice;
+
+  // Match the equity curve points for better visualization
+  for (const point of equityCurve) {
+    // Calculate proportional price at this time
+    const timeProgress = (point.time - equityCurve[0].time) / (equityCurve[equityCurve.length - 1].time - equityCurve[0].time);
+    const priceAtTime = firstPrice + (lastPrice - firstPrice) * timeProgress;
+    const valueAtTime = buyAndHoldQuantity * priceAtTime;
+
+    buyAndHoldEquity.push({
+      time: point.time,
+      value: valueAtTime,
+    });
+  }
+
+  // Calculate Alpha (excess return over market)
+  const alpha = totalReturn - buyAndHoldReturn;
+
+  // Calculate Beta (simplified: ratio of strategy volatility to market volatility)
+  // Market returns (Buy & Hold linear interpolation)
+  const marketReturns: number[] = [];
+  for (let i = 1; i < equityCurve.length; i++) {
+    const marketReturn = ((buyAndHoldEquity[i].value - buyAndHoldEquity[i - 1].value) / buyAndHoldEquity[i - 1].value) * 100;
+    marketReturns.push(marketReturn);
+  }
+
+  const marketAvgReturn = marketReturns.reduce((a, b) => a + b, 0) / marketReturns.length;
+  const marketStdDev = Math.sqrt(
+    marketReturns.reduce((sum, r) => sum + Math.pow(r - marketAvgReturn, 2), 0) / marketReturns.length
+  );
+
+  // Beta = Strategy Volatility / Market Volatility
+  const beta = marketStdDev > 0 ? stdDev / marketStdDev : 1;
+
   return {
     runId: `run-${Date.now()}`,
     symbol,
@@ -192,8 +238,12 @@ export function generateMockBacktestResults(
       avgLoss,
       largestWin,
       largestLoss,
+      buyAndHoldReturn,
+      alpha,
+      beta,
     },
     trades,
     equityCurve,
+    buyAndHoldEquity,
   };
 }

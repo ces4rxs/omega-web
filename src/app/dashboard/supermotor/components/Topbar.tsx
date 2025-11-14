@@ -242,7 +242,6 @@ export default function Topbar() {
       <LayoutsModal
         isOpen={layoutsModalOpen}
         onClose={() => setLayoutsModalOpen(false)}
-        activeIndicators={[]} // TODO: Pass actual active indicators from RightDock
       />
     </div>
   );

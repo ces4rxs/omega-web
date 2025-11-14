@@ -8,11 +8,10 @@ import type { SavedLayout } from '../state/ui';
 interface LayoutsModalProps {
   isOpen: boolean;
   onClose: () => void;
-  activeIndicators: string[];
 }
 
-export default function LayoutsModal({ isOpen, onClose, activeIndicators }: LayoutsModalProps) {
-  const { savedLayouts, currentLayoutId, saveCurrentLayout, loadLayout, deleteLayout, renameLayout } = useUIStore();
+export default function LayoutsModal({ isOpen, onClose }: LayoutsModalProps) {
+  const { savedLayouts, currentLayoutId, activeIndicators, saveCurrentLayout, loadLayout, deleteLayout, renameLayout } = useUIStore();
   const [saveMode, setSaveMode] = useState(false);
   const [newLayoutName, setNewLayoutName] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -25,7 +24,7 @@ export default function LayoutsModal({ isOpen, onClose, activeIndicators }: Layo
 
   const handleSave = () => {
     if (newLayoutName.trim()) {
-      saveCurrentLayout(newLayoutName.trim(), activeIndicators);
+      saveCurrentLayout(newLayoutName.trim());
       setNewLayoutName('');
       setSaveMode(false);
     }
