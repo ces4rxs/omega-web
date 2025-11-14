@@ -248,9 +248,13 @@ export default function ChartPanel({
   const pocLineRef = useRef<IPriceLine | null>(null);
   const vahLineRef = useRef<IPriceLine | null>(null);
   const valLineRef = useRef<IPriceLine | null>(null);
+  const entryLineRef = useRef<IPriceLine | null>(null);
+  const exitLineRef = useRef<IPriceLine | null>(null);
 
   const chartType = useUIStore((state) => state.chartType);
   const volumeProfile = useUIStore((state) => state.volumeProfile);
+  const selectedTradeId = useUIStore((state) => state.selectedTradeId);
+  const backtestResults = useUIStore((state) => state.backtestResults);
 
   // Initialize chart
   useEffect(() => {
@@ -551,6 +555,72 @@ export default function ChartPanel({
       console.error('Error rendering volume profile:', error);
     }
   }, [data, volumeProfile, mainSeriesRef.current]);
+
+  // Trade zoom (Interconexión PRO)
+  useEffect(() => {
+    if (!chartRef.current || !mainSeriesRef.current) return;
+
+    // Remove existing trade lines
+    if (entryLineRef.current) {
+      mainSeriesRef.current.removePriceLine(entryLineRef.current);
+      entryLineRef.current = null;
+    }
+    if (exitLineRef.current) {
+      mainSeriesRef.current.removePriceLine(exitLineRef.current);
+      exitLineRef.current = null;
+    }
+
+    if (!selectedTradeId || !backtestResults) return;
+
+    try {
+      // Find the selected trade
+      const trade = backtestResults.trades.find((t) => t.id === selectedTradeId);
+      if (!trade) return;
+
+      // Convert timestamps to seconds (Lightweight Charts uses seconds)
+      const entryTime = Math.floor(trade.entryTime / 1000);
+      const exitTime = Math.floor(trade.exitTime / 1000);
+
+      // Add padding (10% of trade duration on each side)
+      const tradeDuration = exitTime - entryTime;
+      const padding = Math.max(tradeDuration * 0.1, 3600); // At least 1 hour padding
+
+      const fromTime = entryTime - padding;
+      const toTime = exitTime + padding;
+
+      // Zoom to trade time range
+      chartRef.current.timeScale().setVisibleRange({
+        from: fromTime as Time,
+        to: toTime as Time,
+      });
+
+      // Add entry price line
+      const entryColor = trade.side === 'long' ? '#26a69a' : '#ef5350';
+      const entryLine = mainSeriesRef.current.createPriceLine({
+        price: trade.entryPrice,
+        color: entryColor,
+        lineWidth: 2,
+        lineStyle: 0, // Solid
+        axisLabelVisible: true,
+        title: `${trade.side.toUpperCase()} Entry`,
+      });
+      entryLineRef.current = entryLine;
+
+      // Add exit price line
+      const exitColor = trade.pnl > 0 ? '#26a69a' : '#ef5350';
+      const exitLine = mainSeriesRef.current.createPriceLine({
+        price: trade.exitPrice,
+        color: exitColor,
+        lineWidth: 2,
+        lineStyle: 2, // Dashed
+        axisLabelVisible: true,
+        title: `Exit (${trade.pnl > 0 ? '+' : ''}${trade.pnlPercent.toFixed(2)}%)`,
+      });
+      exitLineRef.current = exitLine;
+    } catch (error) {
+      console.error('Error zooming to trade:', error);
+    }
+  }, [selectedTradeId, backtestResults, mainSeriesRef.current]);
 
   return (
     <div className="relative w-full h-full bg-[#131722] border border-[#2a2e39] rounded-lg overflow-hidden">
