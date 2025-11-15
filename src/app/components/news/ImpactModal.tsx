@@ -206,8 +206,8 @@ function ImpactScoreCard({ impact }: { impact: ImpactAnalysis }) {
 
       <div className="mt-6 pt-6 border-t border-white/10">
         <p className="text-sm text-gray-400">
-          Calculated from: <span className="text-white font-medium">1h Movement ({impact.move1h.toFixed(2)}%)</span> +
-          <span className="text-white font-medium"> Volatility ({impact.volatility1h.toFixed(2)}%)</span>
+          Calculated from: <span className="text-white font-medium">1h Movement ({Number(impact.move1h ?? 0).toFixed(2)}%)</span> +
+          <span className="text-white font-medium"> Volatility ({Number(impact.volatility1h ?? 0).toFixed(2)}%)</span>
         </p>
       </div>
     </div>
@@ -244,10 +244,10 @@ function MovementTimeline({ impact }: { impact: ImpactAnalysis }) {
               <div className="text-xs text-gray-400 mb-2 font-semibold">{item.label}</div>
               <div className={`text-3xl font-bold text-${color}-400 mb-1 flex items-center gap-2`}>
                 {isPositive ? <TrendingUp className="w-6 h-6" /> : item.value < 0 ? <TrendingDown className="w-6 h-6" /> : null}
-                {isPositive ? '+' : ''}{item.value.toFixed(2)}%
+                {isPositive ? '+' : ''}{Number(item.value ?? 0).toFixed(2)}%
               </div>
               <div className="text-xs text-gray-500">
-                Vol: <span className="text-white font-medium">{item.vol.toFixed(2)}%</span>
+                Vol: <span className="text-white font-medium">{Number(item.vol ?? 0).toFixed(2)}%</span>
               </div>
             </motion.div>
           );
@@ -328,7 +328,10 @@ function ProbabilityCard({ impact }: { impact: ImpactAnalysis }) {
 }
 
 function VolatilityCard({ impact }: { impact: ImpactAnalysis }) {
-  const avgVolatility = (impact.volatility1h + impact.volatility4h + impact.volatility24h) / 3;
+  const vol1h = Number(impact.volatility1h ?? 0);
+  const vol4h = Number(impact.volatility4h ?? 0);
+  const vol24h = Number(impact.volatility24h ?? 0);
+  const avgVolatility = (vol1h + vol4h + vol24h) / 3;
 
   return (
     <div className="bg-gradient-to-br from-yellow-500/5 to-orange-500/5 border border-white/10 rounded-xl p-6">
@@ -348,15 +351,15 @@ function VolatilityCard({ impact }: { impact: ImpactAnalysis }) {
         <div className="grid grid-cols-3 gap-3">
           <div className="bg-black/20 rounded-lg p-3 border border-white/10">
             <div className="text-xs text-gray-500 mb-1">1H</div>
-            <div className="text-lg font-bold text-white">{impact.volatility1h.toFixed(1)}%</div>
+            <div className="text-lg font-bold text-white">{vol1h.toFixed(1)}%</div>
           </div>
           <div className="bg-black/20 rounded-lg p-3 border border-white/10">
             <div className="text-xs text-gray-500 mb-1">4H</div>
-            <div className="text-lg font-bold text-white">{impact.volatility4h.toFixed(1)}%</div>
+            <div className="text-lg font-bold text-white">{vol4h.toFixed(1)}%</div>
           </div>
           <div className="bg-black/20 rounded-lg p-3 border border-white/10">
             <div className="text-xs text-gray-500 mb-1">24H</div>
-            <div className="text-lg font-bold text-white">{impact.volatility24h.toFixed(1)}%</div>
+            <div className="text-lg font-bold text-white">{vol24h.toFixed(1)}%</div>
           </div>
         </div>
       </div>
@@ -415,7 +418,7 @@ function HistoricalCard({ impact }: { impact: ImpactAnalysis }) {
         <div className="bg-black/30 rounded-lg p-4 border border-indigo-500/20">
           <div className="text-xs text-gray-400 mb-2">Avg Movement</div>
           <div className="text-2xl font-bold text-indigo-300">
-            {impact.move1h >= 0 ? '+' : ''}{impact.move1h.toFixed(2)}%
+            {Number(impact.move1h ?? 0) >= 0 ? '+' : ''}{Number(impact.move1h ?? 0).toFixed(2)}%
           </div>
           <div className="text-xs text-gray-500 mt-1">From this event</div>
         </div>
@@ -423,7 +426,7 @@ function HistoricalCard({ impact }: { impact: ImpactAnalysis }) {
         <div className="bg-black/30 rounded-lg p-4 border border-indigo-500/20">
           <div className="text-xs text-gray-400 mb-2">Avg Duration</div>
           <div className="text-2xl font-bold text-indigo-300">
-            {impact.eventDuration}
+            {impact.eventDuration || 'N/A'}
           </div>
           <div className="text-xs text-gray-500 mt-1">Time window</div>
         </div>
@@ -438,10 +441,10 @@ function HistoricalCard({ impact }: { impact: ImpactAnalysis }) {
       <div className="mt-4 p-4 bg-indigo-500/10 rounded-lg border border-indigo-500/20">
         <p className="text-sm text-indigo-200 leading-relaxed">
           <span className="font-bold">AI Analysis:</span> This event shows a {' '}
-          <span className="text-white font-semibold">{Math.abs(impact.move1h).toFixed(2)}%</span> movement
-          with <span className="text-white font-semibold">{impact.volatility1h.toFixed(2)}%</span> volatility.
-          Pattern detected: <span className="text-white font-semibold uppercase">{impact.pattern}</span>.
-          Expected duration: <span className="text-white font-semibold">{impact.eventDuration}</span>.
+          <span className="text-white font-semibold">{Math.abs(Number(impact.move1h ?? 0)).toFixed(2)}%</span> movement
+          with <span className="text-white font-semibold">{Number(impact.volatility1h ?? 0).toFixed(2)}%</span> volatility.
+          Pattern detected: <span className="text-white font-semibold uppercase">{impact.pattern || 'UNKNOWN'}</span>.
+          Expected duration: <span className="text-white font-semibold">{impact.eventDuration || 'N/A'}</span>.
         </p>
       </div>
     </div>

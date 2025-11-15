@@ -18,26 +18,34 @@ export interface SmartAlert {
 export function generateSmartAlerts(impact: ImpactAnalysis): SmartAlert[] {
   const alerts: SmartAlert[] = [];
 
+  // Safe number conversions with fallback to 0
+  const move1h = Number(impact.move1h ?? 0);
+  const move4h = Number(impact.move4h ?? 0);
+  const volatility1h = Number(impact.volatility1h ?? 0);
+  const volatility4h = Number(impact.volatility4h ?? 0);
+  const impactScore = Number(impact.impactScore ?? 0);
+  const probabilityUp = Number(impact.probabilityUp ?? 0);
+
   // Momentum Alert - Strong directional movement
-  if (Math.abs(impact.move1h) > 2.0 && impact.volatility1h < 3.0) {
-    const direction = impact.move1h > 0 ? 'alcista' : 'bajista';
+  if (Math.abs(move1h) > 2.0 && volatility1h < 3.0) {
+    const direction = move1h > 0 ? 'alcista' : 'bajista';
     alerts.push({
       type: 'momentum',
-      severity: impact.impactScore > 70 ? 'critical' : 'high',
+      severity: impactScore > 70 ? 'critical' : 'high',
       message: `Momentum ${direction} fuerte detectado`,
-      action: `Movimiento ${direction} de ${Math.abs(impact.move1h).toFixed(2)}% con baja volatilidad → posible continuación`,
+      action: `Movimiento ${direction} de ${Math.abs(move1h).toFixed(2)}% con baja volatilidad → posible continuación`,
       icon: '📈',
-      color: impact.move1h > 0 ? 'green' : 'red',
+      color: move1h > 0 ? 'green' : 'red',
     });
   }
 
   // Volatility Warning - High volatility detected
-  if (impact.volatility1h > 4.0 || impact.volatility4h > 5.0) {
+  if (volatility1h > 4.0 || volatility4h > 5.0) {
     alerts.push({
       type: 'volatility',
-      severity: impact.volatility1h > 6.0 ? 'critical' : 'high',
+      severity: volatility1h > 6.0 ? 'critical' : 'high',
       message: 'Advertencia de alta volatilidad',
-      action: `Volatilidad ${impact.volatility1h.toFixed(2)}% → esperarse movimientos bruscos en ${impact.eventDuration}`,
+      action: `Volatilidad ${volatility1h.toFixed(2)}% → esperarse movimientos bruscos en ${impact.eventDuration || 'próximas horas'}`,
       icon: '⚠️',
       color: 'yellow',
     });
@@ -49,45 +57,45 @@ export function generateSmartAlerts(impact: ImpactAnalysis): SmartAlert[] {
     const direction = safePattern.includes('UP') ? 'alcista' : safePattern.includes('DOWN') ? 'bajista' : 'lateral';
     alerts.push({
       type: 'breakout',
-      severity: impact.impactScore > 60 ? 'high' : 'medium',
+      severity: impactScore > 60 ? 'high' : 'medium',
       message: `Patrón de ruptura ${direction}`,
-      action: `Patrón ${impact.pattern || 'UNKNOWN'} detectado → probabilidad ${direction} ${impact.probabilityUp}%`,
+      action: `Patrón ${impact.pattern || 'UNKNOWN'} detectado → probabilidad ${direction} ${probabilityUp}%`,
       icon: direction === 'alcista' ? '🚀' : direction === 'bajista' ? '📉' : '➡️',
       color: direction === 'alcista' ? 'green' : direction === 'bajista' ? 'red' : 'gray',
     });
   }
 
   // Mean Reversion Risk - Overextended movement
-  if (Math.abs(impact.move1h) > 5.0 && impact.volatility1h > 3.0) {
+  if (Math.abs(move1h) > 5.0 && volatility1h > 3.0) {
     alerts.push({
       type: 'reversion',
       severity: 'medium',
       message: 'Riesgo de reversión a la media',
-      action: `Movimiento extremo ${impact.move1h.toFixed(2)}% → posible corrección en próximas horas`,
+      action: `Movimiento extremo ${move1h.toFixed(2)}% → posible corrección en próximas horas`,
       icon: '🔄',
       color: 'orange',
     });
   }
 
   // Volume Spike - Unusual activity (inferred from high impact + high vol)
-  if (impact.impactScore > 75 && impact.volatility1h > 4.0) {
+  if (impactScore > 75 && volatility1h > 4.0) {
     alerts.push({
       type: 'volume',
       severity: 'critical',
       message: 'Pico de actividad institucional',
-      action: `Impacto ${impact.impactScore}/100 + volatilidad ${impact.volatility1h.toFixed(2)}% → entrada/salida de capital significativo`,
+      action: `Impacto ${impactScore}/100 + volatilidad ${volatility1h.toFixed(2)}% → entrada/salida de capital significativo`,
       icon: '💰',
       color: 'purple',
     });
   }
 
   // If no specific alerts, add a general market update
-  if (alerts.length === 0 && impact.impactScore > 30) {
+  if (alerts.length === 0 && impactScore > 30) {
     alerts.push({
       type: 'momentum',
       severity: 'low',
       message: 'Actualización de mercado',
-      action: `Movimiento ${impact.move1h >= 0 ? 'positivo' : 'negativo'} de ${Math.abs(impact.move1h).toFixed(2)}% en desarrollo`,
+      action: `Movimiento ${move1h >= 0 ? 'positivo' : 'negativo'} de ${Math.abs(move1h).toFixed(2)}% en desarrollo`,
       icon: '📊',
       color: 'blue',
     });
