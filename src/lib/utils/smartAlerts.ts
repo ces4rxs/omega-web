@@ -44,13 +44,14 @@ export function generateSmartAlerts(impact: ImpactAnalysis): SmartAlert[] {
   }
 
   // Trend Breakout - Potential breakout pattern
-  if (impact.pattern.includes('BREAKOUT') || impact.pattern.includes('UPTREND') || impact.pattern.includes('DOWNTREND')) {
-    const direction = impact.pattern.includes('UP') ? 'alcista' : impact.pattern.includes('DOWN') ? 'bajista' : 'lateral';
+  const safePattern = impact.pattern ?? '';
+  if (safePattern.includes('BREAKOUT') || safePattern.includes('UPTREND') || safePattern.includes('DOWNTREND')) {
+    const direction = safePattern.includes('UP') ? 'alcista' : safePattern.includes('DOWN') ? 'bajista' : 'lateral';
     alerts.push({
       type: 'breakout',
       severity: impact.impactScore > 60 ? 'high' : 'medium',
       message: `Patrón de ruptura ${direction}`,
-      action: `Patrón ${impact.pattern} detectado → probabilidad ${direction} ${impact.probabilityUp}%`,
+      action: `Patrón ${impact.pattern || 'UNKNOWN'} detectado → probabilidad ${direction} ${impact.probabilityUp}%`,
       icon: direction === 'alcista' ? '🚀' : direction === 'bajista' ? '📉' : '➡️',
       color: direction === 'alcista' ? 'green' : direction === 'bajista' ? 'red' : 'gray',
     });

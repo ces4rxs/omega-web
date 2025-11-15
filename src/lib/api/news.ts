@@ -214,7 +214,7 @@ function computeImpactMetrics(raw: ImpactAnalysisRaw): ImpactAnalysis {
     volatility4h: raw.volatility4h,
     volatility24h: raw.volatility24h,
     durationMinutes: raw.durationMinutes,
-    pattern: raw.pattern,
+    pattern: raw.pattern || 'UNKNOWN',
     createdAt: raw.createdAt,
 
     // Computed frontend metrics
