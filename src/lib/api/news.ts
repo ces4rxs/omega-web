@@ -19,21 +19,39 @@ export interface NewsItem {
   keywords?: string[];
 }
 
+// Backend response from GET /api/news/:id/impact
+export interface ImpactAnalysisRaw {
+  move1h: number; // percentage
+  move4h: number; // percentage
+  move24h: number; // percentage
+  volatility1h: number; // percentage
+  volatility4h: number; // percentage
+  volatility24h: number; // percentage
+  durationMinutes: number;
+  pattern: string;
+  createdAt: string;
+}
+
+// Frontend-computed impact analysis for UI
 export interface ImpactAnalysis {
-  immediateImpact: number; // 0-100
-  impact1h: number; // 0-100
-  impact4h: number; // 0-100
-  impact24h: number; // 0-100
-  probabilityUp: number; // percentage
-  probabilityDown: number; // percentage
-  expectedVolatility: number; // percentage
-  eventDuration: string; // e.g., "5h 12m"
-  historicalReactions: {
-    avgMove: string; // e.g., "+1.6%"
-    avgDuration: string; // e.g., "120m"
-    sampleSize: number;
-  };
-  summary: string; // AI summary
+  // Raw backend data
+  move1h: number;
+  move4h: number;
+  move24h: number;
+  volatility1h: number;
+  volatility4h: number;
+  volatility24h: number;
+  durationMinutes: number;
+  pattern: string;
+  createdAt: string;
+
+  // Computed frontend metrics
+  impactScore: number; // 0-100 (calculated from move1h + volatility1h)
+  probabilityUp: number; // percentage (calculated from move1h)
+  probabilityDown: number; // percentage (100 - probabilityUp)
+  eventDuration: string; // formatted "5h 12m"
+  impactLevel: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+  trendDirection: 'UP' | 'DOWN' | 'NEUTRAL';
 }
 
 export interface SentimentDistribution {
@@ -108,12 +126,105 @@ export async function getImpact(newsId: number): Promise<ImpactAnalysis> {
       throw new Error(`Failed to fetch impact: ${response.statusText}`);
     }
 
-    const data = await response.json();
-    return data;
+    const rawData: ImpactAnalysisRaw = await response.json();
+
+    // Transform backend data to frontend format with computed metrics
+    return computeImpactMetrics(rawData);
   } catch (error) {
     console.error('Error fetching impact:', error);
     throw error;
   }
+}
+
+// ============================================================================
+// IMPACT CALCULATION FUNCTIONS (Frontend Formulas)
+// ============================================================================
+
+/**
+ * Calculate impact score (0-100) based on price movement and volatility
+ * Formula: Combines absolute movement with volatility to determine impact magnitude
+ */
+function calculateImpactScore(move1h: number, volatility1h: number): number {
+  // Normalize movement and volatility to 0-100 scale
+  const moveComponent = Math.min(Math.abs(move1h) * 10, 50); // Max 50 points from movement
+  const volComponent = Math.min(volatility1h * 10, 50); // Max 50 points from volatility
+
+  const score = moveComponent + volComponent;
+  return Math.min(Math.round(score), 100);
+}
+
+/**
+ * Calculate probability UP using logistic function based on move1h
+ * Formula: sigmoid(move1h * sensitivity) * 100
+ */
+function calculateProbabilityUp(move1h: number): number {
+  const sensitivity = 2.5; // Amplify small movements
+  const sigmoid = 1 / (1 + Math.exp(-move1h * sensitivity));
+  return Math.round(sigmoid * 100);
+}
+
+/**
+ * Determine impact level category based on score
+ */
+function getImpactLevel(score: number): 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL' {
+  if (score >= 80) return 'CRITICAL';
+  if (score >= 60) return 'HIGH';
+  if (score >= 35) return 'MEDIUM';
+  return 'LOW';
+}
+
+/**
+ * Determine trend direction based on move1h
+ */
+function getTrendDirection(move1h: number): 'UP' | 'DOWN' | 'NEUTRAL' {
+  if (move1h > 0.5) return 'UP';
+  if (move1h < -0.5) return 'DOWN';
+  return 'NEUTRAL';
+}
+
+/**
+ * Format duration from minutes to readable string (e.g., "5h 12m")
+ */
+function formatDuration(minutes: number): string {
+  const hours = Math.floor(minutes / 60);
+  const mins = minutes % 60;
+
+  if (hours === 0) return `${mins}m`;
+  if (mins === 0) return `${hours}h`;
+  return `${hours}h ${mins}m`;
+}
+
+/**
+ * Compute all frontend impact metrics from backend raw data
+ */
+function computeImpactMetrics(raw: ImpactAnalysisRaw): ImpactAnalysis {
+  const impactScore = calculateImpactScore(raw.move1h, raw.volatility1h);
+  const probabilityUp = calculateProbabilityUp(raw.move1h);
+  const probabilityDown = 100 - probabilityUp;
+  const eventDuration = formatDuration(raw.durationMinutes);
+  const impactLevel = getImpactLevel(impactScore);
+  const trendDirection = getTrendDirection(raw.move1h);
+
+  return {
+    // Raw backend data
+    move1h: raw.move1h,
+    move4h: raw.move4h,
+    move24h: raw.move24h,
+    volatility1h: raw.volatility1h,
+    volatility4h: raw.volatility4h,
+    volatility24h: raw.volatility24h,
+    durationMinutes: raw.durationMinutes,
+    pattern: raw.pattern,
+    createdAt: raw.createdAt,
+
+    // Computed frontend metrics
+    impactScore,
+    probabilityUp,
+    probabilityDown,
+    eventDuration,
+    impactLevel,
+    trendDirection,
+  };
 }
 
 // ============================================================================
