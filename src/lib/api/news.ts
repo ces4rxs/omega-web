@@ -198,24 +198,33 @@ function formatDuration(minutes: number): string {
  * Compute all frontend impact metrics from backend raw data
  */
 function computeImpactMetrics(raw: ImpactAnalysisRaw): ImpactAnalysis {
-  const impactScore = calculateImpactScore(raw.move1h, raw.volatility1h);
-  const probabilityUp = calculateProbabilityUp(raw.move1h);
+  // Normalize all numbers with fallback to 0
+  const move1h = Number(raw.move1h ?? 0);
+  const move4h = Number(raw.move4h ?? 0);
+  const move24h = Number(raw.move24h ?? 0);
+  const volatility1h = Number(raw.volatility1h ?? 0);
+  const volatility4h = Number(raw.volatility4h ?? 0);
+  const volatility24h = Number(raw.volatility24h ?? 0);
+  const durationMinutes = Number(raw.durationMinutes ?? 0);
+
+  const impactScore = calculateImpactScore(move1h, volatility1h);
+  const probabilityUp = calculateProbabilityUp(move1h);
   const probabilityDown = 100 - probabilityUp;
-  const eventDuration = formatDuration(raw.durationMinutes);
+  const eventDuration = formatDuration(durationMinutes);
   const impactLevel = getImpactLevel(impactScore);
-  const trendDirection = getTrendDirection(raw.move1h);
+  const trendDirection = getTrendDirection(move1h);
 
   return {
-    // Raw backend data
-    move1h: raw.move1h,
-    move4h: raw.move4h,
-    move24h: raw.move24h,
-    volatility1h: raw.volatility1h,
-    volatility4h: raw.volatility4h,
-    volatility24h: raw.volatility24h,
-    durationMinutes: raw.durationMinutes,
+    // Raw backend data (normalized)
+    move1h,
+    move4h,
+    move24h,
+    volatility1h,
+    volatility4h,
+    volatility24h,
+    durationMinutes,
     pattern: raw.pattern || 'UNKNOWN',
-    createdAt: raw.createdAt,
+    createdAt: raw.createdAt || new Date().toISOString(),
 
     // Computed frontend metrics
     impactScore,

@@ -170,7 +170,7 @@ export default function NewsCard({ item, onViewImpact, index }: NewsCardProps) {
                 <Gauge className="w-3 h-3 text-gray-500" />
                 <span className="text-xs text-gray-500">Volatility</span>
               </div>
-              <div className="text-xl font-bold text-yellow-400">{impact.volatility1h.toFixed(1)}%</div>
+              <div className="text-xl font-bold text-yellow-400">{Number(impact.volatility1h ?? 0).toFixed(1)}%</div>
             </div>
 
             {/* Duration */}
@@ -208,11 +208,11 @@ export default function NewsCard({ item, onViewImpact, index }: NewsCardProps) {
               ].map((item) => (
                 <div key={item.label} className="text-center">
                   <div className="text-xs text-gray-500 mb-1">{item.label}</div>
-                  <div className={`text-lg font-bold ${item.value >= 0 ? 'text-green-400' : 'text-red-400'} flex items-center justify-center gap-1`}>
-                    {item.value >= 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
-                    {item.value >= 0 ? '+' : ''}{item.value.toFixed(2)}%
+                  <div className={`text-lg font-bold ${Number(item.value ?? 0) >= 0 ? 'text-green-400' : 'text-red-400'} flex items-center justify-center gap-1`}>
+                    {Number(item.value ?? 0) >= 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
+                    {Number(item.value ?? 0) >= 0 ? '+' : ''}{Number(item.value ?? 0).toFixed(2)}%
                   </div>
-                  <div className="text-xs text-gray-600">Vol: {item.vol.toFixed(1)}%</div>
+                  <div className="text-xs text-gray-600">Vol: {Number(item.vol ?? 0).toFixed(1)}%</div>
                 </div>
               ))}
             </div>
@@ -264,7 +264,7 @@ export default function NewsCard({ item, onViewImpact, index }: NewsCardProps) {
           <div className="flex items-center gap-4 text-xs">
             <div className="flex items-center gap-1">
               <span className="text-gray-500">Confianza:</span>
-              <span className="text-cyan-400 font-bold">{(item.confidence * 100).toFixed(0)}%</span>
+              <span className="text-cyan-400 font-bold">{(Number(item.confidence ?? 0) * 100).toFixed(0)}%</span>
             </div>
             <div className="flex items-center gap-1">
               <Clock className="w-3 h-3 text-gray-500" />
