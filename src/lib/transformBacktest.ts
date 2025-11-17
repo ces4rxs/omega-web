@@ -4,7 +4,7 @@ import type { Trade } from "./types"
 
 // ---------- TIPOS DEL BACKEND REAL ----------
 
-interface BackendTrade {
+export interface BackendTrade {
   type: "buy" | "sell"
   time: number  // UNIX timestamp
   price: number
@@ -13,7 +13,7 @@ interface BackendTrade {
   slippageBps?: number
 }
 
-interface BackendPerformance {
+export interface BackendPerformance {
   initialCash: number
   finalEquity: number
   totalReturn: number        // decimal (e.g., 0.25 = 25%)
@@ -25,7 +25,7 @@ interface BackendPerformance {
   trades: number
 }
 
-interface BackendBacktestResponse {
+export interface BackendBacktestResponse {
   ok: boolean
   backtest: {
     strategy: string
@@ -57,16 +57,20 @@ export function transformBacktestResponse(raw: BackendBacktestResponse): any {
 
     // Validación básica
     if (!backtest) {
-      console.error('❌ Respuesta del backend sin campo "backtest":', raw)
+      if (process.env.NODE_ENV === 'development') {
+        console.error('❌ Respuesta del backend sin campo "backtest":', raw)
+      }
       throw new Error("Respuesta inválida del backend")
     }
 
-    console.log('🔍 Transformando respuesta del backend:', {
-      strategy: backtest.strategy,
-      symbol: backtest.symbol,
-      trades: backtest.trades?.length || 0,
-      equityPoints: backtest.equityCurve?.length || 0
-    })
+    if (process.env.NODE_ENV === 'development') {
+      console.log('🔍 Transformando respuesta del backend:', {
+        strategy: backtest.strategy,
+        symbol: backtest.symbol,
+        trades: backtest.trades?.length || 0,
+        equityPoints: backtest.equityCurve?.length || 0
+      })
+    }
 
     // Emparejar trades: cada BUY con su SELL correspondiente
     const pairedTrades = pairTrades(backtest.trades, backtest.symbol)
@@ -117,7 +121,9 @@ export function transformBacktestResponse(raw: BackendBacktestResponse): any {
       largestLoss: additionalMetrics.largestLoss
     }
 
-    console.log('✅ TRANSFORMED PERFORMANCE:', performance)
+    if (process.env.NODE_ENV === 'development') {
+      console.log('✅ TRANSFORMED PERFORMANCE:', performance)
+    }
 
     return {
       backtest: {
@@ -134,7 +140,9 @@ export function transformBacktestResponse(raw: BackendBacktestResponse): any {
       }
     }
   } catch (error: any) {
-    console.error('❌ Error transformando respuesta del backend:', error)
+    if (process.env.NODE_ENV === 'development') {
+      console.error('❌ Error transformando respuesta del backend:', error)
+    }
     throw new Error(`Error procesando resultados del backtest: ${error.message}`)
   }
 }

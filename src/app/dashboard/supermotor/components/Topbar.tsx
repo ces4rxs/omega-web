@@ -6,7 +6,7 @@ import type { ChartType } from '../state/ui';
 import { Search, Play, Layout, Sun, Moon, ChevronDown, CandlestickChart, BarChart3, LineChart, AreaChart, Box, Layers } from 'lucide-react';
 import LayoutsModal from './LayoutsModal';
 import { runBacktest } from '@/lib/omega';
-import { transformBacktestResponse } from '@/lib/transformBacktest';
+import { transformBacktestResponse, type BackendBacktestResponse } from '@/lib/transformBacktest';
 import { useToast } from '@/components/ui/toast';
 
 const POPULAR_SYMBOLS = [
@@ -95,12 +95,14 @@ export default function Topbar() {
         duration: 3000
       });
 
-      console.log('🚀 Iniciando backtest:', {
-        symbol: currentSymbol,
-        timeframe: currentTimeframe,
-        startDate: formatDate(startDate),
-        endDate: formatDate(endDate)
-      });
+      if (process.env.NODE_ENV === 'development') {
+        console.log('🚀 Iniciando backtest:', {
+          symbol: currentSymbol,
+          timeframe: currentTimeframe,
+          startDate: formatDate(startDate),
+          endDate: formatDate(endDate)
+        });
+      }
 
       // Llamar al backend real
       const response = await runBacktest({
@@ -120,12 +122,16 @@ export default function Topbar() {
         slippageBps: 5
       });
 
-      console.log('✅ Respuesta del backend recibida:', response);
+      if (process.env.NODE_ENV === 'development') {
+        console.log('✅ Respuesta del backend recibida:', response);
+      }
 
       // Transformar la respuesta al formato del frontend
-      const transformedData = transformBacktestResponse(response);
+      const transformedData = transformBacktestResponse(response as BackendBacktestResponse);
 
-      console.log('✅ Datos transformados:', transformedData);
+      if (process.env.NODE_ENV === 'development') {
+        console.log('✅ Datos transformados:', transformedData);
+      }
 
       // Actualizar el estado con los resultados
       completeBacktest(transformedData.backtest);

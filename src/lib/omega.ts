@@ -3,6 +3,7 @@
 // Auto: usa backend real (Render) si está disponible, o fallback educativo offline.
 
 import { api } from "@/lib/api";
+import type { BackendBacktestResponse } from "@/lib/transformBacktest";
 
 // ---------- ⚙️ Helper: verificar conexión ----------
 async function tryBackend<T = any>(path: string): Promise<T | null> {
@@ -222,7 +223,7 @@ export interface BacktestPayload {
  * Endpoint: POST /api/backtest
  * Requiere autenticación JWT
  */
-export async function runBacktest(payload: BacktestPayload) {
+export async function runBacktest(payload: BacktestPayload): Promise<BackendBacktestResponse> {
   try {
     // Validar fechas
     if (!payload.startDate || !payload.endDate) {
@@ -242,16 +243,23 @@ export async function runBacktest(payload: BacktestPayload) {
       ...(payload.params && { params: payload.params }),
     };
 
-    console.log("🚀 Enviando backtest al backend:", body);
+    if (process.env.NODE_ENV === 'development') {
+      console.log("🚀 Enviando backtest al backend:", body);
+    }
 
     // Llamar al backend real
-    const data = await api.post("/api/backtest", body);
+    const data = await api.post<BackendBacktestResponse>("/api/backtest", body);
 
-    console.log("✅ Respuesta del backend:", data);
+    if (process.env.NODE_ENV === 'development') {
+      console.log("✅ Respuesta del backend:", data);
+    }
 
-    return data;
+    // Type assertion para asegurar el tipo correcto
+    return data as BackendBacktestResponse;
   } catch (error: any) {
-    console.error("❌ Error en runBacktest:", error);
+    if (process.env.NODE_ENV === 'development') {
+      console.error("❌ Error en runBacktest:", error);
+    }
 
     // Manejo de errores específicos
     if (error.message?.includes("429") || error.message?.includes("Demasiados backtests")) {
