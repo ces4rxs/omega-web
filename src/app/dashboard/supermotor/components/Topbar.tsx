@@ -5,6 +5,9 @@ import { useUIStore } from '../state/ui';
 import type { ChartType } from '../state/ui';
 import { Search, Play, Layout, Sun, Moon, ChevronDown, CandlestickChart, BarChart3, LineChart, AreaChart, Box, Layers } from 'lucide-react';
 import LayoutsModal from './LayoutsModal';
+import { runBacktest } from '@/lib/omega';
+import { transformBacktestResponse } from '@/lib/transformBacktest';
+import { useToast } from '@/components/ui/toast';
 
 const POPULAR_SYMBOLS = [
   'BTCUSDT',
@@ -43,12 +46,16 @@ export default function Topbar() {
     theme,
     chartType,
     backtestRunning,
+    bottomDockOpen,
     setCurrentSymbol,
     setCurrentTimeframe,
     setLayout,
     setTheme,
     setChartType,
     startBacktest,
+    completeBacktest,
+    stopBacktest,
+    toggleBottomDock,
   } = useUIStore();
 
   const [searchOpen, setSearchOpen] = useState(false);
@@ -56,17 +63,100 @@ export default function Topbar() {
   const [chartTypeOpen, setChartTypeOpen] = useState(false);
   const [layoutsModalOpen, setLayoutsModalOpen] = useState(false);
 
+  const { addToast } = useToast();
+
   const handleSymbolSelect = (symbol: string) => {
     setCurrentSymbol(symbol);
     setSearchOpen(false);
     setSearchQuery('');
   };
 
-  const handleBacktest = () => {
-    // Generate a unique run ID
-    const runId = `run-${Date.now()}`;
-    startBacktest(runId);
-    // TODO: Call backend API to start backtest
+  const handleBacktest = async () => {
+    try {
+      // Generar ID único del backtest
+      const runId = `run-${Date.now()}`;
+
+      // Iniciar el backtest en el estado
+      startBacktest(runId);
+
+      // Calcular fechas (últimos 365 días por defecto)
+      const endDate = new Date();
+      const startDate = new Date();
+      startDate.setDate(startDate.getDate() - 365);
+
+      // Formatear fechas a YYYY-MM-DD
+      const formatDate = (date: Date) => date.toISOString().split('T')[0];
+
+      // Mostrar notificación de inicio
+      addToast({
+        title: 'Ejecutando backtest...',
+        description: `${currentSymbol} en ${currentTimeframe}`,
+        type: 'info',
+        duration: 3000
+      });
+
+      console.log('🚀 Iniciando backtest:', {
+        symbol: currentSymbol,
+        timeframe: currentTimeframe,
+        startDate: formatDate(startDate),
+        endDate: formatDate(endDate)
+      });
+
+      // Llamar al backend real
+      const response = await runBacktest({
+        strategy: 'smaCrossover', // Por defecto, esto podría venir de settings
+        symbol: currentSymbol,
+        timeframe: currentTimeframe === '1m' ? 'minute'
+                  : currentTimeframe === '5m' ? 'minute'
+                  : currentTimeframe === '15m' ? 'minute'
+                  : currentTimeframe === '1h' ? 'hour'
+                  : currentTimeframe === '4h' ? 'hour'
+                  : currentTimeframe === '1D' ? 'day'
+                  : 'day', // Convertir formato frontend a backend
+        startDate: formatDate(startDate),
+        endDate: formatDate(endDate),
+        initialCash: 10000,
+        feeBps: 10,
+        slippageBps: 5
+      });
+
+      console.log('✅ Respuesta del backend recibida:', response);
+
+      // Transformar la respuesta al formato del frontend
+      const transformedData = transformBacktestResponse(response);
+
+      console.log('✅ Datos transformados:', transformedData);
+
+      // Actualizar el estado con los resultados
+      completeBacktest(transformedData.backtest);
+
+      // Mostrar éxito
+      addToast({
+        title: 'Backtest completado',
+        description: `${transformedData.backtest.trades?.length || 0} trades ejecutados`,
+        type: 'success',
+        duration: 5000
+      });
+
+      // Abrir el dock inferior para mostrar resultados
+      if (!bottomDockOpen) {
+        toggleBottomDock();
+      }
+
+    } catch (error: any) {
+      console.error('❌ Error ejecutando backtest:', error);
+
+      // Detener el backtest en caso de error
+      stopBacktest();
+
+      // Mostrar error al usuario
+      addToast({
+        title: 'Error en backtest',
+        description: error.message || 'Error al ejecutar el backtest',
+        type: 'error',
+        duration: 6000
+      });
+    }
   };
 
   const filteredSymbols = searchQuery

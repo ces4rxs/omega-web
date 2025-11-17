@@ -206,41 +206,69 @@ export async function fetchMarketSeries(symbol: string, timeframe: string) {
 
 // ---------- 🧪 BACKTESTING ----------
 export interface BacktestPayload {
-  strategyId?: string;
+  strategy: string;
   symbol: string;
   timeframe: string;
-  capital?: number;
-  risk?: "conservative" | "balanced" | "aggressive";
+  startDate: string;
+  endDate: string;
+  initialCash?: number;
+  feeBps?: number;
+  slippageBps?: number;
+  params?: Record<string, any>;
 }
 
+/**
+ * Ejecuta un backtest en el backend real
+ * Endpoint: POST /api/backtest
+ * Requiere autenticación JWT
+ */
 export async function runBacktest(payload: BacktestPayload) {
-  const body = {
-    strategyId: payload.strategyId ?? "demo-quant",
-    symbol: payload.symbol,
-    timeframe: payload.timeframe,
-    capital: payload.capital ?? 10000,
-    risk: payload.risk ?? "balanced",
-  };
+  try {
+    // Validar fechas
+    if (!payload.startDate || !payload.endDate) {
+      throw new Error("startDate y endDate son requeridos");
+    }
 
-  const data = await postBackend("/ai/backtest/run", body);
-  if (data) {
+    // Construir payload según formato del backend
+    const body = {
+      strategy: payload.strategy,
+      symbol: payload.symbol,
+      timeframe: payload.timeframe || "day",
+      startDate: payload.startDate,
+      endDate: payload.endDate,
+      initialCash: payload.initialCash ?? 10000,
+      feeBps: payload.feeBps ?? 10,
+      slippageBps: payload.slippageBps ?? 5,
+      ...(payload.params && { params: payload.params }),
+    };
+
+    console.log("🚀 Enviando backtest al backend:", body);
+
+    // Llamar al backend real
+    const data = await api.post("/api/backtest", body);
+
+    console.log("✅ Respuesta del backend:", data);
+
     return data;
-  }
+  } catch (error: any) {
+    console.error("❌ Error en runBacktest:", error);
 
-  const pnl = Number((Math.random() * 4 - 1.2).toFixed(2));
-  return {
-    ok: true,
-    simulated: true,
-    timeframe: payload.timeframe,
-    symbol: payload.symbol,
-    result: {
-      pnl,
-      pnlPct: Number((pnl / body.capital).toFixed(4)),
-      sharpe: Number((1.1 + Math.random() * 0.6).toFixed(2)),
-      trades: 18 + Math.floor(Math.random() * 12),
-    },
-    note: "Backtest simulado (sin conexión con servidor).",
-  };
+    // Manejo de errores específicos
+    if (error.message?.includes("429") || error.message?.includes("Demasiados backtests")) {
+      throw new Error("Límite de backtests alcanzado. Intenta de nuevo en 5 minutos.");
+    }
+
+    if (error.message?.includes("401") || error.message?.includes("Unauthorized")) {
+      throw new Error("Sesión expirada. Por favor inicia sesión nuevamente.");
+    }
+
+    if (error.message?.includes("403") || error.message?.includes("Forbidden")) {
+      throw new Error("No tienes permisos para ejecutar backtests. Verifica tu suscripción.");
+    }
+
+    // Error genérico
+    throw new Error(error.message || "Error al ejecutar el backtest. Intenta nuevamente.");
+  }
 }
 
 // ======================================================

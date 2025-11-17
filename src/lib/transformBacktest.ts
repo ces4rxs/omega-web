@@ -2,7 +2,9 @@
 
 import type { Trade } from "./types"
 
-interface RawTrade {
+// ---------- TIPOS DEL BACKEND REAL ----------
+
+interface BackendTrade {
   type: "buy" | "sell"
   time: number  // UNIX timestamp
   price: number
@@ -11,21 +13,20 @@ interface RawTrade {
   slippageBps?: number
 }
 
-interface RawPerformance {
+interface BackendPerformance {
   initialCash: number
   finalEquity: number
-  totalReturn: number
-  totalReturnPct: number
-  cagr: number
-  cagrPct: number
+  totalReturn: number        // decimal (e.g., 0.25 = 25%)
+  totalReturnPct: number     // percentage (e.g., 25.5 = 25.5%)
+  cagr: number               // decimal
+  cagrPct: number            // percentage
   sharpeRatio: number
-  maxDrawdown: number
-  maxDrawdownPct: number
+  maxDrawdown: number        // decimal
   trades: number
 }
 
-interface RawBacktestResponse {
-  ok?: boolean
+interface BackendBacktestResponse {
+  ok: boolean
   backtest: {
     strategy: string
     symbol: string
@@ -35,82 +36,106 @@ interface RawBacktestResponse {
       end: string
       bars: number
     }
-    performance: RawPerformance
-    trades: RawTrade[]
+    performance: BackendPerformance
+    trades: BackendTrade[]
     equityCurve: number[]
-    execution: any
+    execution: {
+      time: string
+      dataSource: string
+      runId: string
+    }
   }
 }
 
 /**
- * Transforma la respuesta completa del backend al formato esperado por el frontend
+ * Transforma la respuesta del backend real al formato esperado por el frontend
+ * Endpoint: POST /api/backtest
  */
-export function transformBacktestResponse(raw: RawBacktestResponse, symbol: string): any {
-  const { backtest } = raw
+export function transformBacktestResponse(raw: BackendBacktestResponse): any {
+  try {
+    const { backtest } = raw
 
-  // DEBUG: Ver qué devuelve el backend
-  console.log('🔍 RAW BACKEND RESPONSE:', JSON.stringify(raw, null, 2))
-  console.log('🔍 PERFORMANCE METRICS:', backtest.performance)
-
-  // Emparejar trades: cada BUY con su SELL correspondiente
-  const pairedTrades = pairTrades(backtest.trades, symbol)
-
-  // Calcular métricas faltantes a partir de los trades
-  const additionalMetrics = calculateAdditionalMetrics(pairedTrades)
-
-  // Transformar equity curve de array de números a array de objetos con fechas
-  const transformedEquityCurve = transformEquityCurve(
-    backtest.equityCurve,
-    backtest.period.start,
-    backtest.period.end
-  )
-
-  // Calculate Calmar and Recovery Factor
-  const calmarRatio = backtest.performance.maxDrawdown > 0
-    ? backtest.performance.cagr / backtest.performance.maxDrawdown
-    : 0
-
-  const totalReturn = backtest.performance.totalReturn
-  const recoveryFactor = backtest.performance.maxDrawdown > 0
-    ? totalReturn / backtest.performance.maxDrawdown
-    : 0
-
-  // Mapear performance metrics al formato esperado por el frontend
-  const performance = {
-    totalReturn: backtest.performance.totalReturn,           // Ya es decimal
-    cagr: backtest.performance.cagr,                        // Ya es decimal
-    sharpeRatio: backtest.performance.sharpeRatio,
-    maxDrawdown: backtest.performance.maxDrawdown,          // Ya es decimal
-    winRate: additionalMetrics.winRate,                     // Calculado
-    profitFactor: additionalMetrics.profitFactor,           // Calculado
-    totalTrades: backtest.performance.trades,               // Número total
-    expectancy: additionalMetrics.expectancy,               // Calculado
-    avgWin: additionalMetrics.avgWin,
-    avgLoss: additionalMetrics.avgLoss,
-    // Advanced metrics
-    sortinoRatio: additionalMetrics.sortinoRatio,
-    calmarRatio: calmarRatio,
-    recoveryFactor: recoveryFactor,
-    riskRewardRatio: additionalMetrics.riskRewardRatio,
-    maxAdverseExcursion: additionalMetrics.maxAdverseExcursion,
-    maxFavorableExcursion: additionalMetrics.maxFavorableExcursion,
-    consecutiveWins: additionalMetrics.consecutiveWins,
-    consecutiveLosses: additionalMetrics.consecutiveLosses,
-    avgTradeDuration: additionalMetrics.avgTradeDuration,
-    largestWin: additionalMetrics.largestWin,
-    largestLoss: additionalMetrics.largestLoss
-  }
-
-  console.log('✅ TRANSFORMED PERFORMANCE:', performance)
-
-  return {
-    backtest: {
-      id: backtest.execution?.runId || 'unknown',
-      performance,
-      trades: pairedTrades,
-      equityCurve: transformedEquityCurve,
-      createdAt: new Date().toISOString()
+    // Validación básica
+    if (!backtest) {
+      console.error('❌ Respuesta del backend sin campo "backtest":', raw)
+      throw new Error("Respuesta inválida del backend")
     }
+
+    console.log('🔍 Transformando respuesta del backend:', {
+      strategy: backtest.strategy,
+      symbol: backtest.symbol,
+      trades: backtest.trades?.length || 0,
+      equityPoints: backtest.equityCurve?.length || 0
+    })
+
+    // Emparejar trades: cada BUY con su SELL correspondiente
+    const pairedTrades = pairTrades(backtest.trades, backtest.symbol)
+
+    // Calcular métricas faltantes a partir de los trades
+    const additionalMetrics = calculateAdditionalMetrics(pairedTrades)
+
+    // Transformar equity curve de array de números a array de objetos con fechas
+    const transformedEquityCurve = transformEquityCurve(
+      backtest.equityCurve,
+      backtest.period.start,
+      backtest.period.end
+    )
+
+    // Calculate Calmar and Recovery Factor
+    const calmarRatio = backtest.performance.maxDrawdown > 0
+      ? backtest.performance.cagr / backtest.performance.maxDrawdown
+      : 0
+
+    const totalReturn = backtest.performance.totalReturn
+    const recoveryFactor = backtest.performance.maxDrawdown > 0
+      ? totalReturn / backtest.performance.maxDrawdown
+      : 0
+
+    // Mapear performance metrics al formato esperado por el frontend
+    const performance = {
+      totalReturn: backtest.performance.totalReturn,           // Ya es decimal
+      cagr: backtest.performance.cagr,                        // Ya es decimal
+      sharpeRatio: backtest.performance.sharpeRatio,
+      maxDrawdown: backtest.performance.maxDrawdown,          // Ya es decimal
+      winRate: additionalMetrics.winRate,                     // Calculado
+      profitFactor: additionalMetrics.profitFactor,           // Calculado
+      totalTrades: backtest.performance.trades,               // Número total
+      expectancy: additionalMetrics.expectancy,               // Calculado
+      avgWin: additionalMetrics.avgWin,
+      avgLoss: additionalMetrics.avgLoss,
+      // Advanced metrics
+      sortinoRatio: additionalMetrics.sortinoRatio,
+      calmarRatio: calmarRatio,
+      recoveryFactor: recoveryFactor,
+      riskRewardRatio: additionalMetrics.riskRewardRatio,
+      maxAdverseExcursion: additionalMetrics.maxAdverseExcursion,
+      maxFavorableExcursion: additionalMetrics.maxFavorableExcursion,
+      consecutiveWins: additionalMetrics.consecutiveWins,
+      consecutiveLosses: additionalMetrics.consecutiveLosses,
+      avgTradeDuration: additionalMetrics.avgTradeDuration,
+      largestWin: additionalMetrics.largestWin,
+      largestLoss: additionalMetrics.largestLoss
+    }
+
+    console.log('✅ TRANSFORMED PERFORMANCE:', performance)
+
+    return {
+      backtest: {
+        id: backtest.execution?.runId || `run-${Date.now()}`,
+        performance,
+        trades: pairedTrades,
+        equityCurve: transformedEquityCurve,
+        createdAt: new Date().toISOString(),
+        // Metadata adicional
+        strategy: backtest.strategy,
+        symbol: backtest.symbol,
+        timeframe: backtest.timeframe,
+        period: backtest.period
+      }
+    }
+  } catch (error: any) {
+    console.error('❌ Error transformando respuesta del backend:', error)
+    throw new Error(`Error procesando resultados del backtest: ${error.message}`)
   }
 }
 
@@ -259,9 +284,9 @@ function calculateAdditionalMetrics(trades: Trade[]) {
 /**
  * Empareja trades buy/sell en trades completos con entry/exit
  */
-function pairTrades(rawTrades: RawTrade[], symbol: string): Trade[] {
+function pairTrades(rawTrades: BackendTrade[], symbol: string): Trade[] {
   const pairedTrades: Trade[] = []
-  let position: RawTrade | null = null
+  let position: BackendTrade | null = null
   let tradeId = 1
 
   for (const trade of rawTrades) {
