@@ -182,6 +182,10 @@ function EquityCurveTab({ results, selectedTradeId }: EquityCurveTabProps) {
         timeVisible: true,
         secondsVisible: false,
       },
+    });
+
+    // Remove watermark
+    chart.applyOptions({
       watermark: {
         visible: false,
       },

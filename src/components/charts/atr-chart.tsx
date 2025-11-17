@@ -54,6 +54,10 @@ export function ATRChart({ data, period = 14 }: ATRChartProps) {
           bottom: 0.1,
         },
       },
+    })
+
+    // Remove watermark
+    chart.current.applyOptions({
       watermark: {
         visible: false,
       },
