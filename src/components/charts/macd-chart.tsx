@@ -63,6 +63,9 @@ export function MACDChart({
           bottom: 0.1,
         },
       },
+      watermark: {
+        visible: false,
+      },
     })
 
     // Crear series

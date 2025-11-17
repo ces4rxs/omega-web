@@ -158,6 +158,9 @@ export function CandlestickChart({
       rightPriceScale: {
         borderColor: '#2B2B43',
       },
+      watermark: {
+        visible: false,
+      },
     })
 
     // Crear serie de candlesticks

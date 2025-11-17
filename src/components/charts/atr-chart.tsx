@@ -54,6 +54,9 @@ export function ATRChart({ data, period = 14 }: ATRChartProps) {
           bottom: 0.1,
         },
       },
+      watermark: {
+        visible: false,
+      },
     })
 
     // Crear serie ATR

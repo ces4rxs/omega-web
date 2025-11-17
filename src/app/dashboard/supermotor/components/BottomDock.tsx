@@ -182,6 +182,9 @@ function EquityCurveTab({ results, selectedTradeId }: EquityCurveTabProps) {
         timeVisible: true,
         secondsVisible: false,
       },
+      watermark: {
+        visible: false,
+      },
     });
 
     // Strategy equity line (solid blue)
