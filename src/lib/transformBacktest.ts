@@ -1,7 +1,5 @@
 // Transformar datos raw del backend al formato esperado por el frontend
 
-import type { Trade } from "./types"
-
 // ---------- TIPOS DEL BACKEND REAL ----------
 
 export interface BackendTrade {
@@ -78,9 +76,17 @@ export function transformBacktestResponse(raw: BackendBacktestResponse): any {
     // Calcular métricas faltantes a partir de los trades
     const additionalMetrics = calculateAdditionalMetrics(pairedTrades)
 
-    // Transformar equity curve de array de números a array de objetos con fechas
+    // Transformar equity curve de array de números a array de objetos con timestamps
     const transformedEquityCurve = transformEquityCurve(
       backtest.equityCurve,
+      backtest.period.start,
+      backtest.period.end
+    )
+
+    // Generar Buy & Hold equity curve para comparación
+    const buyAndHoldEquity = generateBuyAndHoldEquity(
+      pairedTrades,
+      backtest.performance.initialCash,
       backtest.period.start,
       backtest.period.end
     )
@@ -95,6 +101,10 @@ export function transformBacktestResponse(raw: BackendBacktestResponse): any {
       ? totalReturn / backtest.performance.maxDrawdown
       : 0
 
+    // Calcular winning/losing trades
+    const winningTrades = pairedTrades.filter(t => t.pnl > 0).length
+    const losingTrades = pairedTrades.filter(t => t.pnl <= 0).length
+
     // Mapear performance metrics al formato esperado por el frontend
     const performance = {
       totalReturn: backtest.performance.totalReturn,           // Ya es decimal
@@ -104,6 +114,8 @@ export function transformBacktestResponse(raw: BackendBacktestResponse): any {
       winRate: additionalMetrics.winRate,                     // Calculado
       profitFactor: additionalMetrics.profitFactor,           // Calculado
       totalTrades: backtest.performance.trades,               // Número total
+      winningTrades: winningTrades,                           // Calculado
+      losingTrades: losingTrades,                             // Calculado
       expectancy: additionalMetrics.expectancy,               // Calculado
       avgWin: additionalMetrics.avgWin,
       avgLoss: additionalMetrics.avgLoss,
@@ -118,7 +130,11 @@ export function transformBacktestResponse(raw: BackendBacktestResponse): any {
       consecutiveLosses: additionalMetrics.consecutiveLosses,
       avgTradeDuration: additionalMetrics.avgTradeDuration,
       largestWin: additionalMetrics.largestWin,
-      largestLoss: additionalMetrics.largestLoss
+      largestLoss: additionalMetrics.largestLoss,
+      // Buy & Hold comparison
+      buyAndHoldReturn: ((pairedTrades[pairedTrades.length - 1]?.exitPrice - pairedTrades[0]?.entryPrice) / pairedTrades[0]?.entryPrice) || 0,
+      alpha: backtest.performance.totalReturn - (((pairedTrades[pairedTrades.length - 1]?.exitPrice - pairedTrades[0]?.entryPrice) / pairedTrades[0]?.entryPrice) || 0),
+      beta: 1.0 // Simplificado por ahora
     }
 
     if (process.env.NODE_ENV === 'development') {
@@ -131,6 +147,9 @@ export function transformBacktestResponse(raw: BackendBacktestResponse): any {
         performance,
         trades: pairedTrades,
         equityCurve: transformedEquityCurve,
+        buyAndHoldEquity: buyAndHoldEquity,
+        initialCapital: backtest.performance.initialCash,
+        finalCapital: backtest.performance.finalEquity,
         createdAt: new Date().toISOString(),
         // Metadata adicional
         strategy: backtest.strategy,
@@ -148,9 +167,61 @@ export function transformBacktestResponse(raw: BackendBacktestResponse): any {
 }
 
 /**
- * Transforma equity curve de array de números a objetos con fechas
+ * Genera la curva de equity para estrategia Buy & Hold
  */
-function transformEquityCurve(equityCurve: number[], startDate: string, endDate: string): Array<{date: string, equity: number}> {
+function generateBuyAndHoldEquity(
+  trades: any[],
+  initialCapital: number,
+  startDate: string,
+  endDate: string
+): Array<{time: number, value: number}> {
+  if (trades.length === 0) {
+    const start = new Date(startDate).getTime()
+    const end = new Date(endDate).getTime()
+    return [
+      { time: start, value: initialCapital },
+      { time: end, value: initialCapital }
+    ]
+  }
+
+  // Obtener el primer y último precio de los trades
+  const firstTrade = trades[0]
+  const lastTrade = trades[trades.length - 1]
+
+  const entryPrice = firstTrade.entryPrice
+  const exitPrice = lastTrade.exitPrice
+
+  // Calcular cuántas unidades podríamos comprar con el capital inicial
+  const quantity = initialCapital / entryPrice
+
+  // Generar puntos de equity basados en el cambio de precio
+  const start = new Date(startDate).getTime()
+  const end = new Date(endDate).getTime()
+  const duration = end - start
+  const points = 100 // Generar 100 puntos para una curva suave
+
+  const buyAndHoldEquity: Array<{time: number, value: number}> = []
+
+  for (let i = 0; i <= points; i++) {
+    const timestamp = start + (duration * i / points)
+    // Interpolación lineal del precio
+    const progress = i / points
+    const currentPrice = entryPrice + (exitPrice - entryPrice) * progress
+    const currentValue = quantity * currentPrice
+
+    buyAndHoldEquity.push({
+      time: timestamp,
+      value: currentValue
+    })
+  }
+
+  return buyAndHoldEquity
+}
+
+/**
+ * Transforma equity curve de array de números a objetos con timestamps
+ */
+function transformEquityCurve(equityCurve: number[], startDate: string, endDate: string): Array<{time: number, value: number}> {
   if (!equityCurve || equityCurve.length === 0) return []
 
   const start = new Date(startDate)
@@ -159,10 +230,10 @@ function transformEquityCurve(equityCurve: number[], startDate: string, endDate:
   const interval = totalDays / equityCurve.length
 
   return equityCurve.map((equity, index) => {
-    const date = new Date(start.getTime() + (index * interval * 24 * 60 * 60 * 1000))
+    const timestamp = start.getTime() + (index * interval * 24 * 60 * 60 * 1000)
     return {
-      date: date.toISOString().split('T')[0],
-      equity: equity
+      time: timestamp,
+      value: equity
     }
   })
 }
@@ -170,7 +241,7 @@ function transformEquityCurve(equityCurve: number[], startDate: string, endDate:
 /**
  * Calcula métricas adicionales a partir de los trades emparejados
  */
-function calculateAdditionalMetrics(trades: Trade[]) {
+function calculateAdditionalMetrics(trades: any[]) {
   if (trades.length === 0) {
     return {
       winRate: 0,
@@ -244,9 +315,9 @@ function calculateAdditionalMetrics(trades: Trade[]) {
     }
   }
 
-  // Average trade duration
+  // Average trade duration (convert from milliseconds to days)
   const avgTradeDuration = trades.length > 0
-    ? trades.reduce((sum, t) => sum + (t.duration || 0), 0) / trades.length
+    ? trades.reduce((sum, t) => sum + (t.duration || 0), 0) / trades.length / (1000 * 60 * 60 * 24)
     : 0
 
   // MAE/MFE (simplified - using largest loss/win as proxy)
@@ -291,11 +362,12 @@ function calculateAdditionalMetrics(trades: Trade[]) {
 
 /**
  * Empareja trades buy/sell en trades completos con entry/exit
+ * Retorna trades en el formato esperado por el frontend (timestamps en ms)
  */
-function pairTrades(rawTrades: BackendTrade[], symbol: string): Trade[] {
-  const pairedTrades: Trade[] = []
-  let position: BackendTrade | null = null
+function pairTrades(rawTrades: BackendTrade[], symbol: string): any[] {
+  const pairedTrades: any[] = []
   let tradeId = 1
+  let position: BackendTrade | null = null
 
   for (const trade of rawTrades) {
     if (trade.type === "buy" && !position) {
@@ -306,20 +378,19 @@ function pairTrades(rawTrades: BackendTrade[], symbol: string): Trade[] {
       const pnl = (trade.price - position.price) * position.size - (position.fee || 0) - (trade.fee || 0)
       const pnlPercent = ((trade.price - position.price) / position.price) * 100
       const durationMs = trade.time - position.time
-      const durationDays = Math.round(durationMs / (1000 * 60 * 60 * 24))
 
       pairedTrades.push({
-        id: `trade-${tradeId++}`,
+        id: tradeId++,
         symbol: symbol,
         side: "long",
-        entryDate: new Date(position.time).toISOString(),
-        exitDate: new Date(trade.time).toISOString(),
+        entryTime: position.time,
+        exitTime: trade.time,
         entryPrice: position.price,
         exitPrice: trade.price,
         quantity: position.size,
         pnl: pnl,
         pnlPercent: pnlPercent,
-        duration: durationDays
+        duration: durationMs
       })
 
       position = null
@@ -331,20 +402,19 @@ function pairTrades(rawTrades: BackendTrade[], symbol: string): Trade[] {
       const pnl = (position.price - trade.price) * position.size - (position.fee || 0) - (trade.fee || 0)
       const pnlPercent = ((position.price - trade.price) / position.price) * 100
       const durationMs = trade.time - position.time
-      const durationDays = Math.round(durationMs / (1000 * 60 * 60 * 24))
 
       pairedTrades.push({
-        id: `trade-${tradeId++}`,
+        id: tradeId++,
         symbol: symbol,
         side: "short",
-        entryDate: new Date(position.time).toISOString(),
-        exitDate: new Date(trade.time).toISOString(),
+        entryTime: position.time,
+        exitTime: trade.time,
         entryPrice: position.price,
         exitPrice: trade.price,
         quantity: position.size,
         pnl: pnl,
         pnlPercent: pnlPercent,
-        duration: durationDays
+        duration: durationMs
       })
 
       position = null
