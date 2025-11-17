@@ -54,6 +54,9 @@ export function BollingerBandsChart({ data, period = 20, stdDev = 2 }: Bollinger
       rightPriceScale: {
         borderColor: '#2B2B43',
       },
+      watermark: {
+        visible: false,
+      },
     })
 
     // Crear serie de candlesticks

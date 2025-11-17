@@ -82,6 +82,9 @@ export default function ChartCanvas({ data, onChartReady }: ChartCanvasProps) {
         mouseWheel: true,
         pinch: true,
       },
+      watermark: {
+        visible: false,
+      },
     });
 
     // Create candlestick series

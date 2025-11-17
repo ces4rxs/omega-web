@@ -35,6 +35,9 @@ export function UnderwaterChart({ data }: UnderwaterChartProps) {
       rightPriceScale: {
         borderColor: '#374151',
       },
+      watermark: {
+        visible: false,
+      },
     })
 
     chartRef.current = chart

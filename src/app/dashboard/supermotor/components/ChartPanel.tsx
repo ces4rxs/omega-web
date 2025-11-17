@@ -304,6 +304,9 @@ export default function ChartPanel({
         mouseWheel: true,
         pinch: true,
       },
+      watermark: {
+        visible: false,
+      },
     });
 
     chartRef.current = chart;
