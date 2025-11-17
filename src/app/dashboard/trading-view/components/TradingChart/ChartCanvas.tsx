@@ -82,6 +82,10 @@ export default function ChartCanvas({ data, onChartReady }: ChartCanvasProps) {
         mouseWheel: true,
         pinch: true,
       },
+    });
+
+    // Remove watermark
+    chart.applyOptions({
       watermark: {
         visible: false,
       },

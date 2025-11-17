@@ -56,6 +56,10 @@ export function StochasticChart({ data, kPeriod = 14, dPeriod = 3 }: StochasticC
           bottom: 0.1,
         },
       },
+    })
+
+    // Remove watermark
+    chart.current.applyOptions({
       watermark: {
         visible: false,
       },

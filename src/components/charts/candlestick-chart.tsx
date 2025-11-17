@@ -158,6 +158,10 @@ export function CandlestickChart({
       rightPriceScale: {
         borderColor: '#2B2B43',
       },
+    })
+
+    // Remove watermark
+    chart.current.applyOptions({
       watermark: {
         visible: false,
       },

@@ -63,6 +63,10 @@ export function MACDChart({
           bottom: 0.1,
         },
       },
+    })
+
+    // Remove watermark
+    chart.current.applyOptions({
       watermark: {
         visible: false,
       },

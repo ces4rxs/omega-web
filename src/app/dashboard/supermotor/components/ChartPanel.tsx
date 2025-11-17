@@ -304,12 +304,16 @@ export default function ChartPanel({
         mouseWheel: true,
         pinch: true,
       },
+    });
+
+    chartRef.current = chart;
+
+    // Remove watermark
+    chart.applyOptions({
       watermark: {
         visible: false,
       },
     });
-
-    chartRef.current = chart;
 
     // Handle resize
     const handleResize = () => {
