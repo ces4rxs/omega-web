@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, ReactNode } from 'react';
-import { useOmegaSocket, OmegaMeta, OmegaFusion, OmegaNews, OmegaRisk } from '@/hooks/useOmegaSocket';
+import { useOmegaSocket, OmegaMeta, OmegaFusion, OmegaNews, OmegaRisk, OmegaPortfolio } from '@/hooks/useOmegaSocket';
 
 interface OmegaLiveContextType {
     connected: boolean;
@@ -9,6 +9,7 @@ interface OmegaLiveContextType {
     fusion: OmegaFusion | null;
     news: OmegaNews | null;
     risk: OmegaRisk | null;
+    portfolio: OmegaPortfolio | null;
 }
 
 const OmegaLiveContext = createContext<OmegaLiveContextType | undefined>(undefined);

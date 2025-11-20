@@ -58,20 +58,6 @@ export function StochasticChart({ data, kPeriod = 14, dPeriod = 3 }: StochasticC
       },
     })
 
-    // Remove watermark
-    chart.current.applyOptions({
-      watermark: {
-        visible: false,
-      },
-    })
-
-    // Crear series
-    kLineSeries.current = chart.current.addSeries(LineSeries, {
-      color: '#3b82f6',
-      lineWidth: 2,
-      title: '%K',
-    })
-
     dLineSeries.current = chart.current.addSeries(LineSeries, {
       color: '#f59e0b',
       lineWidth: 2,
@@ -96,8 +82,8 @@ export function StochasticChart({ data, kPeriod = 14, dPeriod = 3 }: StochasticC
     // Calcular Stochastic
     const stochData = calculateStochastic(data, kPeriod, dPeriod)
 
-    kLineSeries.current.setData(stochData.k)
-    dLineSeries.current.setData(stochData.d)
+    kLineSeries.current?.setData(stochData.k)
+    dLineSeries.current?.setData(stochData.d)
 
     // Líneas horizontales
     if (stochData.k.length > 0) {

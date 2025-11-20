@@ -56,12 +56,12 @@ export function BollingerBandsChart({ data, period = 20, stdDev = 2 }: Bollinger
       },
     })
 
-    // Remove watermark
-    chart.current.applyOptions({
-      watermark: {
-        visible: false,
-      },
-    })
+    // Remove watermark - NOT SUPPORTED IN V5
+    // chart.current.applyOptions({
+    //   watermark: {
+    //     visible: false,
+    //   },
+    // })
 
     // Crear serie de candlesticks
     candlestickSeries.current = chart.current.addSeries(CandlestickSeries, {

@@ -56,12 +56,12 @@ export function ATRChart({ data, period = 14 }: ATRChartProps) {
       },
     })
 
-    // Remove watermark
-    chart.current.applyOptions({
-      watermark: {
-        visible: false,
-      },
-    })
+    // Remove watermark - NOT SUPPORTED IN V5
+    // chart.current.applyOptions({
+    //   watermark: {
+    //     visible: false,
+    //   },
+    // })
 
     // Crear serie ATR
     atrSeries.current = chart.current.addSeries(LineSeries, {

@@ -160,13 +160,6 @@ export function CandlestickChart({
       },
     })
 
-    // Remove watermark
-    chart.current.applyOptions({
-      watermark: {
-        visible: false,
-      },
-    })
-
     // Crear serie de candlesticks
     candlestickSeries.current = chart.current.addSeries(CandlestickSeries, {
       upColor: '#22c55e',

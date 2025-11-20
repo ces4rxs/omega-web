@@ -308,12 +308,12 @@ export default function ChartPanel({
 
     chartRef.current = chart;
 
-    // Remove watermark
-    chart.applyOptions({
-      watermark: {
-        visible: false,
-      },
-    });
+    // Remove watermark - NOT SUPPORTED IN V5
+    // chart.applyOptions({
+    //   watermark: {
+    //     visible: false,
+    //   },
+    // });
 
     // Handle resize
     const handleResize = () => {

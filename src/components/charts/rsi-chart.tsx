@@ -56,23 +56,9 @@ export function RSIChart({ data, period = 14 }: RSIChartProps) {
       },
     })
 
-    // Remove watermark
-    chart.current.applyOptions({
-      watermark: {
-        visible: false,
-      },
-    })
-
-    // Crear serie RSI
-    rsiSeries.current = chart.current.addSeries(LineSeries, {
-      color: '#8b5cf6',
-      lineWidth: 2,
-      title: `RSI ${period}`,
-    })
-
     // Calcular RSI
     const rsiData = calculateRSI(data, period)
-    rsiSeries.current.setData(rsiData)
+    rsiSeries.current?.setData(rsiData)
 
     // Añadir líneas de sobrecompra (70) y sobreventa (30)
     const overboughtLine = chart.current.addSeries(LineSeries, {

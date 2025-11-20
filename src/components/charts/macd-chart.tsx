@@ -65,12 +65,12 @@ export function MACDChart({
       },
     })
 
-    // Remove watermark
-    chart.current.applyOptions({
-      watermark: {
-        visible: false,
-      },
-    })
+    // Remove watermark - NOT SUPPORTED IN V5
+    // chart.current.applyOptions({
+    //   watermark: {
+    //     visible: false,
+    //   },
+    // })
 
     // Crear series
     histogramSeries.current = chart.current.addSeries(HistogramSeries, {

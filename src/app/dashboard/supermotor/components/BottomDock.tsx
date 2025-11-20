@@ -84,33 +84,30 @@ export default function BottomDock() {
           <div className="flex border-b border-[#2a2e39]">
             <button
               onClick={() => setActiveTab('equity')}
-              className={`flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors ${
-                activeTab === 'equity'
+              className={`flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors ${activeTab === 'equity'
                   ? 'text-white border-b-2 border-[#2962ff] bg-[#131722]'
                   : 'text-gray-400 hover:text-white'
-              }`}
+                }`}
             >
               <LineChart className="w-4 h-4" />
               Equity Curve
             </button>
             <button
               onClick={() => setActiveTab('trades')}
-              className={`flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors ${
-                activeTab === 'trades'
+              className={`flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors ${activeTab === 'trades'
                   ? 'text-white border-b-2 border-[#2962ff] bg-[#131722]'
                   : 'text-gray-400 hover:text-white'
-              }`}
+                }`}
             >
               <Table className="w-4 h-4" />
               Trade History
             </button>
             <button
               onClick={() => setActiveTab('metrics')}
-              className={`flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors ${
-                activeTab === 'metrics'
+              className={`flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors ${activeTab === 'metrics'
                   ? 'text-white border-b-2 border-[#2962ff] bg-[#131722]'
                   : 'text-gray-400 hover:text-white'
-              }`}
+                }`}
             >
               <BarChart3 className="w-4 h-4" />
               Metrics
@@ -184,12 +181,12 @@ function EquityCurveTab({ results, selectedTradeId }: EquityCurveTabProps) {
       },
     });
 
-    // Remove watermark
-    chart.applyOptions({
-      watermark: {
-        visible: false,
-      },
-    });
+    // Remove watermark - NOT SUPPORTED IN V5
+    // chart.applyOptions({
+    //   watermark: {
+    //     visible: false,
+    //   },
+    // });
 
     // Strategy equity line (solid blue)
     const lineSeries = chart.addSeries(LineSeries, {
@@ -362,16 +359,14 @@ function TradeHistoryTab({ results, selectedTradeId, onTradeSelect }: TradeHisto
             <tr
               key={trade.id}
               onClick={() => onTradeSelect(trade.id)}
-              className={`border-b border-[#2a2e39] hover:bg-[#2a2e39] cursor-pointer transition-colors ${
-                selectedTradeId === trade.id ? 'bg-[#2962ff]/20' : ''
-              }`}
+              className={`border-b border-[#2a2e39] hover:bg-[#2a2e39] cursor-pointer transition-colors ${selectedTradeId === trade.id ? 'bg-[#2962ff]/20' : ''
+                }`}
             >
               <td className="px-3 py-2 text-white">{trade.id}</td>
               <td className="px-3 py-2">
                 <span
-                  className={`px-2 py-0.5 rounded text-xs font-medium ${
-                    trade.side === 'long' ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'
-                  }`}
+                  className={`px-2 py-0.5 rounded text-xs font-medium ${trade.side === 'long' ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'
+                    }`}
                 >
                   {trade.side.toUpperCase()}
                 </span>

@@ -84,12 +84,12 @@ export default function ChartCanvas({ data, onChartReady }: ChartCanvasProps) {
       },
     });
 
-    // Remove watermark
-    chart.applyOptions({
-      watermark: {
-        visible: false,
-      },
-    });
+    // Remove watermark - NOT SUPPORTED IN V5
+    // chart.applyOptions({
+    //   watermark: {
+    //     visible: false,
+    //   },
+    // });
 
     // Create candlestick series
     const candleSeries = chart.addSeries(CandlestickSeries, {
