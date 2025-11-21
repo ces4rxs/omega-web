@@ -161,11 +161,10 @@ export default function DashboardLayout({
                 transition={{ delay: index * 0.05 }}
                 onClick={() => router.push(item.href)}
                 title={collapsed ? item.name : undefined}
-                className={`flex items-center ${collapsed ? 'justify-center' : 'justify-between'} w-full ${collapsed ? 'px-2' : 'px-3'} py-2.5 rounded-lg transition-all group relative overflow-hidden ${
-                  isActive
+                className={`flex items-center ${collapsed ? 'justify-center' : 'justify-between'} w-full ${collapsed ? 'px-2' : 'px-3'} py-2.5 rounded-lg transition-all group relative overflow-hidden ${isActive
                     ? "bg-gradient-to-r from-blue-600/20 to-cyan-600/20 text-blue-400 border border-blue-500/30 shadow-lg shadow-blue-500/10"
                     : "hover:bg-white/5 hover:translate-x-1"
-                }`}
+                  }`}
               >
                 {isActive && (
                   <motion.div
@@ -200,11 +199,10 @@ export default function DashboardLayout({
         <button
           onClick={() => router.push('/dashboard/settings')}
           title={collapsed ? "Settings" : undefined}
-          className={`flex items-center ${collapsed ? 'justify-center px-2' : 'gap-3 px-3'} w-full py-2.5 rounded-lg transition-all ${
-            pathname === '/dashboard/settings'
+          className={`flex items-center ${collapsed ? 'justify-center px-2' : 'gap-3 px-3'} w-full py-2.5 rounded-lg transition-all ${pathname === '/dashboard/settings'
               ? "bg-blue-600/20 text-blue-400 border border-blue-500/30"
               : "hover:bg-white/5 text-gray-300 hover:text-white"
-          }`}
+            }`}
         >
           <Settings size={18} />
           {!collapsed && <span className="font-medium">Settings</span>}
@@ -241,6 +239,18 @@ export default function DashboardLayout({
       </div>
     </>
   )
+
+  // FIX: Omega OS Migration
+  // Si estamos en /dashboard, usamos el layout interno de Omega OS (DashboardShell)
+  // por lo que no renderizamos el Sidebar de Backtester Pro aquí.
+  if (pathname === '/dashboard') {
+    return (
+      <>
+        {children}
+        <DevTierSwitcher />
+      </>
+    )
+  }
 
   return (
     <div className="flex min-h-screen bg-gradient-to-br from-black via-zinc-950 to-zinc-900 text-white">
