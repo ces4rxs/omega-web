@@ -1,9 +1,11 @@
 import { io } from 'socket.io-client';
 
-const SOCKET_URL = process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:3001';
+// WebSocket URL - uses environment variable or defaults to Render production
+const WS_URL = process.env.NEXT_PUBLIC_WS_URL || 'wss://backtester-pro-1.onrender.com';
 
-export const socket = io(SOCKET_URL, {
+export const socket = io(WS_URL, {
     transports: ['websocket'],
+    withCredentials: true,
     reconnection: true,
     reconnectionAttempts: Infinity,
     reconnectionDelay: 1000,
