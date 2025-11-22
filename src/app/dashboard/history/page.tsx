@@ -6,7 +6,6 @@ import { OmegaCard } from "@/components/omega-ui/OmegaCard"
 import { OmegaHeader } from "@/components/omega-ui/OmegaHeader"
 import { OmegaSkeleton } from "@/components/omega-ui/OmegaSkeleton"
 import { OmegaBadge } from "@/components/omega-ui/OmegaBadge"
-import { DashboardShell } from "@/components/layout/DashboardShell"
 import { BarChart2, TrendingUp, TrendingDown, Clock, Activity } from "lucide-react"
 
 interface BacktestResult {
@@ -83,113 +82,111 @@ export default function HistoryPage() {
   }
 
   return (
-    <DashboardShell>
-      <div className="p-6 space-y-6">
-        <OmegaHeader
-          title="BACKTEST HISTORY"
-          subtitle="Historical backtest executions and performance analysis"
-        />
+    <div className="p-6 space-y-6">
+      <OmegaHeader
+        title="BACKTEST HISTORY"
+        subtitle="Historical backtest executions and performance analysis"
+      />
 
-        <OmegaCard title="Execution History" glow="blue">
-          {isLoading ? (
-            <div className="space-y-3">
-              <OmegaSkeleton className="h-16 w-full" />
-              <OmegaSkeleton className="h-16 w-full delay-75" />
-              <OmegaSkeleton className="h-16 w-full delay-150" />
-            </div>
-          ) : error ? (
-            <div className="text-center py-12">
-              <Activity className="w-12 h-12 mx-auto text-red-400 mb-4" />
-              <p className="text-sm text-red-400 font-mono">{error}</p>
-              <p className="text-xs text-gray-500 mt-2">Check console for details</p>
-            </div>
-          ) : backtests.length === 0 ? (
-            <div className="text-center py-12">
-              <BarChart2 className="w-12 h-12 mx-auto text-gray-600 mb-4" />
-              <p className="text-sm text-gray-500 font-mono">No backtests found</p>
-              <p className="text-xs text-gray-600 mt-2">
-                Run your first backtest to see results here
-              </p>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-gray-800/50">
-                    <th className="text-left py-3 px-4 text-xs font-mono text-gray-500 uppercase tracking-wider">
-                      Strategy
-                    </th>
-                    <th className="text-left py-3 px-4 text-xs font-mono text-gray-500 uppercase tracking-wider">
-                      Symbol
-                    </th>
-                    <th className="text-left py-3 px-4 text-xs font-mono text-gray-500 uppercase tracking-wider">
-                      Timeframe
-                    </th>
-                    <th className="text-left py-3 px-4 text-xs font-mono text-gray-500 uppercase tracking-wider">
-                      Date
-                    </th>
-                    <th className="text-right py-3 px-4 text-xs font-mono text-gray-500 uppercase tracking-wider">
-                      Return
-                    </th>
-                    <th className="text-center py-3 px-4 text-xs font-mono text-gray-500 uppercase tracking-wider">
-                      Status
-                    </th>
+      <OmegaCard title="Execution History" glow="blue">
+        {isLoading ? (
+          <div className="space-y-3">
+            <OmegaSkeleton className="h-16 w-full" />
+            <OmegaSkeleton className="h-16 w-full delay-75" />
+            <OmegaSkeleton className="h-16 w-full delay-150" />
+          </div>
+        ) : error ? (
+          <div className="text-center py-12">
+            <Activity className="w-12 h-12 mx-auto text-red-400 mb-4" />
+            <p className="text-sm text-red-400 font-mono">{error}</p>
+            <p className="text-xs text-gray-500 mt-2">Check console for details</p>
+          </div>
+        ) : backtests.length === 0 ? (
+          <div className="text-center py-12">
+            <BarChart2 className="w-12 h-12 mx-auto text-gray-600 mb-4" />
+            <p className="text-sm text-gray-500 font-mono">No backtests found</p>
+            <p className="text-xs text-gray-600 mt-2">
+              Run your first backtest to see results here
+            </p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-gray-800/50">
+                  <th className="text-left py-3 px-4 text-xs font-mono text-gray-500 uppercase tracking-wider">
+                    Strategy
+                  </th>
+                  <th className="text-left py-3 px-4 text-xs font-mono text-gray-500 uppercase tracking-wider">
+                    Symbol
+                  </th>
+                  <th className="text-left py-3 px-4 text-xs font-mono text-gray-500 uppercase tracking-wider">
+                    Timeframe
+                  </th>
+                  <th className="text-left py-3 px-4 text-xs font-mono text-gray-500 uppercase tracking-wider">
+                    Date
+                  </th>
+                  <th className="text-right py-3 px-4 text-xs font-mono text-gray-500 uppercase tracking-wider">
+                    Return
+                  </th>
+                  <th className="text-center py-3 px-4 text-xs font-mono text-gray-500 uppercase tracking-wider">
+                    Status
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {backtests.map((bt) => (
+                  <tr
+                    key={bt.id}
+                    className="border-b border-gray-800/30 hover:bg-white/5 transition-colors"
+                  >
+                    <td className="py-4 px-4">
+                      <span className="text-sm font-semibold text-white font-mono">
+                        {bt.strategyName}
+                      </span>
+                    </td>
+                    <td className="py-4 px-4">
+                      <span className="text-sm text-cyan-400 font-mono font-bold">
+                        {bt.symbol}
+                      </span>
+                    </td>
+                    <td className="py-4 px-4">
+                      <span className="text-sm text-gray-400 font-mono">
+                        {bt.timeframe}
+                      </span>
+                    </td>
+                    <td className="py-4 px-4">
+                      <div className="flex items-center gap-2 text-xs text-gray-500 font-mono">
+                        <Clock className="w-3 h-3" />
+                        {formatDate(bt.startedAt)}
+                      </div>
+                    </td>
+                    <td className="py-4 px-4 text-right">
+                      <div className="flex items-center justify-end gap-1">
+                        {bt.netReturn >= 0 ? (
+                          <TrendingUp className="w-4 h-4 text-emerald-400" />
+                        ) : (
+                          <TrendingDown className="w-4 h-4 text-red-400" />
+                        )}
+                        <span
+                          className={`text-sm font-bold font-mono ${bt.netReturn >= 0 ? "text-emerald-400" : "text-red-400"
+                            }`}
+                        >
+                          {bt.netReturn >= 0 ? "+" : ""}
+                          {bt.netReturn.toFixed(2)}%
+                        </span>
+                      </div>
+                    </td>
+                    <td className="py-4 px-4 text-center">
+                      {getStatusBadge(bt.status)}
+                    </td>
                   </tr>
-                </thead>
-                <tbody>
-                  {backtests.map((bt) => (
-                    <tr
-                      key={bt.id}
-                      className="border-b border-gray-800/30 hover:bg-white/5 transition-colors"
-                    >
-                      <td className="py-4 px-4">
-                        <span className="text-sm font-semibold text-white font-mono">
-                          {bt.strategyName}
-                        </span>
-                      </td>
-                      <td className="py-4 px-4">
-                        <span className="text-sm text-cyan-400 font-mono font-bold">
-                          {bt.symbol}
-                        </span>
-                      </td>
-                      <td className="py-4 px-4">
-                        <span className="text-sm text-gray-400 font-mono">
-                          {bt.timeframe}
-                        </span>
-                      </td>
-                      <td className="py-4 px-4">
-                        <div className="flex items-center gap-2 text-xs text-gray-500 font-mono">
-                          <Clock className="w-3 h-3" />
-                          {formatDate(bt.startedAt)}
-                        </div>
-                      </td>
-                      <td className="py-4 px-4 text-right">
-                        <div className="flex items-center justify-end gap-1">
-                          {bt.netReturn >= 0 ? (
-                            <TrendingUp className="w-4 h-4 text-emerald-400" />
-                          ) : (
-                            <TrendingDown className="w-4 h-4 text-red-400" />
-                          )}
-                          <span
-                            className={`text-sm font-bold font-mono ${bt.netReturn >= 0 ? "text-emerald-400" : "text-red-400"
-                              }`}
-                          >
-                            {bt.netReturn >= 0 ? "+" : ""}
-                            {bt.netReturn.toFixed(2)}%
-                          </span>
-                        </div>
-                      </td>
-                      <td className="py-4 px-4 text-center">
-                        {getStatusBadge(bt.status)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </OmegaCard>
-      </div>
-    </DashboardShell>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </OmegaCard>
+    </div>
   )
 }
