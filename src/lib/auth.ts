@@ -17,6 +17,11 @@ export async function getCurrentUser(): Promise<User> {
   return api.get<User>("/auth/me")
 }
 
+// Cerrar sesión
+export async function logoutUser(): Promise<void> {
+  return api.post<void>("/auth/logout")
+}
+
 // Recuperación de contraseña
 export async function forgotPassword(email: string): Promise<{ message: string; sent: boolean }> {
   return api.post("/auth/forgot", { email })

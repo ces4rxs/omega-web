@@ -4,6 +4,7 @@ import React, { createContext, useContext, useEffect, useState, useMemo } from "
 import { useRouter, usePathname } from "next/navigation";
 import { User, AuthResponse } from "@/lib/types";
 import { loginUser as apiLogin, getCurrentUser } from "@/lib/auth";
+import { api } from "@/lib/api";
 
 interface AuthContextType {
     user: User | null;
@@ -21,25 +22,25 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const router = useRouter();
     const pathname = usePathname();
 
-    // Bootstrapping session
+    // Bootstrap: Validate session with backend
     useEffect(() => {
         const bootstrap = async () => {
-            const token = localStorage.getItem("accessToken");
-            const storedUser = localStorage.getItem("user");
-
-            if (token && storedUser) {
-                try {
-                    // Optimistic load
-                    setUser(JSON.parse(storedUser));
-
-                    // Optional: Verify with server if needed, but for now trust local + 401 interceptors
-                    // await getCurrentUser(); 
-                } catch (e) {
-                    console.error("Session restore failed", e);
-                    logout();
+            try {
+                // Call backend to validate session
+                const userData = await getCurrentUser();
+                setUser(userData);
+            } catch (error) {
+                // Session invalid or user not authenticated
+                setUser(null);
+                // Clear any stale tokens
+                if (typeof window !== 'undefined') {
+                    localStorage.removeItem("accessToken");
+                    localStorage.removeItem("refreshToken");
+                    localStorage.removeItem("user");
                 }
+            } finally {
+                setIsLoading(false);
             }
-            setIsLoading(false);
         };
 
         bootstrap();
@@ -48,15 +49,20 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const login = async (email: string, password: string) => {
         setIsLoading(true);
         try {
+            // Step 1: Authenticate with backend
             const response = await apiLogin(email, password);
 
+            // Step 2: Store tokens
             localStorage.setItem("accessToken", response.accessToken);
             localStorage.setItem("user", JSON.stringify(response.user));
             if (response.refreshToken) {
                 localStorage.setItem("refreshToken", response.refreshToken);
             }
 
-            setUser(response.user);
+            // Step 3: Fetch full user profile from backend
+            const userData = await getCurrentUser();
+            setUser(userData);
+
             router.push("/dashboard");
         } catch (error) {
             throw error;
@@ -65,13 +71,22 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         }
     };
 
-    const logout = () => {
-        localStorage.removeItem("accessToken");
-        localStorage.removeItem("refreshToken");
-        localStorage.removeItem("user");
-        localStorage.removeItem("sidebarCollapsed");
-        setUser(null);
-        router.push("/login");
+    const logout = async () => {
+        try {
+            // Call backend logout endpoint
+            await api.post("/auth/logout");
+        } catch (error) {
+            // Log but don't block logout on error
+            console.warn("Logout endpoint failed:", error);
+        } finally {
+            // Clear local state regardless
+            localStorage.removeItem("accessToken");
+            localStorage.removeItem("refreshToken");
+            localStorage.removeItem("user");
+            localStorage.removeItem("sidebarCollapsed");
+            setUser(null);
+            router.push("/login");
+        }
     };
 
     // Protect routes
