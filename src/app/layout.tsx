@@ -22,11 +22,11 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en" className="dark">
       <body className={`${inter.variable} ${jetbrainsMono.variable} font-sans min-h-screen bg-black text-white antialiased selection:bg-purple-500/30 selection:text-purple-200`}>
-        <OmegaLiveProvider>
-          <Providers>
+        <Providers>
+          <OmegaLiveProvider>
             {children}
-          </Providers>
-        </OmegaLiveProvider>
+          </OmegaLiveProvider>
+        </Providers>
       </body>
     </html>
   );

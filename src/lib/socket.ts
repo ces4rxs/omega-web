@@ -9,5 +9,7 @@ export const socket = io(WS_URL, {
     reconnection: true,
     reconnectionAttempts: Infinity,
     reconnectionDelay: 1000,
-    autoConnect: true,
+    reconnectionDelayMax: 5000, // Cap max delay
+    randomizationFactor: 0.5,   // Jitter to prevent thundering herd
+    autoConnect: false,         // Manual connection only
 });

@@ -124,6 +124,19 @@ export const useOmegaSocket = () => {
         };
     }, []);
 
+    // Explicit connection methods
+    const connect = () => {
+        if (!socket.connected) {
+            socket.connect();
+        }
+    };
+
+    const disconnect = () => {
+        if (socket.connected) {
+            socket.disconnect();
+        }
+    };
+
     const value = useMemo(() => ({
         connected,
         meta,
@@ -131,6 +144,8 @@ export const useOmegaSocket = () => {
         news,
         risk,
         portfolio,
+        connect,
+        disconnect
     }), [connected, meta, fusion, news, risk, portfolio]);
 
     return value;

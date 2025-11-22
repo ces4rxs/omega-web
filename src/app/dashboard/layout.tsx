@@ -21,6 +21,7 @@ import {
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { DevTierSwitcher } from "@/components/dev-tier-switcher"
+import { useAuth } from "@/contexts/AuthProvider"
 
 interface NavItem {
   name: string
@@ -46,38 +47,19 @@ export default function DashboardLayout({
 }) {
   const router = useRouter()
   const pathname = usePathname()
-  const [user, setUser] = useState<any>(null)
-  const [isLoading, setIsLoading] = useState(true)
+  const { user, logout, isLoading } = useAuth()
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const storedUser = localStorage.getItem('user')
-      const token = localStorage.getItem('accessToken')
-
-      if (!token) {
-        router.push('/login')
-        return
-      }
-
-      if (storedUser) {
-        try {
-          setUser(JSON.parse(storedUser))
-        } catch (e) {
-          console.error('Error parsing user:', e)
-        }
-      }
-
       // Load sidebar collapsed state
       const sidebarCollapsed = localStorage.getItem('sidebarCollapsed')
       if (sidebarCollapsed === 'true') {
         setIsSidebarCollapsed(true)
       }
-
-      setIsLoading(false)
     }
-  }, [router])
+  }, [])
 
   useEffect(() => {
     setIsMobileMenuOpen(false)
@@ -115,11 +97,7 @@ export default function DashboardLayout({
   }
 
   const handleLogout = () => {
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem('user')
-      localStorage.removeItem('accessToken')
-      router.push('/login')
-    }
+    logout()
   }
 
   const toggleSidebar = () => {

@@ -10,6 +10,15 @@ import { Brain, Activity, TrendingUp, Zap, Clock } from 'lucide-react'
 export const MetaCognitivePanel: React.FC = () => {
     const { meta, connected } = useOmegaLive()
 
+    return <MetaCognitiveContent meta={meta} connected={connected} />
+}
+
+interface MetaCognitiveContentProps {
+    meta: any; // typed as OmegaMeta | null in context but keeping flexible here
+    connected: boolean;
+}
+
+const MetaCognitiveContent = React.memo(({ meta, connected }: MetaCognitiveContentProps) => {
     // Helper to format uptime (seconds to readable format)
     const formatUptime = (seconds: number): string => {
         const hours = Math.floor(seconds / 3600)
@@ -191,4 +200,5 @@ export const MetaCognitivePanel: React.FC = () => {
             </div>
         </OmegaCard>
     )
-}
+})
+MetaCognitiveContent.displayName = 'MetaCognitiveContent'

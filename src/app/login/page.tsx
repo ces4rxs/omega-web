@@ -3,15 +3,15 @@
 import Image from "next/image";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { loginUser } from "@/lib/auth";
+import { useAuth } from "@/contexts/AuthProvider";
 import { motion } from "framer-motion";
 
 export default function LoginPage() {
   const router = useRouter();
+  const { login, isLoading } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -26,19 +26,11 @@ export default function LoginPage() {
       return;
     }
 
-    setLoading(true);
     try {
-      const authData = await loginUser(email, password);
-      localStorage.setItem("accessToken", authData.accessToken);
-      localStorage.setItem("user", JSON.stringify(authData.user));
-      if (authData.refreshToken)
-        localStorage.setItem("refreshToken", authData.refreshToken);
-
-      router.push("/dashboard");
+      await login(email, password);
+      // Router push is handled in AuthProvider
     } catch {
       setError("⚠️ Credenciales incorrectas o servidor no disponible.");
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -137,14 +129,13 @@ export default function LoginPage() {
 
         <button
           type="submit"
-          disabled={loading}
-          className={`w-full py-2.5 rounded-md font-semibold tracking-wide transition-all ${
-            loading
+          disabled={isLoading}
+          className={`w-full py-2.5 rounded-md font-semibold tracking-wide transition-all ${isLoading
               ? "bg-blue-800/60 cursor-wait"
               : "bg-gradient-to-r from-blue-600 to-indigo-700 hover:from-blue-500 hover:to-indigo-600 active:scale-95"
-          }`}
+            }`}
         >
-          {loading ? "Conectando..." : "Entrar"}
+          {isLoading ? "Conectando..." : "Entrar"}
         </button>
 
         {error && (

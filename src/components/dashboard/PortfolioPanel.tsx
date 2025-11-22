@@ -12,8 +12,17 @@ import {
 import { motion } from 'framer-motion'
 
 export const PortfolioPanel: React.FC = () => {
-    const { portfolio, connected, fusion, meta, news } = useOmegaLive()
+    const { portfolio, connected } = useOmegaLive()
 
+    return <PortfolioContent portfolio={portfolio} connected={connected} />
+}
+
+interface PortfolioContentProps {
+    portfolio: any; // typed as OmegaPortfolio | null in context
+    connected: boolean;
+}
+
+const PortfolioContent = React.memo(({ portfolio, connected }: PortfolioContentProps) => {
     // Helper: Format percentage
     const formatPercent = (value: number): string => {
         return `${(value * 100).toFixed(1)}%`
@@ -102,7 +111,7 @@ export const PortfolioPanel: React.FC = () => {
                                     Suggested Allocation
                                 </h3>
                                 <div className="space-y-2">
-                                    {portfolio.allocations.map((allocation, idx) => {
+                                    {portfolio.allocations.map((allocation: any, idx: number) => {
                                         const weightColor = getWeightColor(allocation.weight)
 
                                         return (
@@ -247,7 +256,7 @@ export const PortfolioPanel: React.FC = () => {
                                         Correlation Matrix
                                     </h3>
                                     <div className="bg-white/5 border border-gray-800/40 rounded-lg p-2 space-y-1">
-                                        {portfolio.correlations.slice(0, 8).map((corr, idx) => (
+                                        {portfolio.correlations.slice(0, 8).map((corr: any, idx: number) => (
                                             <div key={idx} className="flex items-center justify-between text-[10px] font-mono">
                                                 <span className="text-gray-400">
                                                     {corr.asset1} × {corr.asset2}
@@ -269,7 +278,7 @@ export const PortfolioPanel: React.FC = () => {
                                         AI Suggestions
                                     </h3>
                                     <div className="space-y-2">
-                                        {portfolio.suggestions.map((suggestion, idx) => {
+                                        {portfolio.suggestions.map((suggestion: any, idx: number) => {
                                             const priorityStyle = getPriorityStyle(suggestion.priority)
 
                                             return (
@@ -301,7 +310,7 @@ export const PortfolioPanel: React.FC = () => {
 
                                                         {suggestion.assets && suggestion.assets.length > 0 && (
                                                             <div className="flex flex-wrap gap-1 mb-2">
-                                                                {suggestion.assets.map((asset, i) => (
+                                                                {suggestion.assets.map((asset: string, i: number) => (
                                                                     <span key={i} className="text-[9px] px-1.5 py-0.5 bg-white/10 text-gray-300 rounded font-mono">
                                                                         {asset}
                                                                     </span>
@@ -363,4 +372,5 @@ export const PortfolioPanel: React.FC = () => {
             </div>
         </OmegaCard>
     )
-}
+})
+PortfolioContent.displayName = 'PortfolioContent'

@@ -31,6 +31,15 @@ export const NewsFeedPanel: React.FC = () => {
         }
     }, [news])
 
+    return <NewsFeedContent newsHistory={newsHistory} connected={connected} />
+}
+
+interface NewsFeedContentProps {
+    newsHistory: NewsItem[];
+    connected: boolean;
+}
+
+const NewsFeedContent = React.memo(({ newsHistory, connected }: NewsFeedContentProps) => {
     // Format timestamp
     const formatTime = (timestamp: number): string => {
         const date = new Date(timestamp)
@@ -241,4 +250,5 @@ export const NewsFeedPanel: React.FC = () => {
             </div>
         </OmegaCard>
     )
-}
+})
+NewsFeedContent.displayName = 'NewsFeedContent'

@@ -26,9 +26,32 @@ import {
 import { useTier } from "@/hooks/use-tier"
 import { DashboardShell } from "@/components/layout/DashboardShell"
 import { LiveDebugger } from "@/components/diagnostic/LiveDebugger"
-import { MetaCognitivePanel } from "@/components/dashboard/MetaCognitivePanel"
-import { NewsFeedPanel } from "@/components/dashboard/NewsFeedPanel"
-import { PortfolioPanel } from "@/components/dashboard/PortfolioPanel"
+import dynamic from 'next/dynamic'
+import { OmegaSkeleton } from "@/components/omega-ui/OmegaSkeleton"
+
+const MetaCognitivePanel = dynamic(
+  () => import("@/components/dashboard/MetaCognitivePanel").then(mod => mod.MetaCognitivePanel),
+  {
+    ssr: false,
+    loading: () => <div className="h-full w-full bg-white/5 rounded-xl border border-white/10 p-4"><OmegaSkeleton className="h-full w-full" /></div>
+  }
+)
+
+const NewsFeedPanel = dynamic(
+  () => import("@/components/dashboard/NewsFeedPanel").then(mod => mod.NewsFeedPanel),
+  {
+    ssr: false,
+    loading: () => <div className="h-full w-full bg-white/5 rounded-xl border border-white/10 p-4"><OmegaSkeleton className="h-full w-full" /></div>
+  }
+)
+
+const PortfolioPanel = dynamic(
+  () => import("@/components/dashboard/PortfolioPanel").then(mod => mod.PortfolioPanel),
+  {
+    ssr: false,
+    loading: () => <div className="h-full w-full bg-white/5 rounded-xl border border-white/10 p-4"><OmegaSkeleton className="h-full w-full" /></div>
+  }
+)
 
 export default function DashboardPage() {
   const router = useRouter()

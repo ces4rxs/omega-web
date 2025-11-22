@@ -1,7 +1,8 @@
 'use client';
 
-import React, { createContext, useContext, ReactNode } from 'react';
+import React, { createContext, useContext, ReactNode, useEffect } from 'react';
 import { useOmegaSocket, OmegaMeta, OmegaFusion, OmegaNews, OmegaRisk, OmegaPortfolio } from '@/hooks/useOmegaSocket';
+import { useAuth } from '@/contexts/AuthProvider';
 
 interface OmegaLiveContextType {
     connected: boolean;
@@ -16,6 +17,16 @@ const OmegaLiveContext = createContext<OmegaLiveContextType | undefined>(undefin
 
 export const OmegaLiveProvider = ({ children }: { children: ReactNode }) => {
     const socketState = useOmegaSocket();
+    const { isAuthenticated } = useAuth();
+
+    // Connection management based on Auth
+    useEffect(() => {
+        if (isAuthenticated) {
+            socketState.connect();
+        } else {
+            socketState.disconnect();
+        }
+    }, [isAuthenticated, socketState]);
 
     return (
         <OmegaLiveContext.Provider value={socketState}>
