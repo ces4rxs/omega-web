@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { socket } from '@/lib/socket';
 
 export interface OmegaMeta {
@@ -124,12 +124,14 @@ export const useOmegaSocket = () => {
         };
     }, []);
 
-    return {
+    const value = useMemo(() => ({
         connected,
         meta,
         fusion,
         news,
         risk,
         portfolio,
-    };
+    }), [connected, meta, fusion, news, risk, portfolio]);
+
+    return value;
 };

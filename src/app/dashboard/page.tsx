@@ -65,7 +65,7 @@ export default function DashboardPage() {
           {/* CENTER: Main Content (5 cols) */}
           <div className="lg:col-span-5 h-full overflow-y-auto space-y-4">
             {/* LiveDebugger for testing WebSocket */}
-            <LiveDebugger />
+            {/* <LiveDebugger /> */}
 
             {/* Welcome Header */}
             <div className="flex items-center gap-3">

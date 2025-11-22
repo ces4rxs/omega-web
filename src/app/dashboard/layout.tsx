@@ -85,10 +85,30 @@ export default function DashboardLayout({
 
   if (isLoading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-black via-zinc-950 to-zinc-900">
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
-          <p className="text-white text-lg">Cargando...</p>
+      <div className="flex min-h-screen bg-black text-white">
+        {/* Sidebar Skeleton */}
+        <div className="hidden lg:flex w-72 border-r border-white/10 bg-black/30 p-6 flex-col gap-8">
+          <div className="flex items-center justify-center mb-4">
+            <div className="w-6 h-6 bg-white/10 rounded-full animate-pulse" />
+          </div>
+          <div className="space-y-3">
+            {[...Array(6)].map((_, i) => (
+              <div key={i} className="h-10 bg-white/5 rounded-lg animate-pulse" />
+            ))}
+          </div>
+        </div>
+
+        {/* Content Skeleton */}
+        <div className="flex-1 p-8 space-y-6">
+          <div className="flex items-center justify-between">
+            <div className="h-8 w-48 bg-white/10 rounded animate-pulse" />
+            <div className="h-8 w-32 bg-white/10 rounded animate-pulse" />
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="h-64 bg-white/5 rounded-xl animate-pulse" />
+            <div className="h-64 bg-white/5 rounded-xl animate-pulse" />
+            <div className="h-64 bg-white/5 rounded-xl animate-pulse" />
+          </div>
         </div>
       </div>
     )
@@ -162,8 +182,8 @@ export default function DashboardLayout({
                 onClick={() => router.push(item.href)}
                 title={collapsed ? item.name : undefined}
                 className={`flex items-center ${collapsed ? 'justify-center' : 'justify-between'} w-full ${collapsed ? 'px-2' : 'px-3'} py-2.5 rounded-lg transition-all group relative overflow-hidden ${isActive
-                    ? "bg-gradient-to-r from-blue-600/20 to-cyan-600/20 text-blue-400 border border-blue-500/30 shadow-lg shadow-blue-500/10"
-                    : "hover:bg-white/5 hover:translate-x-1"
+                  ? "bg-gradient-to-r from-blue-600/20 to-cyan-600/20 text-blue-400 border border-blue-500/30 shadow-lg shadow-blue-500/10"
+                  : "hover:bg-white/5 hover:translate-x-1"
                   }`}
               >
                 {isActive && (
@@ -200,8 +220,8 @@ export default function DashboardLayout({
           onClick={() => router.push('/dashboard/settings')}
           title={collapsed ? "Settings" : undefined}
           className={`flex items-center ${collapsed ? 'justify-center px-2' : 'gap-3 px-3'} w-full py-2.5 rounded-lg transition-all ${pathname === '/dashboard/settings'
-              ? "bg-blue-600/20 text-blue-400 border border-blue-500/30"
-              : "hover:bg-white/5 text-gray-300 hover:text-white"
+            ? "bg-blue-600/20 text-blue-400 border border-blue-500/30"
+            : "hover:bg-white/5 text-gray-300 hover:text-white"
             }`}
         >
           <Settings size={18} />

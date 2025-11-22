@@ -20,7 +20,6 @@ export function generateSmartAlerts(impact: ImpactAnalysis): SmartAlert[] {
 
   // Safe number conversions with fallback to 0
   const move1h = Number(impact.move1h ?? 0);
-  const move4h = Number(impact.move4h ?? 0);
   const volatility1h = Number(impact.volatility1h ?? 0);
   const volatility4h = Number(impact.volatility4h ?? 0);
   const impactScore = Number(impact.impactScore ?? 0);

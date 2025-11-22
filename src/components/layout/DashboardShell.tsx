@@ -3,7 +3,7 @@
 import React from 'react'
 import { useOmegaLive } from '@/contexts/OmegaLiveProvider'
 import { OmegaOrb } from '@/components/dashboard/OmegaOrb'
-import { Badge } from '@/components/ui/badge'
+import { OmegaBadge } from '@/components/omega-ui/OmegaBadge'
 import {
     LayoutGrid,
     Activity,
@@ -55,8 +55,11 @@ export const DashboardShell: React.FC<DashboardShellProps> = ({ children }) => {
                         <div className="h-6 w-[1px] bg-gray-800 mx-2"></div>
                         <div className="flex flex-col">
                             <span className="text-[10px] text-gray-500 uppercase leading-none mb-1">System State</span>
-                            <span className="text-xs text-cyan-400 font-bold tracking-widest">
-                                {meta?.status || 'INITIALIZING...'}
+                            <span className={`text-xs font-bold tracking-widest ${!connected ? 'text-red-500' :
+                                !meta ? 'text-yellow-500' :
+                                    'text-cyan-400'
+                                }`}>
+                                {!connected ? 'OFFLINE' : (meta?.status || 'SYNCING...')}
                             </span>
                         </div>
                     </div>
@@ -74,9 +77,9 @@ export const DashboardShell: React.FC<DashboardShellProps> = ({ children }) => {
                             <Bell size={18} className="text-gray-400" />
                             <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full"></span>
                         </button>
-                        <Badge variant={connected ? "outline" : "destructive"} className="font-mono text-[10px]">
+                        <OmegaBadge variant={connected ? "success" : "danger"} dot>
                             {connected ? "NET: STABLE" : "NET: LOST"}
-                        </Badge>
+                        </OmegaBadge>
                     </div>
                 </header>
 
