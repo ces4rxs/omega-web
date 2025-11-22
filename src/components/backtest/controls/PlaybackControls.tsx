@@ -111,8 +111,8 @@ export const PlaybackControls = React.memo(function PlaybackControls({
           min={0.5}
           max={5}
           step={0.5}
-          value={[speed]}
-          onValueChange={(values) => setSpeed(values[0])}
+          value={speed}
+          onValueChange={(value) => setSpeed(value)}
           className="flex-1"
         />
         <span className="text-sm font-mono font-semibold text-white min-w-[3rem] bg-slate-800/50 px-2 py-1 rounded border border-slate-700">
