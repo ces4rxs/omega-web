@@ -28,8 +28,8 @@ interface UseBacktestReplayReturn {
 
   // Utility
   toggleFullscreen: () => void
-  takeScreenshot: (canvasRef: React.RefObject<HTMLCanvasElement>) => void
-  containerRef: React.RefObject<HTMLDivElement>
+  takeScreenshot: (canvasRef: React.RefObject<HTMLCanvasElement | null>) => void
+  containerRef: React.RefObject<HTMLDivElement | null>
 }
 
 export function useBacktestReplay(
@@ -46,7 +46,7 @@ export function useBacktestReplay(
   const [speed, setSpeed] = useState(1)
 
   const intervalRef = useRef<NodeJS.Timeout | null>(null)
-  const containerRef = useRef<HTMLDivElement>(null)
+  const containerRef = useRef<HTMLDivElement | null>(null)
 
   const maxSteps = equityCurve.length
   const progress = useMemo(
