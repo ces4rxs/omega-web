@@ -179,7 +179,7 @@ export function useBacktestReplay(
   // ============================================================================
 
   const takeScreenshot = useCallback(
-    (canvasRef: React.RefObject<HTMLCanvasElement>) => {
+    (canvasRef: React.RefObject<HTMLCanvasElement | null>) => {
       const canvas = canvasRef.current
       if (!canvas) return
 
