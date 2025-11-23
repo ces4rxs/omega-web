@@ -36,7 +36,7 @@ interface UseEquityCanvasParams {
   showBenchmark: boolean
 }
 
-export function useEquityCanvas(params: UseEquityCanvasParams): React.RefObject<HTMLCanvasElement> {
+export function useEquityCanvas(params: UseEquityCanvasParams): React.RefObject<HTMLCanvasElement | null> {
   const {
     visibleData,
     initialCapital,
@@ -50,7 +50,7 @@ export function useEquityCanvas(params: UseEquityCanvasParams): React.RefObject<
     showBenchmark
   } = params
 
-  const canvasRef = useRef<HTMLCanvasElement>(null)
+  const canvasRef = useRef<HTMLCanvasElement | null>(null)
 
   useEffect(() => {
     const canvas = canvasRef.current

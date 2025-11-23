@@ -3,7 +3,7 @@
  * Contiene todos los tipos necesarios para replay, métricas y visualización
  */
 
-import type { Trade } from './types'
+import type { Trade } from '@/lib/types'
 
 // ============================================================================
 // DATOS DE ENTRADA
@@ -183,4 +183,4 @@ export interface AudioConfig {
 // EXPORTS DE UTILIDAD
 // ============================================================================
 
-export type { Trade } from './types'
+export type { Trade } from '@/lib/types'
