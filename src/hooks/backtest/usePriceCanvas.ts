@@ -26,7 +26,7 @@ interface UsePriceCanvasParams {
   showSMAs: boolean
 }
 
-export function usePriceCanvas(params: UsePriceCanvasParams): React.RefObject<HTMLCanvasElement> {
+export function usePriceCanvas(params: UsePriceCanvasParams): React.RefObject<HTMLCanvasElement | null> {
   const {
     priceData,
     currentStep,
@@ -35,7 +35,7 @@ export function usePriceCanvas(params: UsePriceCanvasParams): React.RefObject<HT
     showSMAs
   } = params
 
-  const canvasRef = useRef<HTMLCanvasElement>(null)
+  const canvasRef = useRef<HTMLCanvasElement | null>(null)
 
   // ============================================================================
   // CALCULATE SMAs
