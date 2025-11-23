@@ -9,6 +9,17 @@ const nextConfig = {
   eslint: {
     ignoreDuringBuilds: false, // ✅ Valida errores de ESLint
   },
+
+  // Redirects for moved/deleted pages
+  async redirects() {
+    return [
+      {
+        source: "/analysis",
+        destination: "/dashboard/analysis",
+        permanent: true, // 308 redirect (permanent)
+      },
+    ];
+  },
 };
 
 export default nextConfig;
